@@ -298,3 +298,78 @@ class HistorialPagina extends StatelessWidget {
     );
   }
 }
+// --- PANTALLAS DE NAVEGACIÓN ---
+
+class PaginaConsulta extends StatelessWidget {
+  const PaginaConsulta({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text("Consultar Producto"),
+        backgroundColor: const Color(0xFF1A237E),
+        foregroundColor: Colors.white,
+      ),
+      body: const Center(
+        child: Padding(
+          padding: EdgeInsets.all(20.0),
+          child: Text(
+            "Aquí podrás consultar información detallada de los productos 4Life.",
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 16),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class PaginaHistorial extends StatelessWidget {
+  const PaginaHistorial({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text("Historial de Diagnósticos"),
+        backgroundColor: const Color(0xFF1A237E),
+        foregroundColor: Colors.white,
+      ),
+      body: const Center(
+        child: Text(
+          "No tienes diagnósticos guardados localmente.",
+          style: TextStyle(fontSize: 16, color: Colors.grey),
+        ),
+      ),
+    );
+  }
+}
+
+class PaginaDatosPaciente extends StatelessWidget {
+  const PaginaDatosPaciente({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text("Datos del Paciente"),
+        backgroundColor: const Color(0xFF1A237E),
+        foregroundColor: Colors.white,
+      ),
+      body: const Center(
+        child: Text(
+          "No tienes datos guardados localmente.",
+          style: TextStyle(fontSize: 16, color: Colors.grey),
+        ),
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          // Acción para agregar nuevo paciente (no implementada)
+        },
+        backgroundColor: const Color(0xFF1A237E),
+        child: const Icon(Icons.add),
+      ),      
+    );
+  }
+}  
