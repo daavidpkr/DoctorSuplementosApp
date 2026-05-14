@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "916760929366",
+    "project_id": "doctorsuplementos-4bbb1",
+    "storage_bucket": "doctorsuplementos-4bbb1.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:916760929366:android:13656f89d780918867c7f7",
+        "android_client_info": {
+          "package_name": "com.example.DoctorSuplementos"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDY1ZyaLp8i8KVtcEnyUzgNFz0b0M191kA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

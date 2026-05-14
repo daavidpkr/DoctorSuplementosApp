@@ -1,0 +1,43 @@
+name: DoctorSuplementos
+description: "App de asesoramiento técnico para socios de 4Life."
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.1.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  
+  # Librería de Iconos (Estándar de Flutter)
+  cupertino_icons: ^1.0.8
+
+  # Libreria de compartir contenido
+  share_plus: ^10.1.4
+
+  # Inteligencia Artificial: Gemini 3.1
+  google_generative_ai: ^0.4.7
+  
+  # Firebase: Conexión y Base de Datos
+  firebase_core: ^3.1.1
+  cloud_firestore: ^5.0.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+  flutter_launcher_icons: ^0.13.1 # Añade esta línea
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/icon.png"
+  min_sdk_android: 21 # sdk mínimo para iconos adaptativos
+  adaptive_icon_background: "#1A237E" # El color azul de tu app
+  adaptive_icon_foreground: "assets/icon.png"
+
+flutter:
+  # Activa el diseño Material Design para botones y campos de texto
+  uses-material-design: true
