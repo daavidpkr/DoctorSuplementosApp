@@ -1,9 +1,5 @@
 plugins {
-    id "com.android.application"
-    id "kotlin-android"
     // 1. Este activa Firebase en tu App
-    id "com.google.gms.google-services"
-    id "dev.flutter.flutter-gradle-plugin"
     id("com.google.gms.google-services")
     id("dev.flutter.flutter-gradle-plugin")
 }
