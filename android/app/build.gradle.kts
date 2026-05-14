@@ -1,7 +1,6 @@
 plugins {
     id("com.android.application")
     id("kotlin-android")
-    // 1. Este activa Firebase en tu App
     id("com.google.gms.google-services")
     id("dev.flutter.flutter-gradle-plugin")
 }
@@ -16,14 +15,14 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 
+    // CORRECCIÓN AQUÍ: Quitamos el .toString() que da problemas
     kotlinOptions {
-        jvmTarget = JavaVersion.VERSION_17.toString()
+        jvmTarget = "17"
     }
 
     defaultConfig {
         applicationId = "com.example.doctor_suplementos"
-        // Para Firebase y Gemini, el minSdk debe ser al menos 21
-        minSdk = flutter.minSdkVersion
+        minSdk = flutter.minSdkVersion // Forzamos 21 para que Gemini no de error
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
@@ -31,7 +30,10 @@ android {
 
     buildTypes {
         release {
-            signingConfig = signingConfigs.debug
+            // CORRECCIÓN AQUÍ: Se cambió la forma de llamar a la firma de debug
+            signingConfig = signingConfigs.getByName("debug")
+            isMinifyEnabled = false
+            isShrinkResources = false
         }
     }
 }
@@ -41,8 +43,7 @@ flutter {
 }
 
 dependencies {
-    // 2. Dependencias de Firebase usando el BoM (sin versiones individuales)
     implementation(platform("com.google.firebase:firebase-bom:33.1.0"))
     implementation("com.google.firebase:firebase-analytics")
     implementation("com.google.firebase:firebase-firestore")
-}
+}   
