@@ -21,7 +21,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.example.doctorsuplementos"
+        applicationId = "com.example.DoctorSuplementos"
         minSdk = flutter.minSdkVersion // Forzamos 21 para que Gemini no de error
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
