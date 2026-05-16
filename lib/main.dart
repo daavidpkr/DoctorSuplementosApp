@@ -49,9 +49,14 @@ class PantallaPrincipal extends StatelessWidget {
             children: [
               const Icon(Icons.biotech, size: 80, color: Color(0xFF1A237E)),
               const SizedBox(height: 40),
-              _botonMenu(context, "Consultar producto(s)", Icons.search, const ConsultaProductoPagina()),
-              _botonMenu(context, "Diagnóstico", Icons.medication, const FormularioPaciente()),
-              _botonMenu(context, "Historial", Icons.history, const HistorialPagina()),
+              _botonMenu(context, "Consultar producto(s)", Icons.search,
+                  const ConsultaProductoPagina()),
+              _botonMenu(context, "Diagnóstico", Icons.medication,
+                  const FormularioPaciente()),
+              _botonMenu(
+                  context, "Historial", Icons.history, const PaginaHistorial()),
+              _botonMenu(context, "Asesor IA 4Life", Icons.chat,
+                  const PaginaChatbot()),
             ],
           ),
         ),
@@ -59,17 +64,21 @@ class PantallaPrincipal extends StatelessWidget {
     );
   }
 
-  Widget _botonMenu(BuildContext context, String titulo, IconData icono, Widget destino) {
+  Widget _botonMenu(
+      BuildContext context, String titulo, IconData icono, Widget destino) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 20),
       child: ElevatedButton.icon(
-        onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => destino)),
+        onPressed: () => Navigator.push(
+            context, MaterialPageRoute(builder: (context) => destino)),
         icon: Icon(icono, color: Colors.white),
-        label: Text(titulo, style: const TextStyle(color: Colors.white, fontSize: 16)),
+        label: Text(titulo,
+            style: const TextStyle(color: Colors.white, fontSize: 16)),
         style: ElevatedButton.styleFrom(
           backgroundColor: const Color(0xFF1A237E),
           minimumSize: const Size(double.infinity, 60),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
         ),
       ),
     );
@@ -79,14 +88,23 @@ class PantallaPrincipal extends StatelessWidget {
 // --- GESTIÓN DE HISTORIAL LOCAL ---
 class HistorialService {
   static final List<Map<String, dynamic>> registros = [];
-  
-  static void guardar(String titulo, String resultado, Map<String, String> datos) {
-    registros.insert(0, {
+
+  static Future<void> guardar(
+      String titulo, String resultado, Map<String, String> datos) async {
+    final registro = {
       'fecha': DateTime.now().toString().substring(0, 16),
       'titulo': titulo,
+      'nombre': datos['nombre'] ?? '',
       'resultado': resultado,
       'datos': datos,
-    });
+    };
+
+    registros.insert(0, registro);
+
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getStringList('historial_pacientes') ?? [];
+    raw.insert(0, jsonEncode(registro));
+    await prefs.setStringList('historial_pacientes', raw);
   }
 }
 
@@ -109,9 +127,12 @@ class _FormularioPacienteState extends State<FormularioPaciente> {
   @override
   void initState() {
     super.initState();
-    nombreController = TextEditingController(text: widget.infoPrevia?['datos']?['nombre'] ?? "");
-    edadController = TextEditingController(text: widget.infoPrevia?['datos']?['edad'] ?? "");
-    generoController = TextEditingController(text: widget.infoPrevia?['datos']?['genero'] ?? "");
+    nombreController = TextEditingController(
+        text: widget.infoPrevia?['datos']?['nombre'] ?? "");
+    edadController =
+        TextEditingController(text: widget.infoPrevia?['datos']?['edad'] ?? "");
+    generoController = TextEditingController(
+        text: widget.infoPrevia?['datos']?['genero'] ?? "");
     historialController = TextEditingController();
   }
 
@@ -124,7 +145,7 @@ class _FormularioPacienteState extends State<FormularioPaciente> {
       apiKey: 'AIzaSyB3ea3TYD72dtfGyP9kSrjyot7RzMk0ZXk',
     );
 
-    String contextoAnterior = widget.infoPrevia != null 
+    String contextoAnterior = widget.infoPrevia != null
         ? "HISTORIAL PREVIO: El paciente anteriormente reportó: ${widget.infoPrevia!['datos']['sintomas']}. El resultado anterior fue: ${widget.infoPrevia!['resultado']}. "
         : "";
 
@@ -147,8 +168,9 @@ class _FormularioPacienteState extends State<FormularioPaciente> {
       final content = [Content.text(prompt)];
       final response = await model.generateContent(content);
       String textoFinal = response.text ?? "Sin respuesta";
-      
-      HistorialService.guardar("Diagnóstico: ${nombreController.text}", textoFinal, {
+
+      await HistorialService.guardar(
+          "Diagnóstico: ${nombreController.text}", textoFinal, {
         'nombre': nombreController.text,
         'edad': edadController.text,
         'genero': generoController.text,
@@ -170,19 +192,28 @@ class _FormularioPacienteState extends State<FormularioPaciente> {
         title: const Text("Resultado del Diagnóstico"),
         content: SingleChildScrollView(child: Text(mensaje)),
         actions: [
-          IconButton(icon: const Icon(Icons.copy), onPressed: () {
-            Clipboard.setData(ClipboardData(text: mensaje));
-            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Copiado al portapapeles")));
-          }),
-          IconButton(icon: const Icon(Icons.share), onPressed: () => Share.share(mensaje)),
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text("Cerrar")),
+          IconButton(
+              icon: const Icon(Icons.copy),
+              onPressed: () {
+                Clipboard.setData(ClipboardData(text: mensaje));
+                ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text("Copiado al portapapeles")));
+              }),
+          IconButton(
+              icon: const Icon(Icons.share),
+              onPressed: () => Share.share(mensaje)),
+          TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text("Cerrar")),
         ],
       ),
     );
   }
 
   void _mostrarDialogoSimple(String t, String m) {
-    showDialog(context: context, builder: (c) => AlertDialog(title: Text(t), content: Text(m)));
+    showDialog(
+        context: context,
+        builder: (c) => AlertDialog(title: Text(t), content: Text(m)));
   }
 
   @override
@@ -196,28 +227,38 @@ class _FormularioPacienteState extends State<FormularioPaciente> {
             _buildCampo("Nombre", nombreController, "Nombre..."),
             _buildCampo("Edad", edadController, "Edad..."),
             _buildCampo("Género", generoController, "Género..."),
-            _buildCampo("Síntomas actuales", historialController, "Describa qué siente...", lineas: 4),
+            _buildCampo("Síntomas actuales", historialController,
+                "Describa qué siente...",
+                lineas: 4),
             const SizedBox(height: 20),
-            cargando 
-              ? const CircularProgressIndicator()
-              : ElevatedButton(
-                  onPressed: generarDiagnostico,
-                  style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1A237E), minimumSize: const Size(double.infinity, 55)),
-                  child: const Text("GENERAR DIAGNÓSTICO", style: TextStyle(color: Colors.white)),
-                ),
+            cargando
+                ? const CircularProgressIndicator()
+                : ElevatedButton(
+                    onPressed: generarDiagnostico,
+                    style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF1A237E),
+                        minimumSize: const Size(double.infinity, 55)),
+                    child: const Text("GENERAR DIAGNÓSTICO",
+                        style: TextStyle(color: Colors.white)),
+                  ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildCampo(String label, TextEditingController controller, String hint, {int lineas = 1}) {
+  Widget _buildCampo(
+      String label, TextEditingController controller, String hint,
+      {int lineas = 1}) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 15),
       child: TextField(
         controller: controller,
         maxLines: lineas,
-        decoration: InputDecoration(labelText: label, hintText: hint, border: const OutlineInputBorder()),
+        decoration: InputDecoration(
+            labelText: label,
+            hintText: hint,
+            border: const OutlineInputBorder()),
       ),
     );
   }
@@ -233,21 +274,31 @@ class ConsultaProductoPagina extends StatefulWidget {
 
 class _ConsultaProductoPaginaState extends State<ConsultaProductoPagina> {
   final controller = TextEditingController();
-  
+
   Future<void> consultar() async {
-    final model = GenerativeModel(model: 'gemini-1.5-flash', apiKey: 'AIzaSyB3ea3TYD72dtfGyP9kSrjyot7RzMk0ZXk');
-    final prompt = "Proporciona información completa (Descripción, ingredientes, indicaciones, contraindicaciones y dosis) del producto: ${controller.text}";
+    final model = GenerativeModel(
+        model: 'gemini-1.5-flash',
+        apiKey: 'AIzaSyB3ea3TYD72dtfGyP9kSrjyot7RzMk0ZXk');
+    final prompt =
+        "Proporciona información completa (Descripción, ingredientes, indicaciones, contraindicaciones y dosis) del producto: ${controller.text}";
     final response = await model.generateContent([Content.text(prompt)]);
-    
+
+    if (!mounted) return;
     showDialog(
       context: context,
       builder: (c) => AlertDialog(
         title: Text("Info: ${controller.text}"),
         content: SingleChildScrollView(child: Text(response.text ?? "")),
         actions: [
-          IconButton(icon: const Icon(Icons.copy), onPressed: () => Clipboard.setData(ClipboardData(text: response.text ?? ""))),
-          IconButton(icon: const Icon(Icons.share), onPressed: () => Share.share(response.text ?? "")),
-          TextButton(onPressed: () => Navigator.pop(c), child: const Text("Cerrar")),
+          IconButton(
+              icon: const Icon(Icons.copy),
+              onPressed: () =>
+                  Clipboard.setData(ClipboardData(text: response.text ?? ""))),
+          IconButton(
+              icon: const Icon(Icons.share),
+              onPressed: () => Share.share(response.text ?? "")),
+          TextButton(
+              onPressed: () => Navigator.pop(c), child: const Text("Cerrar")),
         ],
       ),
     );
@@ -261,9 +312,13 @@ class _ConsultaProductoPaginaState extends State<ConsultaProductoPagina> {
         padding: const EdgeInsets.all(20),
         child: Column(
           children: [
-            TextField(controller: controller, decoration: const InputDecoration(labelText: "Nombre del producto")),
+            TextField(
+                controller: controller,
+                decoration:
+                    const InputDecoration(labelText: "Nombre del producto")),
             const SizedBox(height: 20),
-            ElevatedButton(onPressed: consultar, child: const Text("Consultar")),
+            ElevatedButton(
+                onPressed: consultar, child: const Text("Consultar")),
           ],
         ),
       ),
@@ -279,24 +334,26 @@ class HistorialPagina extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text("Historial (Local)")),
-      body: HistorialService.registros.isEmpty 
-        ? const Center(child: Text("No hay consultas previas"))
-        : ListView.builder(
-            itemCount: HistorialService.registros.length,
-            itemBuilder: (context, index) {
-              final item = HistorialService.registros[index];
-              return ListTile(
-                leading: const Icon(Icons.description),
-                title: Text(item['titulo']),
-                subtitle: Text("Fecha: ${item['fecha']}"),
-                onTap: () {
-                  Navigator.push(context, MaterialPageRoute(
-                    builder: (c) => FormularioPaciente(infoPrevia: item)
-                  ));
-                },
-              );
-            },
-          ),
+      body: HistorialService.registros.isEmpty
+          ? const Center(child: Text("No hay consultas previas"))
+          : ListView.builder(
+              itemCount: HistorialService.registros.length,
+              itemBuilder: (context, index) {
+                final item = HistorialService.registros[index];
+                return ListTile(
+                  leading: const Icon(Icons.description),
+                  title: Text(item['titulo']),
+                  subtitle: Text("Fecha: ${item['fecha']}"),
+                  onTap: () {
+                    Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (c) =>
+                                FormularioPaciente(infoPrevia: item)));
+                  },
+                );
+              },
+            ),
     );
   }
 }
@@ -327,23 +384,102 @@ class PaginaConsulta extends StatelessWidget {
   }
 }
 
-class PaginaHistorial extends StatelessWidget {
+class PaginaHistorial extends StatefulWidget {
   const PaginaHistorial({super.key});
+
+  @override
+  State<PaginaHistorial> createState() => _PaginaHistorialState();
+}
+
+class _PaginaHistorialState extends State<PaginaHistorial> {
+  List<Map<String, dynamic>> _datosHistorial = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _cargarDatos();
+  }
+
+  Future<void> _cargarDatos() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getStringList('historial_pacientes') ?? [];
+    final datos =
+        raw.map((e) => jsonDecode(e) as Map<String, dynamic>).toList();
+
+    if (!mounted) return;
+    setState(() => _datosHistorial = datos);
+  }
+
+  String _nombrePaciente(Map<String, dynamic> registro) {
+    final datos = registro['datos'];
+    if (registro['nombre'] != null &&
+        registro['nombre'].toString().trim().isNotEmpty) {
+      return registro['nombre'].toString();
+    }
+    if (datos is Map &&
+        datos['nombre'] != null &&
+        datos['nombre'].toString().trim().isNotEmpty) {
+      return datos['nombre'].toString();
+    }
+    return registro['titulo']?.toString() ?? "Sin nombre";
+  }
+
+  void _mostrarDetalle(Map<String, dynamic> registro) {
+    final resultado =
+        registro['resultado']?.toString() ?? "Sin resultado guardado";
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(_nombrePaciente(registro)),
+        content: SingleChildScrollView(child: Text(resultado)),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.copy),
+            onPressed: () {
+              Clipboard.setData(ClipboardData(text: resultado));
+              ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text("Copiado al portapapeles")));
+            },
+          ),
+          IconButton(
+              icon: const Icon(Icons.share),
+              onPressed: () => Share.share(resultado)),
+          TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text("Cerrar")),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Historial de Diagnósticos"),
+        title: const Text("Historial 4Life"),
         backgroundColor: const Color(0xFF1A237E),
         foregroundColor: Colors.white,
       ),
-      body: const Center(
-        child: Text(
-          "No tienes diagnósticos guardados localmente.",
-          style: TextStyle(fontSize: 16, color: Colors.grey),
-        ),
-      ),
+      body: _datosHistorial.isEmpty
+          ? const Center(
+              child: Text(
+                "No hay consultas guardadas",
+                style: TextStyle(fontSize: 16, color: Colors.grey),
+              ),
+            )
+          : ListView.builder(
+              itemCount: _datosHistorial.length,
+              itemBuilder: (context, i) {
+                final registro = _datosHistorial[i];
+                return ListTile(
+                  leading: const Icon(Icons.person),
+                  title: Text(_nombrePaciente(registro)),
+                  subtitle: Text("Fecha: ${registro['fecha'] ?? 'Sin fecha'}"),
+                  onTap: () => _mostrarDetalle(registro),
+                );
+              },
+            ),
     );
   }
 }
@@ -371,7 +507,143 @@ class PaginaDatosPaciente extends StatelessWidget {
         },
         backgroundColor: const Color(0xFF1A237E),
         child: const Icon(Icons.add),
-      ),      
+      ),
     );
   }
-}  
+}
+
+class PaginaChatbot extends StatefulWidget {
+  const PaginaChatbot({super.key});
+
+  @override
+  State<PaginaChatbot> createState() => _PaginaChatbotState();
+}
+
+class _PaginaChatbotState extends State<PaginaChatbot> {
+  final TextEditingController _controller = TextEditingController();
+  final List<Map<String, String>> mensajes = [];
+  bool enviando = false;
+
+  Future<void> enviarMensaje() async {
+    final textoUsuario = _controller.text.trim();
+    if (textoUsuario.isEmpty || enviando) return;
+
+    setState(() {
+      mensajes.add({"rol": "usuario", "texto": textoUsuario});
+      enviando = true;
+    });
+    _controller.clear();
+
+    final model = GenerativeModel(
+      model: 'gemini-3-flash-preview',
+      apiKey: 'AIzaSyB3ea3TYD72dtfGyP9kSrjyot7RzMk0ZXk',
+    );
+
+    final historial = mensajes
+        .map((mensaje) =>
+            "${mensaje['rol'] == 'ia' ? 'Asesor IA' : 'Socio'}: ${mensaje['texto']}")
+        .join("\n");
+
+    final prompt = """
+    Eres un asesor IA para socios de 4Life.
+    Responde preguntas libres sobre suplementos, productos 4Life, hábitos saludables, ventas y seguimiento de clientes.
+    Mantén un tono claro, práctico y responsable. Si la pregunta parece médica, recomienda consultar a un profesional de salud.
+
+    Conversación actual:
+    $historial
+    """;
+
+    try {
+      final response = await model.generateContent([Content.text(prompt)]);
+      final respuestaIA = response.text ?? "No pude generar una respuesta.";
+
+      if (!mounted) return;
+      setState(() {
+        mensajes.add({"rol": "ia", "texto": respuestaIA});
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        mensajes.add({
+          "rol": "ia",
+          "texto": "No se pudo conectar con la IA. Intenta nuevamente."
+        });
+      });
+    } finally {
+      if (mounted) {
+        setState(() => enviando = false);
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text("Asesor IA 4Life"),
+        backgroundColor: const Color(0xFF1A237E),
+        foregroundColor: Colors.white,
+      ),
+      body: Column(
+        children: [
+          Expanded(
+            child: mensajes.isEmpty
+                ? const Center(
+                    child: Text(
+                      "Haz una pregunta para iniciar la conversación.",
+                      style: TextStyle(fontSize: 16, color: Colors.grey),
+                      textAlign: TextAlign.center,
+                    ),
+                  )
+                : ListView.builder(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    itemCount: mensajes.length,
+                    itemBuilder: (context, i) {
+                      final esIA = mensajes[i]["rol"] == "ia";
+                      return ListTile(
+                        leading: Icon(esIA ? Icons.smart_toy : Icons.person),
+                        title: Text(esIA ? "Gemini 4Life" : "Tú"),
+                        subtitle: Text(mensajes[i]["texto"] ?? ""),
+                      );
+                    },
+                  ),
+          ),
+          if (enviando)
+            const Padding(
+              padding: EdgeInsets.only(bottom: 8),
+              child: LinearProgressIndicator(),
+            ),
+          Padding(
+            padding: const EdgeInsets.all(8),
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _controller,
+                    decoration: const InputDecoration(
+                      hintText: "Pregunta lo que sea...",
+                      border: OutlineInputBorder(),
+                    ),
+                    minLines: 1,
+                    maxLines: 4,
+                    onSubmitted: (_) => enviarMensaje(),
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.send),
+                  onPressed: enviando ? null : enviarMensaje,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
