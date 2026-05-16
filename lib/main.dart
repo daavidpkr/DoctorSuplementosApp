@@ -151,7 +151,7 @@ class _FormularioPacienteState extends State<FormularioPaciente> {
     String contextoAnterior = widget.infoPrevia != null
         ? "HISTORIAL PREVIO: El paciente anteriormente reportó: ${widget.infoPrevia!['datos']['sintomas']}. El resultado anterior fue: ${widget.infoPrevia!['resultado']}. "
         : "";
-
+        
     final prompt = """
     $contextoAnterior
     SÍNTOMAS ACTUALES: ${historialController.text}
