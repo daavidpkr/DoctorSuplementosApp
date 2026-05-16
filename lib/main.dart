@@ -37,7 +37,7 @@ const List<String> productosPermitidos4Life = [
   'Limpiador',
   'Recall',
   'Immune boost',
-  'Immune plus (TF Bost)',
+  'TF Boost',
 ];
 
 final String catalogoPermitido4Life = productosPermitidos4Life.join(', ');
@@ -87,7 +87,7 @@ const List<ProductoPrecio> productosConPrecio4Life = [
   ProductoPrecio(
       nombre: 'Preo biotics', afiliado: 57.50, publico: 75.98, lp: 32),
   ProductoPrecio(nombre: 'Fibre', afiliado: 52.37, publico: 59.82, lp: 22),
-  ProductoPrecio(nombre: 'Agpro', afiliado: 73.00, publico: 97.00, lp: null),
+  ProductoPrecio(nombre: 'Agpro', afiliado: 73.00, publico: 97.00, lp: 45),
   ProductoPrecio(nombre: 'Suero', afiliado: 45.00, publico: 60.00, lp: 27),
   ProductoPrecio(
       nombre: 'Crema para los ojos', afiliado: 45.00, publico: 60.00, lp: 27),
@@ -99,8 +99,7 @@ const List<ProductoPrecio> productosConPrecio4Life = [
   ProductoPrecio(
       nombre: 'Crema cuerpo', afiliado: 25.00, publico: 33.00, lp: 8),
   ProductoPrecio(nombre: 'Recall', afiliado: 72.90, publico: 95.62, lp: 42),
-  ProductoPrecio(
-      nombre: 'Immune plus (TF Bost)', afiliado: 27.72, publico: 36.96, lp: 15),
+  ProductoPrecio(nombre: 'TF Boost', afiliado: 27.72, publico: 36.96, lp: 15),
 ];
 
 String normalizarTexto(String texto) {
@@ -684,25 +683,78 @@ class _PaginaCalculadoraPreciosState extends State<PaginaCalculadoraPrecios> {
   final TextEditingController _controller = TextEditingController();
   List<ProductoPrecio> _productos = [];
   List<String> _noEncontrados = [];
+  bool _calculando = false;
 
-  void _calcular() {
+  Future<ProductoPrecio?> _buscarProductoConIa(String consulta) async {
+    final model = GenerativeModel(
+      model: 'gemini-3-flash-preview',
+      apiKey: 'AIzaSyB3ea3TYD72dtfGyP9kSrjyot7RzMk0ZXk',
+    );
+
+    final catalogoPrecios =
+        productosConPrecio4Life.map((producto) => producto.nombre).join(', ');
+    final prompt = """
+    Identifica con cual producto coincide mejor esta consulta escrita con errores:
+    "$consulta"
+
+    Debes responder SOLO con el nombre exacto de uno de estos productos:
+    $catalogoPrecios
+
+    Si no coincide razonablemente con ninguno, responde SOLO: NO_ENCONTRADO
+    No expliques la razon.
+    """;
+
+    final response = await model.generateContent([Content.text(prompt)]);
+    final texto = response.text?.trim() ?? '';
+    if (texto.toUpperCase().contains('NO_ENCONTRADO')) return null;
+    return buscarProductoConPrecio(texto);
+  }
+
+  Future<void> _calcular() async {
+    if (_calculando) return;
     final consultas = dividirConsultaProductos(_controller.text);
+    if (consultas.isEmpty) return;
+
+    setState(() => _calculando = true);
+
     final encontrados = <ProductoPrecio>[];
     final noEncontrados = <String>[];
 
-    for (final consulta in consultas) {
-      final producto = buscarProductoConPrecio(consulta);
-      if (producto == null) {
-        noEncontrados.add(consulta);
-      } else {
+    try {
+      for (final consulta in consultas) {
+        var producto = buscarProductoConPrecio(consulta);
+        producto ??= await _buscarProductoConIa(consulta);
+
+        if (producto == null) {
+          noEncontrados.add(consulta);
+          continue;
+        }
         encontrados.add(producto);
       }
-    }
 
-    setState(() {
-      _productos = encontrados;
-      _noEncontrados = noEncontrados;
-    });
+      if (!mounted) return;
+      setState(() {
+        _productos = encontrados;
+        _noEncontrados = noEncontrados;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _productos = encontrados;
+        _noEncontrados = consultas
+            .where((consulta) => buscarProductoConPrecio(consulta) == null)
+            .toList();
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("No se pudo consultar la IA para algunos nombres."),
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _calculando = false);
+      }
+    }
   }
 
   double get _totalAfiliado =>
@@ -766,9 +818,9 @@ class _PaginaCalculadoraPreciosState extends State<PaginaCalculadoraPrecios> {
                   children: [
                     Expanded(
                       child: ElevatedButton.icon(
-                        onPressed: _calcular,
+                        onPressed: _calculando ? null : _calcular,
                         icon: const Icon(Icons.calculate),
-                        label: const Text("Calcular"),
+                        label: Text(_calculando ? "Calculando..." : "Calcular"),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFF1A237E),
                           foregroundColor: Colors.white,
@@ -803,6 +855,7 @@ class _PaginaCalculadoraPreciosState extends State<PaginaCalculadoraPrecios> {
               ],
             ),
           ),
+          if (_calculando) const LinearProgressIndicator(),
           Expanded(
             child: _productos.isEmpty && _noEncontrados.isEmpty
                 ? const Center(
