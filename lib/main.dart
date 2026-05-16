@@ -99,7 +99,8 @@ const List<ProductoPrecio> productosConPrecio4Life = [
   ProductoPrecio(
       nombre: 'Crema cuerpo', afiliado: 25.00, publico: 33.00, lp: 8),
   ProductoPrecio(nombre: 'Recall', afiliado: 72.90, publico: 95.62, lp: 42),
-  ProductoPrecio(nombre: 'TF Boost', afiliado: 27.72, publico: 36.96, lp: 15),
+  ProductoPrecio(
+      nombre: 'TF Boost', afiliado: 27.72, publico: 36.96, lp: 15),
 ];
 
 String normalizarTexto(String texto) {
@@ -683,78 +684,25 @@ class _PaginaCalculadoraPreciosState extends State<PaginaCalculadoraPrecios> {
   final TextEditingController _controller = TextEditingController();
   List<ProductoPrecio> _productos = [];
   List<String> _noEncontrados = [];
-  bool _calculando = false;
 
-  Future<ProductoPrecio?> _buscarProductoConIa(String consulta) async {
-    final model = GenerativeModel(
-      model: 'gemini-3-flash-preview',
-      apiKey: 'AIzaSyB3ea3TYD72dtfGyP9kSrjyot7RzMk0ZXk',
-    );
-
-    final catalogoPrecios =
-        productosConPrecio4Life.map((producto) => producto.nombre).join(', ');
-    final prompt = """
-    Identifica con cual producto coincide mejor esta consulta escrita con errores:
-    "$consulta"
-
-    Debes responder SOLO con el nombre exacto de uno de estos productos:
-    $catalogoPrecios
-
-    Si no coincide razonablemente con ninguno, responde SOLO: NO_ENCONTRADO
-    No expliques la razon.
-    """;
-
-    final response = await model.generateContent([Content.text(prompt)]);
-    final texto = response.text?.trim() ?? '';
-    if (texto.toUpperCase().contains('NO_ENCONTRADO')) return null;
-    return buscarProductoConPrecio(texto);
-  }
-
-  Future<void> _calcular() async {
-    if (_calculando) return;
+  void _calcular() {
     final consultas = dividirConsultaProductos(_controller.text);
-    if (consultas.isEmpty) return;
-
-    setState(() => _calculando = true);
-
     final encontrados = <ProductoPrecio>[];
     final noEncontrados = <String>[];
 
-    try {
-      for (final consulta in consultas) {
-        var producto = buscarProductoConPrecio(consulta);
-        producto ??= await _buscarProductoConIa(consulta);
-
-        if (producto == null) {
-          noEncontrados.add(consulta);
-          continue;
-        }
+    for (final consulta in consultas) {
+      final producto = buscarProductoConPrecio(consulta);
+      if (producto == null) {
+        noEncontrados.add(consulta);
+      } else {
         encontrados.add(producto);
       }
-
-      if (!mounted) return;
-      setState(() {
-        _productos = encontrados;
-        _noEncontrados = noEncontrados;
-      });
-    } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _productos = encontrados;
-        _noEncontrados = consultas
-            .where((consulta) => buscarProductoConPrecio(consulta) == null)
-            .toList();
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("No se pudo consultar la IA para algunos nombres."),
-        ),
-      );
-    } finally {
-      if (mounted) {
-        setState(() => _calculando = false);
-      }
     }
+
+    setState(() {
+      _productos = encontrados;
+      _noEncontrados = noEncontrados;
+    });
   }
 
   double get _totalAfiliado =>
@@ -818,9 +766,9 @@ class _PaginaCalculadoraPreciosState extends State<PaginaCalculadoraPrecios> {
                   children: [
                     Expanded(
                       child: ElevatedButton.icon(
-                        onPressed: _calculando ? null : _calcular,
+                        onPressed: _calcular,
                         icon: const Icon(Icons.calculate),
-                        label: Text(_calculando ? "Calculando..." : "Calcular"),
+                        label: const Text("Calcular"),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFF1A237E),
                           foregroundColor: Colors.white,
@@ -855,7 +803,6 @@ class _PaginaCalculadoraPreciosState extends State<PaginaCalculadoraPrecios> {
               ],
             ),
           ),
-          if (_calculando) const LinearProgressIndicator(),
           Expanded(
             child: _productos.isEmpty && _noEncontrados.isEmpty
                 ? const Center(
