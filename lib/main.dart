@@ -42,6 +42,39 @@ const List<String> productosPermitidos4Life = [
 
 final String catalogoPermitido4Life = productosPermitidos4Life.join(', ');
 
+const Map<String, String> imagenesProducto4Life = {
+  'Transfer factor plus': 'assets/productos/1 TRASFER FACTOR PLUS.png',
+  'Riovida stix': 'assets/productos/2 RIOVIDA STIX.png',
+  'Energy go stix': 'assets/productos/3 ENERGY GO STIX.png',
+  'Renuvo': 'assets/productos/4 RENUVO.png',
+  'Glucoach': 'assets/productos/5 GLUCOACH.png',
+  'Bcv': 'assets/productos/6 BCV.png',
+  'Malepro': 'assets/productos/7 MALEPRO.png',
+  'Colageno tipo i': 'assets/productos/8 COLAGENO TIPO I.png',
+  'Transfer factor tri factor':
+      'assets/productos/9 TRASFER FACTOR TRI FACTOR.png',
+  'Nutrastart': 'assets/productos/10 NUTRASTART.png',
+  'Riovida burst': 'assets/productos/11 RIOVIDA BURST.png',
+  'Protf': 'assets/productos/12 PROTF.png',
+  'Bioefa': 'assets/productos/13 BIOEFA.png',
+  'Belle vie': 'assets/productos/14 BELLE VIE.png',
+  'Glutamine prime': 'assets/productos/15 GLUTAMINE PRIME.png',
+  'Kbu': 'assets/productos/16 KBU.png',
+  'Vistari': 'assets/productos/17 VISTARI.png',
+  'Preo biotics': 'assets/productos/18 PREO BIOTICS.png',
+  'Fibre': 'assets/productos/19 FIBRE.png',
+  'Agpro': 'assets/productos/21 AGPRO.png',
+  'Suero': 'assets/productos/22 SUERO.png',
+  'Crema para los ojos': 'assets/productos/23 CREMA PARA LOS OJOS.png',
+  'Tonico': 'assets/productos/24 TONICO.png',
+  'Crema humectante': 'assets/productos/25 CREMA HUMECTANTE.png',
+  'Pasta de dientes': 'assets/productos/26 PASTA DE DIENTES.png',
+  'Crema cuerpo': 'assets/productos/27 CREMA CUERPO.png',
+  'Limpiador': 'assets/productos/28 LIMPIADOR.png',
+  'Recall': 'assets/productos/29 RECALL.png',
+  'TF Boost': 'assets/productos/30 TF BOOST.png',
+};
+
 class ProductoPrecio {
   final String nombre;
   final double afiliado;
@@ -99,8 +132,7 @@ const List<ProductoPrecio> productosConPrecio4Life = [
   ProductoPrecio(
       nombre: 'Crema cuerpo', afiliado: 25.00, publico: 33.00, lp: 8),
   ProductoPrecio(nombre: 'Recall', afiliado: 72.90, publico: 95.62, lp: 42),
-  ProductoPrecio(
-      nombre: 'TF Boost', afiliado: 27.72, publico: 36.96, lp: 15),
+  ProductoPrecio(nombre: 'TF Boost', afiliado: 27.72, publico: 36.96, lp: 15),
 ];
 
 String normalizarTexto(String texto) {
@@ -142,6 +174,29 @@ ProductoPrecio? buscarProductoConPrecio(String consulta) {
     }
   }
   return mejorPuntaje >= 45 ? mejor : null;
+}
+
+String? buscarProductoPermitido(String consulta) {
+  String? mejor;
+  var mejorPuntaje = 0;
+  for (final producto in productosPermitidos4Life) {
+    final puntaje = puntajeCoincidencia(consulta, producto);
+    if (puntaje > mejorPuntaje) {
+      mejorPuntaje = puntaje;
+      mejor = producto;
+    }
+  }
+  return mejorPuntaje >= 45 ? mejor : null;
+}
+
+String? productoDesdeTexto(String texto) {
+  final normalizado = normalizarTexto(texto);
+  for (final producto in productosPermitidos4Life) {
+    if (normalizado.contains(normalizarTexto(producto))) {
+      return producto;
+    }
+  }
+  return null;
 }
 
 List<String> dividirConsultaProductos(String texto) {
@@ -598,13 +653,46 @@ class _ConsultaProductoPaginaState extends State<ConsultaProductoPagina> {
     try {
       final response = await model.generateContent([Content.text(prompt)]);
       final resultado = response.text ?? "No pude generar una respuesta.";
+      final productoIdentificado = productoDesdeTexto(resultado) ??
+          buscarProductoPermitido(productoBuscado);
+      final imagenProducto = productoIdentificado == null
+          ? null
+          : imagenesProducto4Life[productoIdentificado];
 
       if (!mounted) return;
       showDialog(
         context: context,
         builder: (c) => AlertDialog(
-          title: Text("Info: $productoBuscado"),
-          content: SingleChildScrollView(child: Text(resultado)),
+          title: Text(productoIdentificado ?? "Info: $productoBuscado"),
+          content: SizedBox(
+            width: 460,
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (imagenProducto != null) ...[
+                    Container(
+                      height: 230,
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF8F8F2),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: const Color(0xFFE1E1D7)),
+                      ),
+                      child: Image.asset(
+                        imagenProducto,
+                        fit: BoxFit.contain,
+                        filterQuality: FilterQuality.high,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+                  Text(resultado),
+                ],
+              ),
+            ),
+          ),
           actions: [
             IconButton(
                 icon: const Icon(Icons.copy),
