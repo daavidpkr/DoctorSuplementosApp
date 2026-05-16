@@ -332,34 +332,98 @@ class ConsultaProductoPagina extends StatefulWidget {
 
 class _ConsultaProductoPaginaState extends State<ConsultaProductoPagina> {
   final controller = TextEditingController();
+  bool consultando = false;
 
   Future<void> consultar() async {
-    final model = GenerativeModel(
-        model: 'gemini-1.5-flash',
-        apiKey: 'AIzaSyB3ea3TYD72dtfGyP9kSrjyot7RzMk0ZXk');
-    final prompt =
-        "Proporciona información completa (Descripción, ingredientes, indicaciones, contraindicaciones y dosis) del producto: ${controller.text}";
-    final response = await model.generateContent([Content.text(prompt)]);
+    final productoBuscado = controller.text.trim();
+    if (productoBuscado.isEmpty || consultando) return;
 
-    if (!mounted) return;
-    showDialog(
-      context: context,
-      builder: (c) => AlertDialog(
-        title: Text("Info: ${controller.text}"),
-        content: SingleChildScrollView(child: Text(response.text ?? "")),
-        actions: [
-          IconButton(
-              icon: const Icon(Icons.copy),
-              onPressed: () =>
-                  Clipboard.setData(ClipboardData(text: response.text ?? ""))),
-          IconButton(
-              icon: const Icon(Icons.share),
-              onPressed: () => Share.share(response.text ?? "")),
-          TextButton(
-              onPressed: () => Navigator.pop(c), child: const Text("Cerrar")),
-        ],
-      ),
-    );
+    setState(() => consultando = true);
+
+    final model = GenerativeModel(
+        model: 'gemini-3-flash-preview',
+        apiKey: 'AIzaSyB3ea3TYD72dtfGyP9kSrjyot7RzMk0ZXk');
+    final prompt = """
+    Actua como un asesor experto de productos 4Life.
+
+    El usuario escribio este producto, posiblemente con errores de escritura:
+    "$productoBuscado"
+
+    Primero identifica el producto 4Life mas probable aunque el nombre este incompleto,
+    mal escrito o con abreviaturas. Usa tu conocimiento de productos 4Life y el contexto
+    de la marca. Si hay varias opciones parecidas, elige la mas probable y menciona
+    brevemente que fue una coincidencia aproximada.
+
+    Responde en espanol, claro y ordenado, con esta estructura:
+
+    Producto identificado:
+    [Nombre correcto del producto]
+
+    Descripcion:
+    [Para que se usa o que respalda]
+
+    Ingredientes o componentes principales:
+    [Lista breve]
+
+    Indicaciones de uso:
+    [Uso sugerido de bienestar, sin prometer curas]
+
+    Contraindicaciones o precauciones:
+    [Advertencias responsables]
+
+    Dosis sugerida:
+    [Dosis general si la conoces. Si no estas seguro, indicalo y recomienda revisar la etiqueta oficial]
+
+    Nota:
+    No inventes informacion si no estas seguro. No recomiendes medicamentos ni marcas externas.
+    """;
+    try {
+      final response = await model.generateContent([Content.text(prompt)]);
+      final resultado = response.text ?? "No pude generar una respuesta.";
+
+      if (!mounted) return;
+      showDialog(
+        context: context,
+        builder: (c) => AlertDialog(
+          title: Text("Info: $productoBuscado"),
+          content: SingleChildScrollView(child: Text(resultado)),
+          actions: [
+            IconButton(
+                icon: const Icon(Icons.copy),
+                onPressed: () =>
+                    Clipboard.setData(ClipboardData(text: resultado))),
+            IconButton(
+                icon: const Icon(Icons.share),
+                onPressed: () => Share.share(resultado)),
+            TextButton(
+                onPressed: () => Navigator.pop(c), child: const Text("Cerrar")),
+          ],
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      showDialog(
+        context: context,
+        builder: (c) => AlertDialog(
+          title: const Text("Error"),
+          content: const Text("No se pudo consultar el producto con la IA."),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(c), child: const Text("Cerrar")),
+          ],
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => consultando = false);
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    controller.dispose();
+    super.dispose();
   }
 
   @override
@@ -375,8 +439,10 @@ class _ConsultaProductoPaginaState extends State<ConsultaProductoPagina> {
                 decoration:
                     const InputDecoration(labelText: "Nombre del producto")),
             const SizedBox(height: 20),
-            ElevatedButton(
-                onPressed: consultar, child: const Text("Consultar")),
+            consultando
+                ? const CircularProgressIndicator()
+                : ElevatedButton(
+                    onPressed: consultar, child: const Text("Consultar")),
           ],
         ),
       ),
@@ -554,6 +620,66 @@ class _PaginaHistorialState extends State<PaginaHistorial> {
     ).then((_) => nuevaPreguntaController.dispose());
   }
 
+  void _verReporteAnterior(Map<String, dynamic> pacienteViejo) {
+    final nombre = _nombrePaciente(pacienteViejo);
+    final fecha = pacienteViejo['fecha']?.toString() ?? "Sin fecha";
+    final resultado =
+        pacienteViejo['resultado']?.toString() ?? "Sin resultado guardado";
+    final datos = pacienteViejo['datos'];
+    final sintomas = datos is Map ? datos['sintomas']?.toString() ?? "" : "";
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text("Reporte anterior de $nombre"),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text("Fecha: $fecha"),
+                if (sintomas.isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  const Text(
+                    "Sintomas registrados:",
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  Text(sintomas),
+                ],
+                const SizedBox(height: 12),
+                const Text(
+                  "Reporte o diagnostico:",
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                Text(resultado),
+              ],
+            ),
+          ),
+        ),
+        actions: [
+          IconButton(
+              icon: const Icon(Icons.copy),
+              onPressed: () =>
+                  Clipboard.setData(ClipboardData(text: resultado))),
+          IconButton(
+              icon: const Icon(Icons.share),
+              onPressed: () => Share.share(resultado)),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(dialogContext);
+              _reDiagnosticar(pacienteViejo);
+            },
+            child: const Text("Consultar ajuste"),
+          ),
+          TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text("Cerrar")),
+        ],
+      ),
+    );
+  }
+
   @override
   void dispose() {
     _searchController.dispose();
@@ -594,8 +720,11 @@ class _PaginaHistorialState extends State<PaginaHistorial> {
                         title: Text(_nombrePaciente(item)),
                         subtitle:
                             Text("Fecha: ${item['fecha'] ?? 'Sin fecha'}"),
-                        trailing: const Icon(Icons.refresh, color: Colors.blue),
-                        onTap: () => _reDiagnosticar(item),
+                        trailing: IconButton(
+                          icon: const Icon(Icons.refresh, color: Colors.blue),
+                          onPressed: () => _reDiagnosticar(item),
+                        ),
+                        onTap: () => _verReporteAnterior(item),
                       );
                     },
                   ),
