@@ -886,10 +886,35 @@ class _PaginaChatbotState extends State<PaginaChatbot> {
                     itemCount: mensajes.length,
                     itemBuilder: (context, i) {
                       final esIA = mensajes[i]["rol"] == "ia";
+                      final texto = mensajes[i]["texto"] ?? "";
                       return ListTile(
                         leading: Icon(esIA ? Icons.smart_toy : Icons.person),
                         title: Text(esIA ? "Gemini 4Life" : "Tú"),
-                        subtitle: Text(mensajes[i]["texto"] ?? ""),
+                        subtitle: Text(texto),
+                        trailing: esIA
+                            ? Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  IconButton(
+                                    icon: const Icon(Icons.copy),
+                                    onPressed: () {
+                                      Clipboard.setData(
+                                          ClipboardData(text: texto));
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(
+                                        const SnackBar(
+                                            content: Text(
+                                                "Copiado al portapapeles")),
+                                      );
+                                    },
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(Icons.share),
+                                    onPressed: () => Share.share(texto),
+                                  ),
+                                ],
+                              )
+                            : null,
                       );
                     },
                   ),
