@@ -159,6 +159,10 @@ class _FormularioPacienteState extends State<FormularioPaciente> {
     
     Actúa como un experto en inmunología, bioenergética y asesor profesional de la línea de suplementos de bienestar de 4Life. Tu objetivo es generar un reporte de recomendación altamente profesional, ético y optimizado exclusivamente para ser compartido por WhatsApp.
 
+    REGLA CRÍTICA DE NEGOCIO: 
+    - Debes recomendar ÚNICAMENTE estos productos Transfer factor plus, Riovida stix, Energy go stix, Renuvo, Glucoach, Bcv, Malepro, Colageno tipo i, Transfer factor tri factor, Nutrastart, Riovida burst, Protf, Bioefa, Belle vie, Glutamine prime, Kbu, Vistari, Preo biotics, Fibre, Agpro, Suero, Crema para los ojos, Tonico, Crema humectante, Pasta de dientes, Crema cuerpo, Limpiador, Recall, Immune boost, Immune plus (TF Bost).
+    - Queda estrictamente prohibido inventar nombres de productos, sugerir medicamentos fármacos o marcas externas a 4Life.
+
     Instrucciones estrictas de formato y contenido:
     1. Usa el formato de WhatsApp: coloca asteriscos (*) al principio y al final de los títulos o frases clave para generar textos en **negrita**. Usa listas con viñetas limpias (-) o números.
     2. El mensaje debe ser directo, empático y estructurado en bloques separados por espacios para que sea scannable en el celular.
@@ -185,8 +189,9 @@ class _FormularioPacienteState extends State<FormularioPaciente> {
     - *Dosis noche:* [Cantidad exacta]
     - *Beneficio clave:* [Breve explicación técnica]
 
-    [Repetir estructura si se requiere un 3er o 4to producto, máximo]
-
+    [Repetir estructura si se requiere un 3er o 4to producto, máximo y si no requiere no incluir el texto "No se requiere" o "No aplica"] 
+    [Si por ejemplo no se tiene que tomar en la tarde o noche no pongas esa sección y solo pon las secciones que sean]
+      
     *RECOMENDACIONES DE BIENESTAR GENERAL*
     - [Dar 2 o 3 hábitos diarios o consejos funcionales de apoyo]
 
@@ -445,7 +450,9 @@ class PaginaHistorial extends StatefulWidget {
 }
 
 class _PaginaHistorialState extends State<PaginaHistorial> {
-  List<Map<String, dynamic>> _datosHistorial = [];
+  List<Map<String, dynamic>> _todoElHistorial = [];
+  List<Map<String, dynamic>> _historialFiltrado = [];
+  final TextEditingController _searchController = TextEditingController();
 
   @override
   void initState() {
@@ -460,7 +467,10 @@ class _PaginaHistorialState extends State<PaginaHistorial> {
         raw.map((e) => jsonDecode(e) as Map<String, dynamic>).toList();
 
     if (!mounted) return;
-    setState(() => _datosHistorial = datos);
+    setState(() {
+      _todoElHistorial = datos;
+      _historialFiltrado = datos;
+    });
   }
 
   String _nombrePaciente(Map<String, dynamic> registro) {
@@ -477,33 +487,77 @@ class _PaginaHistorialState extends State<PaginaHistorial> {
     return registro['titulo']?.toString() ?? "Sin nombre";
   }
 
-  void _mostrarDetalle(Map<String, dynamic> registro) {
+  void _filtrarHistorial(String query) {
+    final busqueda = query.toLowerCase().trim();
+    setState(() {
+      _historialFiltrado = _todoElHistorial
+          .where((paciente) =>
+              _nombrePaciente(paciente).toLowerCase().contains(busqueda))
+          .toList();
+    });
+  }
+
+  void _reDiagnosticar(Map<String, dynamic> pacienteViejo) {
+    final nombre = _nombrePaciente(pacienteViejo);
     final resultado =
-        registro['resultado']?.toString() ?? "Sin resultado guardado";
+        pacienteViejo['resultado']?.toString() ?? "Sin resultado guardado";
+    final nuevaPreguntaController = TextEditingController();
 
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text(_nombrePaciente(registro)),
-        content: SingleChildScrollView(child: Text(resultado)),
+        title: Text("Re-evaluar a $nombre"),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              "Diagnóstico anterior:\n$resultado",
+              maxLines: 4,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontSize: 12, color: Colors.grey),
+            ),
+            const SizedBox(height: 10),
+            TextField(
+              controller: nuevaPreguntaController,
+              decoration: const InputDecoration(
+                labelText: "¿Qué cambió o qué nueva duda tienes?",
+                border: OutlineInputBorder(),
+              ),
+              minLines: 1,
+              maxLines: 4,
+            ),
+          ],
+        ),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.copy),
-            onPressed: () {
-              Clipboard.setData(ClipboardData(text: resultado));
-              ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text("Copiado al portapapeles")));
-            },
-          ),
-          IconButton(
-              icon: const Icon(Icons.share),
-              onPressed: () => Share.share(resultado)),
           TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text("Cerrar")),
+              child: const Text("Cancelar")),
+          ElevatedButton(
+            onPressed: () {
+              final nuevaConsultaIA =
+                  "Tomando como base el diagnóstico anterior de este paciente: $resultado. "
+                  "El paciente ahora presenta lo siguiente o se requiere ajustar esto: ${nuevaPreguntaController.text}";
+
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) =>
+                      PaginaChatbot(consultaInicial: nuevaConsultaIA),
+                ),
+              );
+            },
+            child: const Text("Consultar Ajuste"),
+          ),
         ],
       ),
-    );
+    ).then((_) => nuevaPreguntaController.dispose());
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   @override
@@ -514,25 +568,40 @@ class _PaginaHistorialState extends State<PaginaHistorial> {
         backgroundColor: const Color(0xFF1A237E),
         foregroundColor: Colors.white,
       ),
-      body: _datosHistorial.isEmpty
-          ? const Center(
-              child: Text(
-                "No hay consultas guardadas",
-                style: TextStyle(fontSize: 16, color: Colors.grey),
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(10),
+            child: TextField(
+              controller: _searchController,
+              onChanged: _filtrarHistorial,
+              decoration: const InputDecoration(
+                labelText: 'Buscar paciente por nombre...',
+                prefixIcon: Icon(Icons.search),
+                border: OutlineInputBorder(),
               ),
-            )
-          : ListView.builder(
-              itemCount: _datosHistorial.length,
-              itemBuilder: (context, i) {
-                final registro = _datosHistorial[i];
-                return ListTile(
-                  leading: const Icon(Icons.person),
-                  title: Text(_nombrePaciente(registro)),
-                  subtitle: Text("Fecha: ${registro['fecha'] ?? 'Sin fecha'}"),
-                  onTap: () => _mostrarDetalle(registro),
-                );
-              },
             ),
+          ),
+          Expanded(
+            child: _historialFiltrado.isEmpty
+                ? const Center(child: Text("No se encontraron registros"))
+                : ListView.builder(
+                    itemCount: _historialFiltrado.length,
+                    itemBuilder: (context, i) {
+                      final item = _historialFiltrado[i];
+                      return ListTile(
+                        leading: const Icon(Icons.assignment_ind),
+                        title: Text(_nombrePaciente(item)),
+                        subtitle:
+                            Text("Fecha: ${item['fecha'] ?? 'Sin fecha'}"),
+                        trailing: const Icon(Icons.refresh, color: Colors.blue),
+                        onTap: () => _reDiagnosticar(item),
+                      );
+                    },
+                  ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -566,7 +635,9 @@ class PaginaDatosPaciente extends StatelessWidget {
 }
 
 class PaginaChatbot extends StatefulWidget {
-  const PaginaChatbot({super.key});
+  final String? consultaInicial;
+
+  const PaginaChatbot({super.key, this.consultaInicial});
 
   @override
   State<PaginaChatbot> createState() => _PaginaChatbotState();
@@ -576,6 +647,12 @@ class _PaginaChatbotState extends State<PaginaChatbot> {
   final TextEditingController _controller = TextEditingController();
   final List<Map<String, String>> mensajes = [];
   bool enviando = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller.text = widget.consultaInicial ?? "";
+  }
 
   Future<void> enviarMensaje() async {
     final textoUsuario = _controller.text.trim();
@@ -592,22 +669,30 @@ class _PaginaChatbotState extends State<PaginaChatbot> {
       apiKey: 'AIzaSyB3ea3TYD72dtfGyP9kSrjyot7RzMk0ZXk',
     );
 
-    final historial = mensajes
+    final historialPrevio = mensajes
+        .take(mensajes.length - 1)
         .map((mensaje) =>
             "${mensaje['rol'] == 'ia' ? 'Asesor IA' : 'Socio'}: ${mensaje['texto']}")
         .join("\n");
 
-    final prompt = """
+    final promptLimpioParaChatbot = """
     Eres un asesor IA para socios de 4Life.
+    Responde de manera clara, conversacional, sumamente ordenada y amigable.
+    IMPORTANTE: No uses asteriscos (*), no uses almohadillas (#), ni guiones extraños para dar formato.
+    Usa saltos de línea normales y texto limpio.
     Responde preguntas libres sobre suplementos, productos 4Life, hábitos saludables, ventas y seguimiento de clientes.
     Mantén un tono claro, práctico y responsable. Si la pregunta parece médica, recomienda consultar a un profesional de salud.
 
     Conversación actual:
-    $historial
+    $historialPrevio
+
+    Consulta actual:
+    $textoUsuario
     """;
 
     try {
-      final response = await model.generateContent([Content.text(prompt)]);
+      final response =
+          await model.generateContent([Content.text(promptLimpioParaChatbot)]);
       final respuestaIA = response.text ?? "No pude generar una respuesta.";
 
       if (!mounted) return;
