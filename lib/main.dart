@@ -7,6 +7,151 @@ import 'package:share_plus/share_plus.dart'; // <--- PARA COMPARTIR
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 
+const List<String> productosPermitidos4Life = [
+  'Transfer factor plus',
+  'Riovida stix',
+  'Energy go stix',
+  'Renuvo',
+  'Glucoach',
+  'Bcv',
+  'Malepro',
+  'Colageno tipo i',
+  'Transfer factor tri factor',
+  'Nutrastart',
+  'Riovida burst',
+  'Protf',
+  'Bioefa',
+  'Belle vie',
+  'Glutamine prime',
+  'Kbu',
+  'Vistari',
+  'Preo biotics',
+  'Fibre',
+  'Agpro',
+  'Suero',
+  'Crema para los ojos',
+  'Tonico',
+  'Crema humectante',
+  'Pasta de dientes',
+  'Crema cuerpo',
+  'Limpiador',
+  'Recall',
+  'Immune boost',
+  'Immune plus (TF Bost)',
+];
+
+final String catalogoPermitido4Life = productosPermitidos4Life.join(', ');
+
+class ProductoPrecio {
+  final String nombre;
+  final double afiliado;
+  final double publico;
+  final int? lp;
+
+  const ProductoPrecio({
+    required this.nombre,
+    required this.afiliado,
+    required this.publico,
+    required this.lp,
+  });
+}
+
+const List<ProductoPrecio> productosConPrecio4Life = [
+  ProductoPrecio(
+      nombre: 'Transfer factor plus', afiliado: 83.17, publico: 110.98, lp: 55),
+  ProductoPrecio(
+      nombre: 'Riovida stix', afiliado: 42.10, publico: 56.47, lp: 19),
+  ProductoPrecio(
+      nombre: 'Energy go stix', afiliado: 69.82, publico: 92.41, lp: 36),
+  ProductoPrecio(nombre: 'Renuvo', afiliado: 69.82, publico: 92.41, lp: 42),
+  ProductoPrecio(nombre: 'Glucoach', afiliado: 79.06, publico: 104.73, lp: 53),
+  ProductoPrecio(nombre: 'Bcv', afiliado: 79.06, publico: 104.73, lp: 52),
+  ProductoPrecio(nombre: 'Malepro', afiliado: 77.01, publico: 102.68, lp: 44),
+  ProductoPrecio(
+      nombre: 'Colageno tipo i', afiliado: 41.07, publico: 54.42, lp: 23),
+  ProductoPrecio(
+      nombre: 'Transfer factor tri factor',
+      afiliado: 66.74,
+      publico: 88.30,
+      lp: 40),
+  ProductoPrecio(nombre: 'Nutrastart', afiliado: 73.93, publico: 98.57, lp: 30),
+  ProductoPrecio(
+      nombre: 'Riovida burst', afiliado: 53.39, publico: 70.85, lp: 27),
+  ProductoPrecio(nombre: 'Protf', afiliado: 90.36, publico: 120.13, lp: 26),
+  ProductoPrecio(nombre: 'Bioefa', afiliado: 31.83, publico: 42.10, lp: 17),
+  ProductoPrecio(nombre: 'Belle vie', afiliado: 67.77, publico: 90.36, lp: 43),
+  ProductoPrecio(
+      nombre: 'Glutamine prime', afiliado: 46.21, publico: 61.61, lp: 27),
+  ProductoPrecio(nombre: 'Kbu', afiliado: 67.77, publico: 90.36, lp: 42),
+  ProductoPrecio(nombre: 'Vistari', afiliado: 68.79, publico: 91.38, lp: 40),
+  ProductoPrecio(
+      nombre: 'Preo biotics', afiliado: 57.50, publico: 75.98, lp: 32),
+  ProductoPrecio(nombre: 'Fibre', afiliado: 52.37, publico: 59.82, lp: 22),
+  ProductoPrecio(nombre: 'Agpro', afiliado: 73.00, publico: 97.00, lp: null),
+  ProductoPrecio(nombre: 'Suero', afiliado: 45.00, publico: 60.00, lp: 27),
+  ProductoPrecio(
+      nombre: 'Crema para los ojos', afiliado: 45.00, publico: 60.00, lp: 27),
+  ProductoPrecio(nombre: 'Tonico', afiliado: 36.00, publico: 48.00, lp: 19),
+  ProductoPrecio(
+      nombre: 'Crema humectante', afiliado: 36.96, publico: 49.29, lp: 19),
+  ProductoPrecio(
+      nombre: 'Pasta de dientes', afiliado: 16.43, publico: 21.56, lp: 5),
+  ProductoPrecio(
+      nombre: 'Crema cuerpo', afiliado: 25.00, publico: 33.00, lp: 8),
+  ProductoPrecio(nombre: 'Recall', afiliado: 72.90, publico: 95.62, lp: 42),
+  ProductoPrecio(
+      nombre: 'Immune plus (TF Bost)', afiliado: 27.72, publico: 36.96, lp: 15),
+];
+
+String normalizarTexto(String texto) {
+  return texto
+      .toLowerCase()
+      .replaceAll(RegExp(r'[áàäâ]'), 'a')
+      .replaceAll(RegExp(r'[éèëê]'), 'e')
+      .replaceAll(RegExp(r'[íìïî]'), 'i')
+      .replaceAll(RegExp(r'[óòöô]'), 'o')
+      .replaceAll(RegExp(r'[úùüû]'), 'u')
+      .replaceAll('ñ', 'n')
+      .replaceAll(RegExp(r'[^a-z0-9 ]'), ' ')
+      .replaceAll(RegExp(r'\s+'), ' ')
+      .trim();
+}
+
+int puntajeCoincidencia(String consulta, String producto) {
+  final q = normalizarTexto(consulta);
+  final p = normalizarTexto(producto);
+  if (q.isEmpty) return 0;
+  if (q == p) return 100;
+  if (p.contains(q) || q.contains(p)) return 85;
+
+  final palabras = q.split(' ').where((e) => e.isNotEmpty).toSet();
+  final palabrasProducto = p.split(' ').where((e) => e.isNotEmpty).toSet();
+  if (palabras.isEmpty) return 0;
+  final coincidencias = palabras.intersection(palabrasProducto).length;
+  return ((coincidencias / palabras.length) * 70).round();
+}
+
+ProductoPrecio? buscarProductoConPrecio(String consulta) {
+  ProductoPrecio? mejor;
+  var mejorPuntaje = 0;
+  for (final producto in productosConPrecio4Life) {
+    final puntaje = puntajeCoincidencia(consulta, producto.nombre);
+    if (puntaje > mejorPuntaje) {
+      mejorPuntaje = puntaje;
+      mejor = producto;
+    }
+  }
+  return mejorPuntaje >= 45 ? mejor : null;
+}
+
+List<String> dividirConsultaProductos(String texto) {
+  return texto
+      .split(RegExp(r'[,;\n]+'))
+      .map((e) => e.trim())
+      .where((e) => e.isNotEmpty)
+      .toList();
+}
+
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
   runApp(const DoctorSuplementos());
@@ -41,23 +186,30 @@ class PantallaPrincipal extends StatelessWidget {
         backgroundColor: const Color(0xFF1A237E),
         foregroundColor: Colors.white,
       ),
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 30),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.biotech, size: 80, color: Color(0xFF1A237E)),
-              const SizedBox(height: 40),
-              _botonMenu(context, "Consultar producto(s)", Icons.search,
-                  const ConsultaProductoPagina()),
-              _botonMenu(context, "Diagnóstico", Icons.medication,
-                  const FormularioPaciente()),
-              _botonMenu(
-                  context, "Historial", Icons.history, const PaginaHistorial()),
-              _botonMenu(context, "Asesor IA 4Life", Icons.chat,
-                  const PaginaChatbot()),
-            ],
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(vertical: 24),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 30),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.biotech, size: 80, color: Color(0xFF1A237E)),
+                const SizedBox(height: 40),
+                _botonMenu(context, "Consultar producto(s)", Icons.search,
+                    const ConsultaProductoPagina()),
+                _botonMenu(context, "Consultora y calculadora", Icons.calculate,
+                    const PaginaCalculadoraPrecios()),
+                _botonMenu(context, "Diagnóstico", Icons.medication,
+                    const FormularioPaciente()),
+                _botonMenu(context, "Historial", Icons.history,
+                    const PaginaHistorial()),
+                _botonMenu(context, "Asesor IA 4Life", Icons.chat,
+                    const PaginaChatbot()),
+                _botonMenu(context, "Historial de chats", Icons.forum,
+                    const PaginaHistorialChatbot()),
+              ],
+            ),
           ),
         ),
       ),
@@ -105,6 +257,58 @@ class HistorialService {
     final raw = prefs.getStringList('historial_pacientes') ?? [];
     raw.insert(0, jsonEncode(registro));
     await prefs.setStringList('historial_pacientes', raw);
+  }
+}
+
+class ChatHistoryService {
+  static const String _key = 'historial_chat_4life';
+
+  static Future<List<Map<String, dynamic>>> cargarConversaciones() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getStringList(_key) ?? [];
+    return raw
+        .map((e) => jsonDecode(e) as Map<String, dynamic>)
+        .where((e) => e['mensajes'] is List)
+        .toList();
+  }
+
+  static Future<void> guardarConversacion(
+    String id,
+    List<Map<String, String>> mensajes,
+  ) async {
+    if (mensajes.isEmpty) return;
+
+    final prefs = await SharedPreferences.getInstance();
+    final conversaciones = await cargarConversaciones();
+    final primeraPregunta = mensajes.firstWhere(
+      (m) => m['rol'] == 'usuario',
+      orElse: () => mensajes.first,
+    )['texto'];
+
+    final titulo = primeraPregunta ?? 'Chat 4Life';
+    final registro = {
+      'id': id,
+      'fecha': DateTime.now().toString().substring(0, 16),
+      'titulo': titulo.length > 45 ? '${titulo.substring(0, 45)}...' : titulo,
+      'mensajes': mensajes,
+    };
+
+    conversaciones.removeWhere((chat) => chat['id'] == id);
+    conversaciones.insert(0, registro);
+    await prefs.setStringList(
+      _key,
+      conversaciones.map((chat) => jsonEncode(chat)).toList(),
+    );
+  }
+
+  static Future<void> eliminarConversacion(String id) async {
+    final prefs = await SharedPreferences.getInstance();
+    final conversaciones = await cargarConversaciones();
+    conversaciones.removeWhere((chat) => chat['id'] == id);
+    await prefs.setStringList(
+      _key,
+      conversaciones.map((chat) => jsonEncode(chat)).toList(),
+    );
   }
 }
 
@@ -160,7 +364,7 @@ class _FormularioPacienteState extends State<FormularioPaciente> {
     Actúa como un experto en inmunología, bioenergética y asesor profesional de la línea de suplementos de bienestar de 4Life. Tu objetivo es generar un reporte de recomendación altamente profesional, ético y optimizado exclusivamente para ser compartido por WhatsApp.
 
     REGLA CRÍTICA DE NEGOCIO: 
-    - Debes recomendar ÚNICAMENTE estos productos Transfer factor plus, Riovida stix, Energy go stix, Renuvo, Glucoach, Bcv, Malepro, Colageno tipo i, Transfer factor tri factor, Nutrastart, Riovida burst, Protf, Bioefa, Belle vie, Glutamine prime, Kbu, Vistari, Preo biotics, Fibre, Agpro, Suero, Crema para los ojos, Tonico, Crema humectante, Pasta de dientes, Crema cuerpo, Limpiador, Recall, Immune boost, Immune plus (TF Bost).
+    - Debes recomendar ÚNICAMENTE estos productos: $catalogoPermitido4Life.
     - Queda estrictamente prohibido inventar nombres de productos, sugerir medicamentos fármacos o marcas externas a 4Life.
 
     Instrucciones estrictas de formato y contenido:
@@ -363,6 +567,11 @@ class _ConsultaProductoPaginaState extends State<ConsultaProductoPagina> {
     de la marca. Si hay varias opciones parecidas, elige la mas probable y menciona
     brevemente que fue una coincidencia aproximada.
 
+    REGLA OBLIGATORIA: Solo puedes identificar, describir o recomendar productos de esta lista:
+    $catalogoPermitido4Life.
+    Si el usuario pregunta por un producto fuera de la lista, indica que no esta en el catalogo permitido
+    y sugiere que escriba uno de los productos autorizados.
+
     Responde en espanol, claro y ordenado, con esta estructura:
 
     Producto identificado:
@@ -384,7 +593,7 @@ class _ConsultaProductoPaginaState extends State<ConsultaProductoPagina> {
     [Dosis general si la conoces. Si no estas seguro, indicalo y recomienda revisar la etiqueta oficial]
 
     Nota:
-    No inventes informacion si no estas seguro. No recomiendes medicamentos ni marcas externas.
+    No inventes informacion si no estas seguro. No recomiendes medicamentos, marcas externas ni productos fuera del catalogo permitido.
     """;
     try {
       final response = await model.generateContent([Content.text(prompt)]);
@@ -458,6 +667,202 @@ class _ConsultaProductoPaginaState extends State<ConsultaProductoPagina> {
                     onPressed: consultar, child: const Text("Consultar")),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class PaginaCalculadoraPrecios extends StatefulWidget {
+  const PaginaCalculadoraPrecios({super.key});
+
+  @override
+  State<PaginaCalculadoraPrecios> createState() =>
+      _PaginaCalculadoraPreciosState();
+}
+
+class _PaginaCalculadoraPreciosState extends State<PaginaCalculadoraPrecios> {
+  final TextEditingController _controller = TextEditingController();
+  List<ProductoPrecio> _productos = [];
+  List<String> _noEncontrados = [];
+
+  void _calcular() {
+    final consultas = dividirConsultaProductos(_controller.text);
+    final encontrados = <ProductoPrecio>[];
+    final noEncontrados = <String>[];
+
+    for (final consulta in consultas) {
+      final producto = buscarProductoConPrecio(consulta);
+      if (producto == null) {
+        noEncontrados.add(consulta);
+      } else {
+        encontrados.add(producto);
+      }
+    }
+
+    setState(() {
+      _productos = encontrados;
+      _noEncontrados = noEncontrados;
+    });
+  }
+
+  double get _totalAfiliado =>
+      _productos.fold(0, (total, p) => total + p.afiliado);
+
+  double get _totalPublico =>
+      _productos.fold(0, (total, p) => total + p.publico);
+
+  int get _totalLp => _productos.fold(0, (total, p) => total + (p.lp ?? 0));
+
+  String _precio(double valor) => '\$${valor.toStringAsFixed(2)}';
+
+  String _resumenCompartir() {
+    final buffer = StringBuffer('Consulta de precios 4Life\n\n');
+    for (final producto in _productos) {
+      buffer.writeln(producto.nombre);
+      buffer.writeln('Afiliado: ${_precio(producto.afiliado)}');
+      buffer.writeln('Publico: ${_precio(producto.publico)}');
+      buffer.writeln('LP: ${producto.lp?.toString() ?? 'Sin dato'}\n');
+    }
+    buffer.writeln('Total afiliado: ${_precio(_totalAfiliado)}');
+    buffer.writeln('Total publico: ${_precio(_totalPublico)}');
+    buffer.writeln('Total LP: $_totalLp');
+    return buffer.toString();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text("Consultora y calculadora"),
+        backgroundColor: const Color(0xFF1A237E),
+        foregroundColor: Colors.white,
+      ),
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              children: [
+                TextField(
+                  controller: _controller,
+                  minLines: 1,
+                  maxLines: 4,
+                  decoration: const InputDecoration(
+                    labelText: "Producto(s)",
+                    hintText: "Ej: Bioefa, Transfer factor plus",
+                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.shopping_bag),
+                  ),
+                  onSubmitted: (_) => _calcular(),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: _calcular,
+                        icon: const Icon(Icons.calculate),
+                        label: const Text("Calcular"),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF1A237E),
+                          foregroundColor: Colors.white,
+                          minimumSize: const Size(double.infinity, 48),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    IconButton(
+                      tooltip: "Copiar resumen",
+                      onPressed: _productos.isEmpty
+                          ? null
+                          : () {
+                              Clipboard.setData(
+                                  ClipboardData(text: _resumenCompartir()));
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                    content: Text("Resumen copiado")),
+                              );
+                            },
+                      icon: const Icon(Icons.copy),
+                    ),
+                    IconButton(
+                      tooltip: "Compartir resumen",
+                      onPressed: _productos.isEmpty
+                          ? null
+                          : () => Share.share(_resumenCompartir()),
+                      icon: const Icon(Icons.share),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: _productos.isEmpty && _noEncontrados.isEmpty
+                ? const Center(
+                    child: Text(
+                      "Escribe uno o varios productos para consultar precios y LP.",
+                      textAlign: TextAlign.center,
+                      style: TextStyle(fontSize: 16, color: Colors.grey),
+                    ),
+                  )
+                : ListView(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                    children: [
+                      for (final producto in _productos)
+                        Card(
+                          child: ListTile(
+                            title: Text(producto.nombre),
+                            subtitle: Text(
+                              "Afiliado: ${_precio(producto.afiliado)}\n"
+                              "Publico: ${_precio(producto.publico)}\n"
+                              "LP: ${producto.lp?.toString() ?? 'Sin dato'}",
+                            ),
+                          ),
+                        ),
+                      if (_productos.isNotEmpty)
+                        Card(
+                          color: const Color(0xFFE8EAF6),
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  "Totales",
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Text("Afiliado: ${_precio(_totalAfiliado)}"),
+                                Text("Publico: ${_precio(_totalPublico)}"),
+                                Text("LP: $_totalLp"),
+                              ],
+                            ),
+                          ),
+                        ),
+                      for (final item in _noEncontrados)
+                        Card(
+                          child: ListTile(
+                            leading: const Icon(Icons.info_outline),
+                            title: Text(item),
+                            subtitle: const Text(
+                              "No se encontro precio para este producto en la lista cargada.",
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+          ),
+        ],
       ),
     );
   }
@@ -776,10 +1181,115 @@ class PaginaDatosPaciente extends StatelessWidget {
   }
 }
 
+class PaginaHistorialChatbot extends StatefulWidget {
+  const PaginaHistorialChatbot({super.key});
+
+  @override
+  State<PaginaHistorialChatbot> createState() => _PaginaHistorialChatbotState();
+}
+
+class _PaginaHistorialChatbotState extends State<PaginaHistorialChatbot> {
+  List<Map<String, dynamic>> _conversaciones = [];
+  bool _cargando = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _cargar();
+  }
+
+  Future<void> _cargar() async {
+    final datos = await ChatHistoryService.cargarConversaciones();
+    if (!mounted) return;
+    setState(() {
+      _conversaciones = datos;
+      _cargando = false;
+    });
+  }
+
+  List<Map<String, String>> _mensajes(Map<String, dynamic> chat) {
+    final raw = chat['mensajes'];
+    if (raw is! List) return [];
+    return raw
+        .whereType<Map>()
+        .map((m) => {
+              'rol': m['rol']?.toString() ?? 'usuario',
+              'texto': m['texto']?.toString() ?? '',
+            })
+        .toList();
+  }
+
+  Future<void> _eliminar(String id) async {
+    await ChatHistoryService.eliminarConversacion(id);
+    await _cargar();
+  }
+
+  void _abrirChat(Map<String, dynamic> chat) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => PaginaChatbot(
+          conversacionId: chat['id']?.toString(),
+          mensajesIniciales: _mensajes(chat),
+        ),
+      ),
+    ).then((_) => _cargar());
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text("Historial de chats"),
+        backgroundColor: const Color(0xFF1A237E),
+        foregroundColor: Colors.white,
+      ),
+      body: _cargando
+          ? const Center(child: CircularProgressIndicator())
+          : _conversaciones.isEmpty
+              ? const Center(child: Text("No hay conversaciones guardadas"))
+              : ListView.builder(
+                  itemCount: _conversaciones.length,
+                  itemBuilder: (context, index) {
+                    final chat = _conversaciones[index];
+                    final id = chat['id']?.toString() ?? '';
+                    return ListTile(
+                      leading: const Icon(Icons.chat_bubble_outline),
+                      title: Text(chat['titulo']?.toString() ?? 'Chat 4Life'),
+                      subtitle: Text("Fecha: ${chat['fecha'] ?? 'Sin fecha'}"),
+                      onTap: () => _abrirChat(chat),
+                      trailing: IconButton(
+                        tooltip: "Eliminar",
+                        icon: const Icon(Icons.delete_outline),
+                        onPressed: id.isEmpty ? null : () => _eliminar(id),
+                      ),
+                    );
+                  },
+                ),
+      floatingActionButton: FloatingActionButton(
+        backgroundColor: const Color(0xFF1A237E),
+        foregroundColor: Colors.white,
+        onPressed: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const PaginaChatbot()),
+        ).then((_) => _cargar()),
+        child: const Icon(Icons.add),
+      ),
+    );
+  }
+}
+
 class PaginaChatbot extends StatefulWidget {
   final String? consultaInicial;
+  final String? conversacionId;
+  final List<Map<String, String>>? mensajesIniciales;
 
-  const PaginaChatbot({super.key, this.consultaInicial});
+  const PaginaChatbot({
+    super.key,
+    this.consultaInicial,
+    this.conversacionId,
+    this.mensajesIniciales,
+  });
 
   @override
   State<PaginaChatbot> createState() => _PaginaChatbotState();
@@ -789,10 +1299,16 @@ class _PaginaChatbotState extends State<PaginaChatbot> {
   final TextEditingController _controller = TextEditingController();
   final List<Map<String, String>> mensajes = [];
   bool enviando = false;
+  late String _conversacionId;
 
   @override
   void initState() {
     super.initState();
+    _conversacionId = widget.conversacionId ??
+        DateTime.now().microsecondsSinceEpoch.toString();
+    if (widget.mensajesIniciales != null) {
+      mensajes.addAll(widget.mensajesIniciales!);
+    }
     _controller.text = widget.consultaInicial ?? "";
   }
 
@@ -823,6 +1339,11 @@ class _PaginaChatbotState extends State<PaginaChatbot> {
     IMPORTANTE: No uses asteriscos (*), no uses almohadillas (#), ni guiones extraños para dar formato.
     Usa saltos de línea normales y texto limpio.
     Responde preguntas libres sobre suplementos, productos 4Life, hábitos saludables, ventas y seguimiento de clientes.
+    REGLA OBLIGATORIA DE PRODUCTOS: Cuando recomiendes, compares, armes rutinas o sugieras productos,
+    usa UNICAMENTE estos nombres del catalogo autorizado: $catalogoPermitido4Life.
+    Si el socio pide algo que requiera un producto fuera de esa lista, explica que solo puedes recomendar
+    productos del catalogo autorizado y ofrece alternativas dentro de esa lista.
+    No inventes nombres, presentaciones ni productos adicionales.
     Mantén un tono claro, práctico y responsable. Si la pregunta parece médica, recomienda consultar a un profesional de salud.
 
     Conversación actual:
@@ -841,6 +1362,7 @@ class _PaginaChatbotState extends State<PaginaChatbot> {
       setState(() {
         mensajes.add({"rol": "ia", "texto": respuestaIA});
       });
+      await ChatHistoryService.guardarConversacion(_conversacionId, mensajes);
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -849,6 +1371,7 @@ class _PaginaChatbotState extends State<PaginaChatbot> {
           "texto": "No se pudo conectar con la IA. Intenta nuevamente."
         });
       });
+      await ChatHistoryService.guardarConversacion(_conversacionId, mensajes);
     } finally {
       if (mounted) {
         setState(() => enviando = false);
@@ -869,6 +1392,18 @@ class _PaginaChatbotState extends State<PaginaChatbot> {
         title: const Text("Asesor IA 4Life"),
         backgroundColor: const Color(0xFF1A237E),
         foregroundColor: Colors.white,
+        actions: [
+          IconButton(
+            tooltip: "Historial de chats",
+            icon: const Icon(Icons.history),
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const PaginaHistorialChatbot(),
+              ),
+            ),
+          ),
+        ],
       ),
       body: Column(
         children: [
