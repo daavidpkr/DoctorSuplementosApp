@@ -120,8 +120,8 @@ class FormularioPaciente extends StatefulWidget {
 class _FormularioPacienteState extends State<FormularioPaciente> {
   late TextEditingController nombreController;
   late TextEditingController edadController;
-  late TextEditingController generoController;
   late TextEditingController historialController;
+  String? _generoSeleccionado;
   bool cargando = false;
 
   @override
@@ -131,13 +131,16 @@ class _FormularioPacienteState extends State<FormularioPaciente> {
         text: widget.infoPrevia?['datos']?['nombre'] ?? "");
     edadController =
         TextEditingController(text: widget.infoPrevia?['datos']?['edad'] ?? "");
-    generoController = TextEditingController(
-        text: widget.infoPrevia?['datos']?['genero'] ?? "");
+    _generoSeleccionado = widget.infoPrevia?['datos']?['genero'];
     historialController = TextEditingController();
   }
 
   Future<void> generarDiagnostico() async {
     if (historialController.text.isEmpty) return;
+    if (_generoSeleccionado == null || _generoSeleccionado!.isEmpty) {
+      _mostrarDialogoSimple("Falta género", "Por favor, selecciona el género.");
+      return;
+    }
     setState(() => cargando = true);
 
     final model = GenerativeModel(
@@ -152,17 +155,42 @@ class _FormularioPacienteState extends State<FormularioPaciente> {
     final prompt = """
     $contextoAnterior
     SÍNTOMAS ACTUALES: ${historialController.text}
-    DATOS: Nombre: ${nombreController.text}, Edad: ${edadController.text}.
+    DATOS: Nombre: ${nombreController.text}, Edad: ${edadController.text}, Género: $_generoSeleccionado.
     
-    Actúa como Especialista 4Life. Entrega:
-    1. Título breve.
-    2. Hallazgos/Diagnóstico con explicación.
-    3. Nivel de confianza (Alto/Medio/Bajo).
-    4. Recomendaciones accionables (Dosis exactas, dieta, ejercicio). Hazlo que sea legible y fácil de seguir, como por ejemplo en una lista o tabla.
-    5. Productos relacionados (de la lista permitida).
-    
-    PRODUCTOS PERMITIDOS: [TRANSFER FACTOR PLUS, RIOVIDA, ENERGY, RENUVO, GLUCOACH, BCV, MALEPRO, COLAGENO, TRI FACTOR, NUTRASTART, BIOEFA, BELLE VIE, GLUTAMINE, KBU, VISTARI, PREO BIOTICS, FIBRE, RECALL, IMMUNE BOOST].
-    """;
+    Actúa como un experto en inmunología, bioenergética y asesor profesional de la línea de suplementos de bienestar de 4Life. Tu objetivo es generar un reporte de recomendación altamente profesional, ético y optimizado exclusivamente para ser compartido por WhatsApp.
+
+    Instrucciones estrictas de formato y contenido:
+    1. Usa el formato de WhatsApp: coloca asteriscos (*) al principio y al final de los títulos o frases clave para generar textos en **negrita**. Usa listas con viñetas limpias (-) o números.
+    2. El mensaje debe ser directo, empático y estructurado en bloques separados por espacios para que sea scannable en el celular.
+    3. RECOMENDACIÓN DE PRODUCTOS: Recomienda un máximo de 3 o 4 productos de 4Life específicos para el caso. No satures al cliente.
+    4. DOSIFICACIÓN EXACTA Y DETALLADA: Para cada producto recomendado, debes dar la dosis exacta en una lista independiente, clara y legible. Queda estrictamente prohibido agrupar o mezclar las dosis en un solo párrafo de texto corrido.
+    5. TONO Y SEGURIDAD: Mantén un tono científico pero accesible. No uses lenguaje de ventas exagerado ni prometas "curas milagrosas". Incluye siempre de forma sutil que los suplementos respaldan las funciones fisiológicas y el sistema inmunitario, y que no sustituyen ningún tratamiento médico.
+
+    Estructura requerida para la respuesta:
+
+    *SALUDO Y ANÁLISIS DEL CASO*
+    [Breve introducción empática analizando los datos del paciente]
+
+    *SUSTRATO Y RESPALDO RECOMENDADO (Máx. 3-4 productos)*
+
+    *1. [Nombre del Producto 4Life]*
+    - *Dosis mañana:* [Cantidad exacta]
+    - *Dosis tarde:* [Cantidad exacta]
+    - *Dosis noche:* [Cantidad exacta]
+    - *Beneficio clave:* [Breve explicación técnica de cómo actúa en el organismo]
+
+    *2. [Nombre del Producto 4Life]*
+    - *Dosis mañana:* [Cantidad exacta]
+    - *Dosis tarde:* [Cantidad exacta]
+    - *Dosis noche:* [Cantidad exacta]
+    - *Beneficio clave:* [Breve explicación técnica]
+
+    [Repetir estructura si se requiere un 3er o 4to producto, máximo]
+
+    *RECOMENDACIONES DE BIENESTAR GENERAL*
+    - [Dar 2 o 3 hábitos diarios o consejos funcionales de apoyo]
+
+    *Nota de seguridad:* Los productos de 4Life están diseñados para respaldar y potenciar la inteligencia de tu sistema inmunitario y funciones metabólicas generales; no reemplazan las indicaciones de su médico de cabecera.""";
 
     try {
       final content = [Content.text(prompt)];
@@ -173,7 +201,7 @@ class _FormularioPacienteState extends State<FormularioPaciente> {
           "Diagnóstico: ${nombreController.text}", textoFinal, {
         'nombre': nombreController.text,
         'edad': edadController.text,
-        'genero': generoController.text,
+        'genero': _generoSeleccionado!,
         'sintomas': historialController.text,
       });
 
@@ -226,7 +254,32 @@ class _FormularioPacienteState extends State<FormularioPaciente> {
           children: [
             _buildCampo("Nombre", nombreController, "Nombre..."),
             _buildCampo("Edad", edadController, "Edad..."),
-            _buildCampo("Género", generoController, "Género..."),
+            Padding(
+              padding: const EdgeInsets.only(bottom: 15),
+              child: DropdownButtonFormField<String>(
+                initialValue: _generoSeleccionado,
+                decoration: const InputDecoration(
+                  labelText: 'Género del Paciente',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.wc),
+                ),
+                items: const [
+                  DropdownMenuItem(value: 'Hombre', child: Text('Hombre')),
+                  DropdownMenuItem(value: 'Mujer', child: Text('Mujer')),
+                ],
+                onChanged: (String? nuevoValor) {
+                  setState(() {
+                    _generoSeleccionado = nuevoValor;
+                  });
+                },
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Por favor, selecciona el género';
+                  }
+                  return null;
+                },
+              ),
+            ),
             _buildCampo("Síntomas actuales", historialController,
                 "Describa qué siente...",
                 lineas: 4),
