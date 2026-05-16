@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_generative_ai/google_generative_ai.dart';
-//import 'package:firebase_core/firebase_core.dart';
-//import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/services.dart'; // <--- PARA COPIAR (Clipboard)
 import 'package:share_plus/share_plus.dart'; // <--- PARA COMPARTIR
 import 'package:shared_preferences/shared_preferences.dart';
@@ -234,7 +234,8 @@ class _FormularioPacienteState extends State<FormularioPaciente> {
               }),
           IconButton(
               icon: const Icon(Icons.share),
-              onPressed: () => Share.share(mensaje)),
+              onPressed: () =>
+                  SharePlus.instance.share(ShareParams(text: mensaje))),
           TextButton(
               onPressed: () => Navigator.pop(context),
               child: const Text("Cerrar")),
@@ -354,7 +355,8 @@ class _ConsultaProductoPaginaState extends State<ConsultaProductoPagina> {
                   Clipboard.setData(ClipboardData(text: response.text ?? ""))),
           IconButton(
               icon: const Icon(Icons.share),
-              onPressed: () => Share.share(response.text ?? "")),
+              onPressed: () => SharePlus.instance
+                  .share(ShareParams(text: response.text ?? ""))),
           TextButton(
               onPressed: () => Navigator.pop(c), child: const Text("Cerrar")),
         ],
