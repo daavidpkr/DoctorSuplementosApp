@@ -234,8 +234,7 @@ class _FormularioPacienteState extends State<FormularioPaciente> {
               }),
           IconButton(
               icon: const Icon(Icons.share),
-              onPressed: () =>
-                  SharePlus.instance.share(ShareParams(text: mensaje))),
+              onPressed: () => Share.share(mensaje)),
           TextButton(
               onPressed: () => Navigator.pop(context),
               child: const Text("Cerrar")),
@@ -355,8 +354,7 @@ class _ConsultaProductoPaginaState extends State<ConsultaProductoPagina> {
                   Clipboard.setData(ClipboardData(text: response.text ?? ""))),
           IconButton(
               icon: const Icon(Icons.share),
-              onPressed: () => SharePlus.instance
-                  .share(ShareParams(text: response.text ?? ""))),
+              onPressed: () => Share.share(response.text ?? "")),
           TextButton(
               onPressed: () => Navigator.pop(c), child: const Text("Cerrar")),
         ],
