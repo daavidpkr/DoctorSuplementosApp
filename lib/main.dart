@@ -151,7 +151,7 @@ class _FormularioPacienteState extends State<FormularioPaciente> {
     String contextoAnterior = widget.infoPrevia != null
         ? "HISTORIAL PREVIO: El paciente anteriormente reportó: ${widget.infoPrevia!['datos']['sintomas']}. El resultado anterior fue: ${widget.infoPrevia!['resultado']}. "
         : "";
-        
+
     final prompt = """
     $contextoAnterior
     SÍNTOMAS ACTUALES: ${historialController.text}
@@ -261,28 +261,37 @@ class _FormularioPacienteState extends State<FormularioPaciente> {
             _buildCampo("Edad", edadController, "Edad..."),
             Padding(
               padding: const EdgeInsets.only(bottom: 15),
-              child: DropdownButtonFormField<String>(
-                initialValue: _generoSeleccionado,
-                decoration: const InputDecoration(
-                  labelText: 'Género del Paciente',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.wc),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: SizedBox(
+                  width: 220,
+                  child: DropdownButtonFormField<String>(
+                    initialValue: _generoSeleccionado,
+                    isDense: true,
+                    decoration: const InputDecoration(
+                      labelText: 'Género',
+                      border: OutlineInputBorder(),
+                      prefixIcon: Icon(Icons.wc),
+                      contentPadding:
+                          EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                    ),
+                    items: const [
+                      DropdownMenuItem(value: 'Hombre', child: Text('Hombre')),
+                      DropdownMenuItem(value: 'Mujer', child: Text('Mujer')),
+                    ],
+                    onChanged: (String? nuevoValor) {
+                      setState(() {
+                        _generoSeleccionado = nuevoValor;
+                      });
+                    },
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Selecciona el género';
+                      }
+                      return null;
+                    },
+                  ),
                 ),
-                items: const [
-                  DropdownMenuItem(value: 'Hombre', child: Text('Hombre')),
-                  DropdownMenuItem(value: 'Mujer', child: Text('Mujer')),
-                ],
-                onChanged: (String? nuevoValor) {
-                  setState(() {
-                    _generoSeleccionado = nuevoValor;
-                  });
-                },
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Por favor, selecciona el género';
-                  }
-                  return null;
-                },
               ),
             ),
             _buildCampo("Síntomas actuales", historialController,
@@ -390,8 +399,12 @@ class _ConsultaProductoPaginaState extends State<ConsultaProductoPagina> {
           actions: [
             IconButton(
                 icon: const Icon(Icons.copy),
-                onPressed: () =>
-                    Clipboard.setData(ClipboardData(text: resultado))),
+                onPressed: () {
+                  Clipboard.setData(ClipboardData(text: resultado));
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text("Copiado al portapapeles")),
+                  );
+                }),
             IconButton(
                 icon: const Icon(Icons.share),
                 onPressed: () => Share.share(resultado)),
