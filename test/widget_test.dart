@@ -13,7 +13,7 @@ void main() {
   testWidgets('shows main menu', (WidgetTester tester) async {
     await tester.pumpWidget(const DoctorSuplementos());
 
-    expect(find.text('4Life Asesor Integral'), findsOneWidget);
+    expect(find.text('DoctorSuplementos'), findsOneWidget);
     expect(find.text('Consultar producto(s)'), findsOneWidget);
     expect(find.text('Diagnóstico'), findsOneWidget);
     expect(find.text('Historial'), findsOneWidget);

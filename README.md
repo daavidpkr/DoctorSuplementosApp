@@ -1,17 +1,36 @@
-# doctor_suplementos
+# DoctorSuplementos
 
-A new Flutter project.
+Aplicacion Flutter de consulta, asesoria y calculadora para suplementos.
 
-## Getting Started
+## Generar archivos de escritorio
 
-This project is a starting point for a Flutter application.
+### Windows
 
-A few resources to get you started if this is your first Flutter project:
+Ejecuta:
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+```powershell
+flutter build windows --release
+```
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+El ejecutable queda en:
+
+```text
+build/windows/x64/runner/Release/DoctorSuplementos.exe
+```
+
+Para entregar la app, comprime toda la carpeta `Release`, no solo el `.exe`,
+porque ahi tambien estan las DLL y assets que necesita.
+
+### macOS
+
+Este build debe hacerse desde una Mac con Xcode instalado:
+
+```bash
+flutter build macos --release
+```
+
+La app queda en:
+
+```text
+build/macos/Build/Products/Release/DoctorSuplementos.app
+```

@@ -36,43 +36,42 @@ const List<String> productosPermitidos4Life = [
   'Crema cuerpo',
   'Limpiador',
   'Recall',
-  'Immune boost',
-  'TF Boost',
+  'TF boost',
 ];
 
 final String catalogoPermitido4Life = productosPermitidos4Life.join(', ');
 
 const Map<String, String> imagenesProducto4Life = {
-  'Transfer factor plus': 'assets/productos/1 TRASFER FACTOR PLUS.png',
-  'Riovida stix': 'assets/productos/2 RIOVIDA STIX.png',
-  'Energy go stix': 'assets/productos/3 ENERGY GO STIX.png',
-  'Renuvo': 'assets/productos/4 RENUVO.png',
-  'Glucoach': 'assets/productos/5 GLUCOACH.png',
-  'Bcv': 'assets/productos/6 BCV.png',
-  'Malepro': 'assets/productos/7 MALEPRO.png',
-  'Colageno tipo i': 'assets/productos/8 COLAGENO TIPO I.png',
+  'Transfer factor plus': 'assets/productos/trasnfer_factor_plus.png',
+  'Riovida stix': 'assets/productos/riovida_stix.png',
+  'Energy go stix': 'assets/productos/energy_go_stix.png',
+  'Renuvo': 'assets/productos/renuvo.png',
+  'Glucoach': 'assets/productos/glucoach.png',
+  'Bcv': 'assets/productos/bcv.png',
+  'Malepro': 'assets/productos/malepro.png',
+  'Colageno tipo i': 'assets/productos/colageno_tipo_i.png',
   'Transfer factor tri factor':
-      'assets/productos/9 TRASFER FACTOR TRI FACTOR.png',
-  'Nutrastart': 'assets/productos/10 NUTRASTART.png',
-  'Riovida burst': 'assets/productos/11 RIOVIDA BURST.png',
-  'Protf': 'assets/productos/12 PROTF.png',
-  'Bioefa': 'assets/productos/13 BIOEFA.png',
-  'Belle vie': 'assets/productos/14 BELLE VIE.png',
-  'Glutamine prime': 'assets/productos/15 GLUTAMINE PRIME.png',
-  'Kbu': 'assets/productos/16 KBU.png',
-  'Vistari': 'assets/productos/17 VISTARI.png',
-  'Preo biotics': 'assets/productos/18 PREO BIOTICS.png',
-  'Fibre': 'assets/productos/19 FIBRE.png',
-  'Agpro': 'assets/productos/21 AGPRO.png',
-  'Suero': 'assets/productos/22 SUERO.png',
-  'Crema para los ojos': 'assets/productos/23 CREMA PARA LOS OJOS.png',
-  'Tonico': 'assets/productos/24 TONICO.png',
-  'Crema humectante': 'assets/productos/25 CREMA HUMECTANTE.png',
-  'Pasta de dientes': 'assets/productos/26 PASTA DE DIENTES.png',
-  'Crema cuerpo': 'assets/productos/27 CREMA CUERPO.png',
-  'Limpiador': 'assets/productos/28 LIMPIADOR.png',
-  'Recall': 'assets/productos/29 RECALL.png',
-  'TF Boost': 'assets/productos/30 TF BOOST.png',
+      'assets/productos/transfer_factor_tri_factor.png',
+  'Nutrastart': 'assets/productos/nutrastart.png',
+  'Riovida burst': 'assets/productos/riovida_burst.png',
+  'Protf': 'assets/productos/protf.png',
+  'Bioefa': 'assets/productos/bioefa.png',
+  'Belle vie': 'assets/productos/belle_vie.png',
+  'Glutamine prime': 'assets/productos/glutamine_prime.png',
+  'Kbu': 'assets/productos/kbu.png',
+  'Vistari': 'assets/productos/vistari.png',
+  'Preo biotics': 'assets/productos/preo_biotics.png',
+  'Fibre': 'assets/productos/fibre.png',
+  'Agpro': 'assets/productos/agpro.png',
+  'Suero': 'assets/productos/suero.png',
+  'Crema para los ojos': 'assets/productos/crema_para_los_ojos.png',
+  'Tonico': 'assets/productos/tonico.png',
+  'Crema humectante': 'assets/productos/crema_humectante.png',
+  'Pasta de dientes': 'assets/productos/pasta_de_dientes.png',
+  'Crema cuerpo': 'assets/productos/crema_de_cuerpo.png',
+  'Limpiador': 'assets/productos/limpiador.png',
+  'Recall': 'assets/productos/recall.png',
+  'TF boost': 'assets/productos/tf_boost.png',
 };
 
 class ProductoPrecio {
@@ -132,7 +131,7 @@ const List<ProductoPrecio> productosConPrecio4Life = [
   ProductoPrecio(
       nombre: 'Crema cuerpo', afiliado: 25.00, publico: 33.00, lp: 8),
   ProductoPrecio(nombre: 'Recall', afiliado: 72.90, publico: 95.62, lp: 42),
-  ProductoPrecio(nombre: 'TF Boost', afiliado: 27.72, publico: 36.96, lp: 15),
+  ProductoPrecio(nombre: 'TF boost', afiliado: 27.72, publico: 36.96, lp: 15),
 ];
 
 String normalizarTexto(String texto) {
@@ -207,6 +206,17 @@ List<String> dividirConsultaProductos(String texto) {
       .toList();
 }
 
+Future<XFile> imagenProductoComoPng(String assetPath, String nombre) async {
+  final data = await rootBundle.load(assetPath);
+  final bytes = data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
+  final archivo = normalizarTexto(nombre).replaceAll(' ', '_');
+  return XFile.fromData(
+    bytes,
+    name: '$archivo.png',
+    mimeType: 'image/png',
+  );
+}
+
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
   runApp(const DoctorSuplementos());
@@ -237,7 +247,8 @@ class PantallaPrincipal extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("4Life Asesor Integral"),
+        title: const Text("DoctorSuplementos"),
+        centerTitle: true,
         backgroundColor: const Color(0xFF1A237E),
         foregroundColor: Colors.white,
       ),
@@ -674,10 +685,10 @@ class _ConsultaProductoPaginaState extends State<ConsultaProductoPagina> {
                   if (imagenProducto != null) ...[
                     Container(
                       height: 230,
-                      padding: const EdgeInsets.all(14),
+                      padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
                         color: const Color(0xFFF8F8F2),
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(8),
                         border: Border.all(color: const Color(0xFFE1E1D7)),
                       ),
                       child: Image.asset(
@@ -704,7 +715,16 @@ class _ConsultaProductoPaginaState extends State<ConsultaProductoPagina> {
                 }),
             IconButton(
                 icon: const Icon(Icons.share),
-                onPressed: () => Share.share(resultado)),
+                onPressed: () async {
+                  if (imagenProducto == null || productoIdentificado == null) {
+                    await Share.share(resultado);
+                    return;
+                  }
+
+                  final imagen = await imagenProductoComoPng(
+                      imagenProducto, productoIdentificado);
+                  await Share.shareXFiles([imagen], text: resultado);
+                }),
             TextButton(
                 onPressed: () => Navigator.pop(c), child: const Text("Cerrar")),
           ],
@@ -906,6 +926,18 @@ class _PaginaCalculadoraPreciosState extends State<PaginaCalculadoraPrecios> {
                       for (final producto in _productos)
                         Card(
                           child: ListTile(
+                            leading: imagenesProducto4Life[producto.nombre] ==
+                                    null
+                                ? null
+                                : SizedBox(
+                                    width: 58,
+                                    height: 58,
+                                    child: Image.asset(
+                                      imagenesProducto4Life[producto.nombre]!,
+                                      fit: BoxFit.contain,
+                                      filterQuality: FilterQuality.high,
+                                    ),
+                                  ),
                             title: Text(producto.nombre),
                             subtitle: Text(
                               "Afiliado: ${_precio(producto.afiliado)}\n"
