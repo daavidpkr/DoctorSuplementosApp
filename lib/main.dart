@@ -36,7 +36,7 @@ const List<String> productosPermitidos4Life = [
   'Crema cuerpo',
   'Limpiador',
   'Recall',
-  'TF boost',
+  'TF Boost',
 ];
 
 final String catalogoPermitido4Life = productosPermitidos4Life.join(', ');
@@ -71,7 +71,7 @@ const Map<String, String> imagenesProducto4Life = {
   'Crema cuerpo': 'assets/productos/crema_de_cuerpo.png',
   'Limpiador': 'assets/productos/limpiador.png',
   'Recall': 'assets/productos/recall.png',
-  'TF boost': 'assets/productos/tf_boost.png',
+  'TF Boost': 'assets/productos/tf_boost.png',
 };
 
 class ProductoPrecio {
@@ -131,7 +131,7 @@ const List<ProductoPrecio> productosConPrecio4Life = [
   ProductoPrecio(
       nombre: 'Crema cuerpo', afiliado: 25.00, publico: 33.00, lp: 8),
   ProductoPrecio(nombre: 'Recall', afiliado: 72.90, publico: 95.62, lp: 42),
-  ProductoPrecio(nombre: 'TF boost', afiliado: 27.72, publico: 36.96, lp: 15),
+  ProductoPrecio(nombre: 'TF Boost', afiliado: 27.72, publico: 36.96, lp: 15),
 ];
 
 String normalizarTexto(String texto) {
