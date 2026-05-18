@@ -92,7 +92,7 @@ const List<ProductoPrecio> productosConPrecio4Life = [
   ProductoPrecio(
       nombre: 'Transfer factor plus', afiliado: 83.17, publico: 110.98, lp: 55),
   ProductoPrecio(
-      nombre: 'Riovida stix', afiliado: 42.10, publico: 56.47, lp: 19),
+      nombre: 'Riovida stix', afiliado: 43.36, publico: 57.67, lp: 20),
   ProductoPrecio(
       nombre: 'Energy go stix', afiliado: 69.82, publico: 92.41, lp: 36),
   ProductoPrecio(nombre: 'Renuvo', afiliado: 69.82, publico: 92.41, lp: 42),
@@ -100,7 +100,7 @@ const List<ProductoPrecio> productosConPrecio4Life = [
   ProductoPrecio(nombre: 'Bcv', afiliado: 79.06, publico: 104.73, lp: 52),
   ProductoPrecio(nombre: 'Malepro', afiliado: 77.01, publico: 102.68, lp: 44),
   ProductoPrecio(
-      nombre: 'Colageno tipo i', afiliado: 41.07, publico: 54.42, lp: 23),
+      nombre: 'Colageno tipo i', afiliado: 43.12, publico: 57.35, lp: 23),
   ProductoPrecio(
       nombre: 'Transfer factor tri factor',
       afiliado: 66.74,
@@ -110,17 +110,17 @@ const List<ProductoPrecio> productosConPrecio4Life = [
   ProductoPrecio(
       nombre: 'Riovida burst', afiliado: 53.39, publico: 70.85, lp: 27),
   ProductoPrecio(nombre: 'Protf', afiliado: 90.36, publico: 120.13, lp: 26),
-  ProductoPrecio(nombre: 'Bioefa', afiliado: 31.83, publico: 42.10, lp: 17),
+  ProductoPrecio(nombre: 'Bioefa', afiliado: 33.11, publico: 44.04, lp: 18),
   ProductoPrecio(nombre: 'Belle vie', afiliado: 67.77, publico: 90.36, lp: 43),
   ProductoPrecio(
       nombre: 'Glutamine prime', afiliado: 46.21, publico: 61.61, lp: 27),
   ProductoPrecio(nombre: 'Kbu', afiliado: 67.77, publico: 90.36, lp: 42),
   ProductoPrecio(nombre: 'Vistari', afiliado: 68.79, publico: 91.38, lp: 40),
   ProductoPrecio(
-      nombre: 'Preo biotics', afiliado: 57.50, publico: 75.98, lp: 32),
-  ProductoPrecio(nombre: 'Fibre', afiliado: 52.37, publico: 59.82, lp: 22),
+      nombre: 'Preo biotics', afiliado: 60.95, publico: 81.06, lp: 35),
+  ProductoPrecio(nombre: 'Fibre', afiliado: 54.47, publico: 72.45, lp: 24),
   ProductoPrecio(nombre: 'Agpro', afiliado: 73.00, publico: 97.00, lp: 45),
-  ProductoPrecio(nombre: 'Suero', afiliado: 45.00, publico: 60.00, lp: 27),
+  ProductoPrecio(nombre: 'Suero', afiliado: 50.31, publico: 66.74, lp: 29),
   ProductoPrecio(
       nombre: 'Crema para los ojos', afiliado: 45.00, publico: 60.00, lp: 27),
   ProductoPrecio(nombre: 'Tonico', afiliado: 36.00, publico: 48.00, lp: 19),
@@ -129,8 +129,8 @@ const List<ProductoPrecio> productosConPrecio4Life = [
   ProductoPrecio(
       nombre: 'Pasta de dientes', afiliado: 16.43, publico: 21.56, lp: 5),
   ProductoPrecio(
-      nombre: 'Crema cuerpo', afiliado: 25.00, publico: 33.00, lp: 8),
-  ProductoPrecio(nombre: 'Recall', afiliado: 72.90, publico: 95.62, lp: 42),
+      nombre: 'Crema cuerpo', afiliado: 25.67, publico: 33.88, lp: 8),
+  ProductoPrecio(nombre: 'Recall', afiliado: 72.90, publico: 96.52, lp: 42),
   ProductoPrecio(nombre: 'TF Boost', afiliado: 27.72, publico: 36.96, lp: 15),
 ];
 
