@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:google_generative_ai/google_generative_ai.dart';
-//import 'package:firebase_core/firebase_core.dart';
-//import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/services.dart'; // <--- PARA COPIAR (Clipboard)
 import 'package:share_plus/share_plus.dart'; // <--- PARA COMPARTIR
 import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:async';
 import 'dart:convert';
 
 const List<String> productosPermitidos4Life = [
@@ -148,12 +149,23 @@ String normalizarTexto(String texto) {
       .trim();
 }
 
+String normalizarClaveProducto(String texto) {
+  return normalizarTexto(texto).replaceAll(RegExp(r'\s+'), '');
+}
+
 int puntajeCoincidencia(String consulta, String producto) {
   final q = normalizarTexto(consulta);
   final p = normalizarTexto(producto);
+  final qClave = normalizarClaveProducto(consulta);
+  final pClave = normalizarClaveProducto(producto);
   if (q.isEmpty) return 0;
-  if (q == p) return 100;
-  if (p.contains(q) || q.contains(p)) return 85;
+  if (q == p || qClave == pClave) return 100;
+  if (p.contains(q) ||
+      q.contains(p) ||
+      pClave.contains(qClave) ||
+      qClave.contains(pClave)) {
+    return 85;
+  }
 
   final palabras = q.split(' ').where((e) => e.isNotEmpty).toSet();
   final palabrasProducto = p.split(' ').where((e) => e.isNotEmpty).toSet();
@@ -190,8 +202,10 @@ String? buscarProductoPermitido(String consulta) {
 
 String? productoDesdeTexto(String texto) {
   final normalizado = normalizarTexto(texto);
+  final normalizadoClave = normalizarClaveProducto(texto);
   for (final producto in productosPermitidos4Life) {
-    if (normalizado.contains(normalizarTexto(producto))) {
+    if (normalizado.contains(normalizarTexto(producto)) ||
+        normalizadoClave.contains(normalizarClaveProducto(producto))) {
       return producto;
     }
   }
@@ -217,9 +231,21 @@ Future<XFile> imagenProductoComoPng(String assetPath, String nombre) async {
   );
 }
 
-void main() {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await inicializarFirebaseSeguro();
   runApp(const DoctorSuplementos());
+}
+
+Future<void> inicializarFirebaseSeguro() async {
+  try {
+    await Firebase.initializeApp().timeout(const Duration(seconds: 5));
+    FirebaseFirestore.instance.settings = const Settings(
+      persistenceEnabled: true,
+    );
+  } catch (e) {
+    debugPrint('Firebase no se pudo inicializar en este dispositivo: $e');
+  }
 }
 
 class DoctorSuplementos extends StatelessWidget {
@@ -239,9 +265,483 @@ class DoctorSuplementos extends StatelessWidget {
   }
 }
 
-// --- PANTALLA PRINCIPAL CON LOS 3 BOTONES ---
+// --- PANTALLA PRINCIPAL ---
 class PantallaPrincipal extends StatelessWidget {
   const PantallaPrincipal({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFFF7F7FB),
+      body: SafeArea(
+        child: Column(
+          children: [
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 18),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _heroAsesor(),
+                    const SizedBox(height: 18),
+                    _tarjetaMenu(
+                      context,
+                      titulo: "Consultar producto(s)",
+                      descripcion:
+                          "Explora el catalogo y descubre todos nuestros productos.",
+                      icono: Icons.search_rounded,
+                      colores: const [Color(0xFF2E3192), Color(0xFF151B7C)],
+                      destino: const ConsultaProductoPagina(),
+                    ),
+                    _tarjetaMenu(
+                      context,
+                      titulo: "Diagnostico",
+                      descripcion:
+                          "Evalua y conoce las necesidades de tus clientes.",
+                      icono: Icons.medical_services_rounded,
+                      colores: const [Color(0xFF1457E8), Color(0xFF1531A6)],
+                      destino: const FormularioPaciente(),
+                    ),
+                    _tarjetaMenu(
+                      context,
+                      titulo: "Historial",
+                      descripcion:
+                          "Revisa tus consultas, diagnosticos y recomendaciones previas.",
+                      icono: Icons.history_rounded,
+                      colores: const [Color(0xFF8051D4), Color(0xFF6047B7)],
+                      destino: const PaginaHistorial(),
+                    ),
+                    _tarjetaMenu(
+                      context,
+                      titulo: "Asesor IA 4Life",
+                      descripcion:
+                          "Obten recomendaciones personalizadas con inteligencia artificial.",
+                      icono: Icons.chat_rounded,
+                      colores: const [Color(0xFF1487A8), Color(0xFF087394)],
+                      destino: const PaginaChatbot(),
+                    ),
+                    const SizedBox(height: 8),
+                    const Padding(
+                      padding: EdgeInsets.only(left: 8, bottom: 10),
+                      child: Text(
+                        "Accesos rapidos",
+                        style: TextStyle(
+                          color: Color(0xFF0A1552),
+                          fontSize: 13,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                    _accesosRapidos(context),
+                  ],
+                ),
+              ),
+            ),
+            _barraInferior(context),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _heroAsesor() {
+    return Container(
+      height: 158,
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: const Color(0xFFEFF3FF),
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF071451).withValues(alpha: 0.13),
+            blurRadius: 15,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Stack(
+        children: [
+          Positioned(
+            right: -18,
+            top: -42,
+            child: Container(
+              width: 156,
+              height: 156,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: const Color(0xFFBFCBFF).withValues(alpha: 0.28),
+              ),
+            ),
+          ),
+          Positioned(
+            right: 36,
+            top: 22,
+            child: Icon(
+              Icons.science_rounded,
+              size: 92,
+              color: const Color(0xFF1B2A99).withValues(alpha: 0.88),
+            ),
+          ),
+          Positioned(
+            right: 18,
+            top: 22,
+            child: CustomPaint(
+              size: const Size(116, 88),
+              painter: _MoleculaPainter(),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(24, 24, 120, 20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  "¡Hola, Asesor!",
+                  style: TextStyle(
+                    color: Color(0xFF101A5B),
+                    fontSize: 24,
+                    fontWeight: FontWeight.w900,
+                    height: 1,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  "Gestiona, asesora y mejora la vida de mas personas.",
+                  style: TextStyle(
+                    color: Color(0xFF25315F),
+                    fontSize: 12,
+                    height: 1.25,
+                  ),
+                ),
+                const Spacer(),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 13, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF101A70),
+                    borderRadius: BorderRadius.circular(18),
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.track_changes_rounded,
+                          color: Colors.white, size: 15),
+                      SizedBox(width: 7),
+                      Text(
+                        "Tu impacto 4Life",
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      SizedBox(width: 4),
+                      Icon(Icons.chevron_right_rounded,
+                          color: Colors.white, size: 16),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _tarjetaMenu(
+    BuildContext context, {
+    required String titulo,
+    required String descripcion,
+    required IconData icono,
+    required List<Color> colores,
+    required Widget destino,
+  }) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF0E1A5F).withValues(alpha: 0.08),
+            blurRadius: 14,
+            offset: const Offset(0, 7),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => destino),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(15),
+            child: Row(
+              children: [
+                Container(
+                  width: 60,
+                  height: 60,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: colores,
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(icono, color: Colors.white, size: 34),
+                ),
+                const SizedBox(width: 18),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        titulo,
+                        style: const TextStyle(
+                          color: Color(0xFF111B59),
+                          fontSize: 18,
+                          fontWeight: FontWeight.w900,
+                          height: 1.05,
+                        ),
+                      ),
+                      const SizedBox(height: 5),
+                      Text(
+                        descripcion,
+                        style: const TextStyle(
+                          color: Color(0xFF465074),
+                          fontSize: 12,
+                          height: 1.22,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                const Icon(
+                  Icons.chevron_right_rounded,
+                  color: Color(0xFF071451),
+                  size: 31,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _accesosRapidos(BuildContext context) {
+    return Container(
+      height: 58,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF0E1A5F).withValues(alpha: 0.06),
+            blurRadius: 13,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          _accesoRapido(
+            context,
+            "Catalogo",
+            Icons.article_outlined,
+            const ConsultaProductoPagina(),
+          ),
+          _accesoRapido(
+            context,
+            "Precios",
+            Icons.calculate_outlined,
+            const PaginaCalculadoraPrecios(),
+          ),
+          _accesoRapido(
+            context,
+            "Clientes",
+            Icons.groups_2_outlined,
+            const PaginaHistorial(),
+          ),
+          _accesoRapido(
+            context,
+            "Chats",
+            Icons.school_outlined,
+            const PaginaHistorialChatbot(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _accesoRapido(
+      BuildContext context, String texto, IconData icono, Widget destino) {
+    return Expanded(
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => destino),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icono, color: const Color(0xFF1B2A99), size: 20),
+            const SizedBox(height: 4),
+            Text(
+              texto,
+              style: const TextStyle(
+                color: Color(0xFF18215E),
+                fontSize: 10,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _barraInferior(BuildContext context) {
+    return Container(
+      height: 58,
+      margin: const EdgeInsets.fromLTRB(8, 0, 8, 6),
+      decoration: BoxDecoration(
+        color: const Color(0xFF071363),
+        borderRadius: BorderRadius.circular(15),
+      ),
+      child: Row(
+        children: [
+          _itemBarra(
+            context,
+            "Inicio",
+            Icons.home_outlined,
+            null,
+            seleccionado: true,
+          ),
+          _itemBarra(
+            context,
+            "Consultas",
+            Icons.search_rounded,
+            const ConsultaProductoPagina(),
+          ),
+          _itemBarra(
+            context,
+            "Clientes",
+            Icons.groups_2_outlined,
+            const PaginaHistorial(),
+          ),
+          _itemBarra(
+            context,
+            "Perfil",
+            Icons.person_outline_rounded,
+            const PaginaCalculadoraPrecios(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _itemBarra(
+    BuildContext context,
+    String texto,
+    IconData icono,
+    Widget? destino, {
+    bool seleccionado = false,
+  }) {
+    final contenido = Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Icon(icono, color: Colors.white, size: 20),
+        const SizedBox(height: 3),
+        Text(
+          texto,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 10,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      ],
+    );
+
+    return Expanded(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 7, horizontal: 4),
+        child: seleccionado
+            ? Container(
+                decoration: BoxDecoration(
+                  color: const Color(0xFF273BB1),
+                  borderRadius: BorderRadius.circular(9),
+                ),
+                child: contenido,
+              )
+            : InkWell(
+                borderRadius: BorderRadius.circular(9),
+                onTap: destino == null
+                    ? null
+                    : () => Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => destino),
+                        ),
+                child: contenido,
+              ),
+      ),
+    );
+  }
+}
+
+class _MoleculaPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final linePaint = Paint()
+      ..color = const Color(0xFF9FAEE8).withValues(alpha: 0.62)
+      ..strokeWidth = 1.3;
+    final nodePaint = Paint()
+      ..color = Colors.white
+      ..style = PaintingStyle.fill;
+    final nodeBorder = Paint()
+      ..color = const Color(0xFF93A4E2).withValues(alpha: 0.78)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.2;
+
+    final points = [
+      Offset(size.width * .10, size.height * .76),
+      Offset(size.width * .28, size.height * .52),
+      Offset(size.width * .25, size.height * .22),
+      Offset(size.width * .48, size.height * .35),
+      Offset(size.width * .68, size.height * .16),
+      Offset(size.width * .82, size.height * .42),
+      Offset(size.width * .94, size.height * .70),
+      Offset(size.width * .64, size.height * .66),
+    ];
+
+    for (var i = 0; i < points.length - 1; i++) {
+      canvas.drawLine(points[i], points[i + 1], linePaint);
+    }
+    canvas.drawLine(points[1], points[7], linePaint);
+    canvas.drawLine(points[3], points[6], linePaint);
+
+    for (final point in points) {
+      canvas.drawCircle(point, 3.2, nodePaint);
+      canvas.drawCircle(point, 3.2, nodeBorder);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+// --- PANTALLA PRINCIPAL ANTERIOR ---
+class PantallaPrincipalVieja extends StatelessWidget {
+  const PantallaPrincipalVieja({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -618,6 +1118,8 @@ class _ConsultaProductoPaginaState extends State<ConsultaProductoPagina> {
     if (productoBuscado.isEmpty || consultando) return;
 
     setState(() => consultando = true);
+    final productoCoincidenteLocal = buscarProductoPermitido(productoBuscado);
+    final productoParaIa = productoCoincidenteLocal ?? productoBuscado;
 
     final model = GenerativeModel(
         model: 'gemini-3-flash-preview',
@@ -628,10 +1130,15 @@ class _ConsultaProductoPaginaState extends State<ConsultaProductoPagina> {
     El usuario escribio este producto, posiblemente con errores de escritura:
     "$productoBuscado"
 
+    Coincidencia local del catalogo:
+    "$productoParaIa"
+
     Primero identifica el producto 4Life mas probable aunque el nombre este incompleto,
     mal escrito o con abreviaturas. Usa tu conocimiento de productos 4Life y el contexto
     de la marca. Si hay varias opciones parecidas, elige la mas probable y menciona
     brevemente que fue una coincidencia aproximada.
+    Si la coincidencia local del catalogo coincide con un producto de la lista autorizada,
+    usala como el producto identificado.
 
     REGLA OBLIGATORIA: Solo puedes identificar, describir o recomendar productos de esta lista:
     $catalogoPermitido4Life.
@@ -665,6 +1172,7 @@ class _ConsultaProductoPaginaState extends State<ConsultaProductoPagina> {
       final response = await model.generateContent([Content.text(prompt)]);
       final resultado = response.text ?? "No pude generar una respuesta.";
       final productoIdentificado = productoDesdeTexto(resultado) ??
+          productoCoincidenteLocal ??
           buscarProductoPermitido(productoBuscado);
       final imagenProducto = productoIdentificado == null
           ? null
