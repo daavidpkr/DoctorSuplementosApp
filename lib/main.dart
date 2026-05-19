@@ -832,6 +832,15 @@ class HistorialService {
     final raw = prefs.getStringList('historial_pacientes') ?? [];
     raw.insert(0, jsonEncode(registro));
     await prefs.setStringList('historial_pacientes', raw);
+
+    try {
+      await FirebaseFirestore.instance.collection('diagnosticos').add({
+        ...registro,
+        'creadoEn': FieldValue.serverTimestamp(),
+      });
+    } catch (e) {
+      debugPrint('No se pudo guardar el diagnostico en Firebase: $e');
+    }
   }
 }
 
