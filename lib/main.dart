@@ -295,6 +295,15 @@ class PantallaPrincipal extends StatelessWidget {
                     ),
                     _tarjetaMenu(
                       context,
+                      titulo: "Calculadora de precios",
+                      descripcion:
+                          "Calcula precios, LP y totales para uno o varios productos.",
+                      icono: Icons.calculate_rounded,
+                      colores: const [Color(0xFF008C7E), Color(0xFF006B61)],
+                      destino: const PaginaCalculadoraPrecios(),
+                    ),
+                    _tarjetaMenu(
+                      context,
                       titulo: "Diagnostico",
                       descripcion:
                           "Evalua y conoce las necesidades de tus clientes.",
