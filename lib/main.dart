@@ -5,6 +5,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/services.dart'; // <--- PARA COPIAR (Clipboard)
 import 'package:share_plus/share_plus.dart'; // <--- PARA COMPARTIR
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:image_picker/image_picker.dart';
 import 'dart:async';
 import 'dart:convert';
 
@@ -153,6 +154,28 @@ String normalizarClaveProducto(String texto) {
   return normalizarTexto(texto).replaceAll(RegExp(r'\s+'), '');
 }
 
+int distanciaLevenshtein(String a, String b) {
+  if (a == b) return 0;
+  if (a.isEmpty) return b.length;
+  if (b.isEmpty) return a.length;
+
+  var anterior = List<int>.generate(b.length + 1, (i) => i);
+  for (var i = 0; i < a.length; i++) {
+    final actual = List<int>.filled(b.length + 1, 0);
+    actual[0] = i + 1;
+    for (var j = 0; j < b.length; j++) {
+      final costo = a.codeUnitAt(i) == b.codeUnitAt(j) ? 0 : 1;
+      actual[j + 1] = [
+        actual[j] + 1,
+        anterior[j + 1] + 1,
+        anterior[j] + costo,
+      ].reduce((min, value) => value < min ? value : min);
+    }
+    anterior = actual;
+  }
+  return anterior.last;
+}
+
 int puntajeCoincidencia(String consulta, String producto) {
   final q = normalizarTexto(consulta);
   final p = normalizarTexto(producto);
@@ -171,7 +194,30 @@ int puntajeCoincidencia(String consulta, String producto) {
   final palabrasProducto = p.split(' ').where((e) => e.isNotEmpty).toSet();
   if (palabras.isEmpty) return 0;
   final coincidencias = palabras.intersection(palabrasProducto).length;
-  return ((coincidencias / palabras.length) * 70).round();
+  final puntajePalabras = ((coincidencias / palabras.length) * 70).round();
+
+  final maxLen = qClave.length > pClave.length ? qClave.length : pClave.length;
+  if (maxLen == 0) return puntajePalabras;
+  final distancia = distanciaLevenshtein(qClave, pClave);
+  final similitud = (((maxLen - distancia) / maxLen) * 100).round();
+
+  var mejorToken = 0;
+  for (final palabraConsulta in palabras) {
+    for (final palabraProducto in palabrasProducto) {
+      final largo = palabraConsulta.length > palabraProducto.length
+          ? palabraConsulta.length
+          : palabraProducto.length;
+      if (largo < 3) continue;
+      final distanciaToken =
+          distanciaLevenshtein(palabraConsulta, palabraProducto);
+      final similitudToken = (((largo - distanciaToken) / largo) * 100).round();
+      if (similitudToken > mejorToken) mejorToken = similitudToken;
+    }
+  }
+
+  return [puntajePalabras, similitud, mejorToken].reduce(
+    (max, value) => value > max ? value : max,
+  );
 }
 
 ProductoPrecio? buscarProductoConPrecio(String consulta) {
@@ -231,6 +277,114 @@ Future<XFile> imagenProductoComoPng(String assetPath, String nombre) async {
   );
 }
 
+class PerfilAsesor {
+  final String nombre;
+  final String fotoBase64;
+
+  const PerfilAsesor({
+    required this.nombre,
+    required this.fotoBase64,
+  });
+
+  bool get tieneNombre => nombre.trim().isNotEmpty;
+
+  Map<String, dynamic> toJson() => {
+        'nombre': nombre.trim(),
+        'fotoBase64': fotoBase64,
+      };
+
+  factory PerfilAsesor.fromJson(Map<String, dynamic> json) {
+    return PerfilAsesor(
+      nombre: json['nombre']?.toString() ?? '',
+      fotoBase64: json['fotoBase64']?.toString() ?? '',
+    );
+  }
+}
+
+class PerfilService {
+  static const String _prefsKey = 'perfil_asesor_4life';
+  static const String _documentId = 'perfil_principal';
+
+  static Future<PerfilAsesor> cargar() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_prefsKey);
+    if (raw != null && raw.isNotEmpty) {
+      return PerfilAsesor.fromJson(jsonDecode(raw) as Map<String, dynamic>);
+    }
+
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('perfiles_asesores')
+          .doc(_documentId)
+          .get();
+      final data = doc.data();
+      if (data != null) {
+        final perfil = PerfilAsesor.fromJson(data);
+        await prefs.setString(_prefsKey, jsonEncode(perfil.toJson()));
+        return perfil;
+      }
+    } catch (e) {
+      debugPrint('No se pudo cargar el perfil desde Firebase: $e');
+    }
+
+    return const PerfilAsesor(nombre: '', fotoBase64: '');
+  }
+
+  static Future<void> guardar(PerfilAsesor perfil) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_prefsKey, jsonEncode(perfil.toJson()));
+
+    try {
+      await FirebaseFirestore.instance
+          .collection('perfiles_asesores')
+          .doc(_documentId)
+          .set({
+        ...perfil.toJson(),
+        'actualizadoEn': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+    } catch (e) {
+      debugPrint('No se pudo guardar el perfil en Firebase: $e');
+    }
+  }
+}
+
+class ImpactoService {
+  static const String _prefsKey = 'impacto_4life';
+
+  static Future<void> registrar({
+    required String tipo,
+    required String titulo,
+    Map<String, dynamic> datos = const {},
+  }) async {
+    final registro = {
+      'tipo': tipo,
+      'titulo': titulo,
+      'fecha': DateTime.now().toIso8601String(),
+      'datos': datos,
+    };
+
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getStringList(_prefsKey) ?? [];
+    raw.insert(0, jsonEncode(registro));
+    await prefs.setStringList(_prefsKey, raw);
+
+    try {
+      await FirebaseFirestore.instance.collection('impacto_4life').add({
+        ...registro,
+        'creadoEn': FieldValue.serverTimestamp(),
+      });
+    } catch (e) {
+      debugPrint('No se pudo guardar el impacto en Firebase: $e');
+    }
+  }
+
+  static Future<List<Map<String, dynamic>>> cargarEventos() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getStringList(_prefsKey) ?? [];
+    return raw.map((e) => jsonDecode(e) as Map<String, dynamic>).toList();
+  }
+}
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await inicializarFirebaseSeguro();
@@ -266,8 +420,27 @@ class DoctorSuplementos extends StatelessWidget {
 }
 
 // --- PANTALLA PRINCIPAL ---
-class PantallaPrincipal extends StatelessWidget {
+class PantallaPrincipal extends StatefulWidget {
   const PantallaPrincipal({super.key});
+
+  @override
+  State<PantallaPrincipal> createState() => _PantallaPrincipalState();
+}
+
+class _PantallaPrincipalState extends State<PantallaPrincipal> {
+  late Future<PerfilAsesor> _perfilFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _perfilFuture = PerfilService.cargar();
+  }
+
+  void _recargarPerfil() {
+    setState(() {
+      _perfilFuture = PerfilService.cargar();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -282,7 +455,12 @@ class PantallaPrincipal extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _heroAsesor(),
+                    FutureBuilder<PerfilAsesor>(
+                      future: _perfilFuture,
+                      builder: (context, snapshot) {
+                        return _heroAsesor(context, snapshot.data);
+                      },
+                    ),
                     const SizedBox(height: 18),
                     _tarjetaMenu(
                       context,
@@ -329,6 +507,15 @@ class PantallaPrincipal extends StatelessWidget {
                       colores: const [Color(0xFF1487A8), Color(0xFF087394)],
                       destino: const PaginaChatbot(),
                     ),
+                    _tarjetaMenu(
+                      context,
+                      titulo: "Perfil",
+                      descripcion:
+                          "Guarda tu nombre y foto para personalizar la app.",
+                      icono: Icons.person_rounded,
+                      colores: const [Color(0xFF455A64), Color(0xFF263238)],
+                      destino: PaginaPerfil(onPerfilGuardado: _recargarPerfil),
+                    ),
                     const SizedBox(height: 8),
                     const Padding(
                       padding: EdgeInsets.only(left: 8, bottom: 10),
@@ -353,7 +540,9 @@ class PantallaPrincipal extends StatelessWidget {
     );
   }
 
-  Widget _heroAsesor() {
+  Widget _heroAsesor(BuildContext context, PerfilAsesor? perfil) {
+    final nombre = perfil?.nombre.trim() ?? '';
+    final saludo = nombre.isEmpty ? "¡Hola, Asesor!" : "¡Hola, $nombre!";
     return Container(
       height: 158,
       width: double.infinity,
@@ -405,9 +594,11 @@ class PantallaPrincipal extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  "¡Hola, Asesor!",
-                  style: TextStyle(
+                Text(
+                  saludo,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
                     color: Color(0xFF101A5B),
                     fontSize: 24,
                     fontWeight: FontWeight.w900,
@@ -424,31 +615,39 @@ class PantallaPrincipal extends StatelessWidget {
                   ),
                 ),
                 const Spacer(),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 13, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF101A70),
-                    borderRadius: BorderRadius.circular(18),
+                GestureDetector(
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const PaginaImpacto4Life(),
+                    ),
                   ),
-                  child: const Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.track_changes_rounded,
-                          color: Colors.white, size: 15),
-                      SizedBox(width: 7),
-                      Text(
-                        "Tu impacto 4Life",
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w800,
+                  child: Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 13, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF101A70),
+                      borderRadius: BorderRadius.circular(18),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.track_changes_rounded,
+                            color: Colors.white, size: 15),
+                        SizedBox(width: 7),
+                        Text(
+                          "Tu impacto 4Life",
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w800,
+                          ),
                         ),
-                      ),
-                      SizedBox(width: 4),
-                      Icon(Icons.chevron_right_rounded,
-                          color: Colors.white, size: 16),
-                    ],
+                        SizedBox(width: 4),
+                        Icon(Icons.chevron_right_rounded,
+                            color: Colors.white, size: 16),
+                      ],
+                    ),
                   ),
                 ),
               ],
@@ -651,7 +850,7 @@ class PantallaPrincipal extends StatelessWidget {
             context,
             "Perfil",
             Icons.person_outline_rounded,
-            const PaginaCalculadoraPrecios(),
+            PaginaPerfil(onPerfilGuardado: _recargarPerfil),
           ),
         ],
       ),
@@ -748,6 +947,297 @@ class _MoleculaPainter extends CustomPainter {
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
+class PaginaPerfil extends StatefulWidget {
+  final VoidCallback? onPerfilGuardado;
+
+  const PaginaPerfil({super.key, this.onPerfilGuardado});
+
+  @override
+  State<PaginaPerfil> createState() => _PaginaPerfilState();
+}
+
+class _PaginaPerfilState extends State<PaginaPerfil> {
+  final TextEditingController _nombreController = TextEditingController();
+  String _fotoBase64 = '';
+  bool _cargando = true;
+  bool _guardando = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _cargarPerfil();
+  }
+
+  Future<void> _cargarPerfil() async {
+    final perfil = await PerfilService.cargar();
+    if (!mounted) return;
+    setState(() {
+      _nombreController.text = perfil.nombre;
+      _fotoBase64 = perfil.fotoBase64;
+      _cargando = false;
+    });
+  }
+
+  Future<void> _seleccionarFoto() async {
+    final picker = ImagePicker();
+    final imagen = await picker.pickImage(
+      source: ImageSource.gallery,
+      maxWidth: 700,
+      imageQuality: 70,
+    );
+    if (imagen == null) return;
+
+    final bytes = await imagen.readAsBytes();
+    setState(() {
+      _fotoBase64 = base64Encode(bytes);
+    });
+  }
+
+  Future<void> _guardar() async {
+    setState(() => _guardando = true);
+    final perfil = PerfilAsesor(
+      nombre: _nombreController.text,
+      fotoBase64: _fotoBase64,
+    );
+    await PerfilService.guardar(perfil);
+    widget.onPerfilGuardado?.call();
+    if (!mounted) return;
+    setState(() => _guardando = false);
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("Perfil guardado")),
+    );
+  }
+
+  @override
+  void dispose() {
+    _nombreController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final fotoBytes = _fotoBase64.isEmpty ? null : base64Decode(_fotoBase64);
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text("Perfil del asesor"),
+        backgroundColor: const Color(0xFF1A237E),
+        foregroundColor: Colors.white,
+      ),
+      body: _cargando
+          ? const Center(child: CircularProgressIndicator())
+          : ListView(
+              padding: const EdgeInsets.all(20),
+              children: [
+                Center(
+                  child: Stack(
+                    alignment: Alignment.bottomRight,
+                    children: [
+                      CircleAvatar(
+                        radius: 58,
+                        backgroundColor: const Color(0xFFE8EAF6),
+                        backgroundImage:
+                            fotoBytes == null ? null : MemoryImage(fotoBytes),
+                        child: fotoBytes == null
+                            ? const Icon(Icons.person,
+                                size: 62, color: Color(0xFF1A237E))
+                            : null,
+                      ),
+                      FloatingActionButton.small(
+                        heroTag: 'fotoPerfil',
+                        onPressed: _seleccionarFoto,
+                        backgroundColor: const Color(0xFF1A237E),
+                        foregroundColor: Colors.white,
+                        child: const Icon(Icons.photo_camera),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 28),
+                TextField(
+                  controller: _nombreController,
+                  decoration: const InputDecoration(
+                    labelText: "Nombre del asesor",
+                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.badge_outlined),
+                  ),
+                ),
+                const SizedBox(height: 18),
+                ElevatedButton.icon(
+                  onPressed: _guardando ? null : _guardar,
+                  icon: _guardando
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.save),
+                  label: const Text("Guardar perfil"),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF1A237E),
+                    foregroundColor: Colors.white,
+                    minimumSize: const Size(double.infinity, 50),
+                  ),
+                ),
+              ],
+            ),
+    );
+  }
+}
+
+class PaginaImpacto4Life extends StatefulWidget {
+  const PaginaImpacto4Life({super.key});
+
+  @override
+  State<PaginaImpacto4Life> createState() => _PaginaImpacto4LifeState();
+}
+
+class _PaginaImpacto4LifeState extends State<PaginaImpacto4Life> {
+  List<Map<String, dynamic>> _eventos = [];
+  bool _cargando = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _cargar();
+  }
+
+  Future<void> _cargar() async {
+    final eventos = await ImpactoService.cargarEventos();
+    if (!mounted) return;
+    setState(() {
+      _eventos = eventos;
+      _cargando = false;
+    });
+  }
+
+  DateTime? _fechaEvento(Map<String, dynamic> evento) {
+    final raw = evento['fecha']?.toString();
+    if (raw == null) return null;
+    return DateTime.tryParse(raw);
+  }
+
+  String _claveMes(DateTime fecha) {
+    final mes = fecha.month.toString().padLeft(2, '0');
+    return '${fecha.year}-$mes';
+  }
+
+  String _tituloMes(String clave) {
+    final partes = clave.split('-');
+    final anio = int.tryParse(partes.first) ?? DateTime.now().year;
+    final mes = int.tryParse(partes.last) ?? DateTime.now().month;
+    const nombres = [
+      'Enero',
+      'Febrero',
+      'Marzo',
+      'Abril',
+      'Mayo',
+      'Junio',
+      'Julio',
+      'Agosto',
+      'Septiembre',
+      'Octubre',
+      'Noviembre',
+      'Diciembre',
+    ];
+    final ultimoDia = DateTime(anio, mes + 1, 0).day;
+    return '${nombres[mes - 1]} $anio - del 1 al $ultimoDia';
+  }
+
+  Map<String, List<Map<String, dynamic>>> _eventosPorMes() {
+    final grupos = <String, List<Map<String, dynamic>>>{};
+    for (final evento in _eventos) {
+      final fecha = _fechaEvento(evento);
+      if (fecha == null) continue;
+      grupos.putIfAbsent(_claveMes(fecha), () => []).add(evento);
+    }
+    return grupos;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final grupos = _eventosPorMes();
+    final claves = grupos.keys.toList()..sort((a, b) => b.compareTo(a));
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text("Tu impacto 4Life"),
+        backgroundColor: const Color(0xFF1A237E),
+        foregroundColor: Colors.white,
+      ),
+      body: _cargando
+          ? const Center(child: CircularProgressIndicator())
+          : claves.isEmpty
+              ? const Center(
+                  child: Text(
+                    "Aun no hay diagnósticos ni consultas registradas.",
+                    textAlign: TextAlign.center,
+                  ),
+                )
+              : ListView.builder(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: claves.length,
+                  itemBuilder: (context, index) {
+                    final clave = claves[index];
+                    final eventos = grupos[clave] ?? [];
+                    final diagnosticos =
+                        eventos.where((e) => e['tipo'] == 'diagnostico').length;
+                    final consultasProducto = eventos
+                        .where((e) => e['tipo'] == 'consulta_producto')
+                        .length;
+                    final calculadoras = eventos
+                        .where((e) => e['tipo'] == 'calculadora_productos')
+                        .length;
+                    final productos = eventos
+                        .map((e) => e['datos'])
+                        .whereType<Map>()
+                        .expand((datos) {
+                          final lista = datos['productos'];
+                          if (lista is List) return lista.map((e) => '$e');
+                          final producto = datos['producto']?.toString();
+                          return producto == null || producto.isEmpty
+                              ? const Iterable<String>.empty()
+                              : [producto];
+                        })
+                        .toSet()
+                        .toList();
+
+                    return Card(
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              _tituloMes(clave),
+                              style: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF1A237E),
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            Text("Diagnósticos realizados: $diagnosticos"),
+                            Text("Consultas de productos: $consultasProducto"),
+                            Text("Consultas en calculadora: $calculadoras"),
+                            if (productos.isNotEmpty) ...[
+                              const SizedBox(height: 10),
+                              const Text(
+                                "Productos consultados:",
+                                style: TextStyle(fontWeight: FontWeight.bold),
+                              ),
+                              Text(productos.take(8).join(', ')),
+                            ],
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+    );
+  }
+}
+
 // --- PANTALLA PRINCIPAL ANTERIOR ---
 class PantallaPrincipalVieja extends StatelessWidget {
   const PantallaPrincipalVieja({super.key});
@@ -841,6 +1331,15 @@ class HistorialService {
     } catch (e) {
       debugPrint('No se pudo guardar el diagnostico en Firebase: $e');
     }
+
+    await ImpactoService.registrar(
+      tipo: 'diagnostico',
+      titulo: titulo,
+      datos: {
+        'nombre': datos['nombre'] ?? '',
+        'sintomas': datos['sintomas'] ?? '',
+      },
+    );
   }
 }
 
@@ -940,10 +1439,16 @@ class _FormularioPacienteState extends State<FormularioPaciente> {
         ? "HISTORIAL PREVIO: El paciente anteriormente reportó: ${widget.infoPrevia!['datos']['sintomas']}. El resultado anterior fue: ${widget.infoPrevia!['resultado']}. "
         : "";
 
+    final perfilAsesor = await PerfilService.cargar();
+    final saludoAsesor = perfilAsesor.tieneNombre
+        ? "Inicia el reporte con este saludo personalizado: Hola, como estas, mi nombre es ${perfilAsesor.nombre.trim()}. Luego continua con el diagnostico."
+        : "Inicia con un saludo empatico breve y luego continua con el diagnostico.";
+
     final prompt = """
     $contextoAnterior
     SÍNTOMAS ACTUALES: ${historialController.text}
     DATOS: Nombre: ${nombreController.text}, Edad: ${edadController.text}, Género: $_generoSeleccionado.
+    $saludoAsesor
     
     Actúa como un experto en inmunología, bioenergética y asesor profesional de la línea de suplementos de bienestar de 4Life. Tu objetivo es generar un reporte de recomendación altamente profesional, ético y optimizado exclusivamente para ser compartido por WhatsApp.
 
@@ -1145,18 +1650,11 @@ class _ConsultaProductoPaginaState extends State<ConsultaProductoPagina> {
     final prompt = """
     Actua como un asesor experto de productos 4Life.
 
-    El usuario escribio este producto, posiblemente con errores de escritura:
-    "$productoBuscado"
-
-    Coincidencia local del catalogo:
+    Producto consultado:
     "$productoParaIa"
 
-    Primero identifica el producto 4Life mas probable aunque el nombre este incompleto,
-    mal escrito o con abreviaturas. Usa tu conocimiento de productos 4Life y el contexto
-    de la marca. Si hay varias opciones parecidas, elige la mas probable y menciona
-    brevemente que fue una coincidencia aproximada.
-    Si la coincidencia local del catalogo coincide con un producto de la lista autorizada,
-    usala como el producto identificado.
+    Si el usuario lo escribio con errores, trabaja directamente con el producto correcto.
+    No digas que fue una coincidencia ni que el texto estaba mal escrito.
 
     REGLA OBLIGATORIA: Solo puedes identificar, describir o recomendar productos de esta lista:
     $catalogoPermitido4Life.
@@ -1195,6 +1693,14 @@ class _ConsultaProductoPaginaState extends State<ConsultaProductoPagina> {
       final imagenProducto = productoIdentificado == null
           ? null
           : imagenesProducto4Life[productoIdentificado];
+      await ImpactoService.registrar(
+        tipo: 'consulta_producto',
+        titulo: productoIdentificado ?? productoBuscado,
+        datos: {
+          'busqueda': productoBuscado,
+          'producto': productoIdentificado ?? productoParaIa,
+        },
+      );
 
       if (!mounted) return;
       showDialog(
@@ -1337,6 +1843,18 @@ class _PaginaCalculadoraPreciosState extends State<PaginaCalculadoraPrecios> {
       _productos = encontrados;
       _noEncontrados = noEncontrados;
     });
+
+    if (encontrados.isNotEmpty) {
+      ImpactoService.registrar(
+        tipo: 'calculadora_productos',
+        titulo: 'Calculadora de precios',
+        datos: {
+          'cantidad': encontrados.length,
+          'productos': encontrados.map((p) => p.nombre).toList(),
+          'noEncontrados': noEncontrados,
+        },
+      );
+    }
   }
 
   double get _totalAfiliado =>
@@ -1978,6 +2496,10 @@ class _PaginaChatbotState extends State<PaginaChatbot> {
         .map((mensaje) =>
             "${mensaje['rol'] == 'ia' ? 'Asesor IA' : 'Socio'}: ${mensaje['texto']}")
         .join("\n");
+    final productoCoincidente = buscarProductoPermitido(textoUsuario);
+    final instruccionProducto = productoCoincidente == null
+        ? ""
+        : "Si la consulta menciona un producto mal escrito, responde directamente sobre $productoCoincidente. No digas que fue una coincidencia ni que estaba mal escrito.";
 
     final promptLimpioParaChatbot = """
     Eres un asesor IA para socios de 4Life.
@@ -1990,6 +2512,7 @@ class _PaginaChatbotState extends State<PaginaChatbot> {
     Si el socio pide algo que requiera un producto fuera de esa lista, explica que solo puedes recomendar
     productos del catalogo autorizado y ofrece alternativas dentro de esa lista.
     No inventes nombres, presentaciones ni productos adicionales.
+    $instruccionProducto
     Mantén un tono claro, práctico y responsable. Si la pregunta parece médica, recomienda consultar a un profesional de salud.
 
     Conversación actual:
