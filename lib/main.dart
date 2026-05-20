@@ -1825,36 +1825,140 @@ class _PaginaCalculadoraPreciosState extends State<PaginaCalculadoraPrecios> {
   List<ProductoPrecio> _productos = [];
   List<String> _noEncontrados = [];
 
-  void _calcular() {
+  void _agregarProducto(ProductoPrecio producto) {
+    if (_productos.any((item) => item.nombre == producto.nombre)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("${producto.nombre} ya esta seleccionado")),
+      );
+      return;
+    }
+
+    setState(() {
+      _productos = [..._productos, producto];
+      _noEncontrados = [];
+    });
+  }
+
+  void _agregarDesdeTexto() {
     final consultas = dividirConsultaProductos(_controller.text);
-    final encontrados = <ProductoPrecio>[];
+    if (consultas.isEmpty) return;
+
     final noEncontrados = <String>[];
+    var agregados = 0;
 
     for (final consulta in consultas) {
       final producto = buscarProductoConPrecio(consulta);
       if (producto == null) {
         noEncontrados.add(consulta);
-      } else {
-        encontrados.add(producto);
+        continue;
       }
+      if (_productos.any((item) => item.nombre == producto.nombre)) continue;
+      _productos = [..._productos, producto];
+      agregados++;
     }
 
     setState(() {
-      _productos = encontrados;
       _noEncontrados = noEncontrados;
     });
+    _controller.clear();
 
-    if (encontrados.isNotEmpty) {
-      ImpactoService.registrar(
-        tipo: 'calculadora_productos',
-        titulo: 'Calculadora de precios',
-        datos: {
-          'cantidad': encontrados.length,
-          'productos': encontrados.map((p) => p.nombre).toList(),
-          'noEncontrados': noEncontrados,
-        },
+    if (agregados > 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("$agregados producto(s) agregado(s)")),
       );
     }
+  }
+
+  void _quitarProducto(ProductoPrecio producto) {
+    setState(() {
+      _productos =
+          _productos.where((item) => item.nombre != producto.nombre).toList();
+    });
+  }
+
+  void _limpiarSeleccion() {
+    setState(() {
+      _productos = [];
+      _noEncontrados = [];
+      _controller.clear();
+    });
+  }
+
+  Future<void> _calcular() async {
+    _agregarDesdeTexto();
+    if (_productos.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Selecciona al menos un producto")),
+      );
+      return;
+    }
+
+    await ImpactoService.registrar(
+      tipo: 'calculadora_productos',
+      titulo: 'Calculadora de precios',
+      datos: {
+        'cantidad': _productos.length,
+        'productos': _productos.map((p) => p.nombre).toList(),
+        'noEncontrados': _noEncontrados,
+      },
+    );
+
+    if (!mounted) return;
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(22, 18, 22, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 42,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFD6DAEA),
+                    borderRadius: BorderRadius.circular(99),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 18),
+              const Text(
+                "Resultado",
+                style: TextStyle(
+                  color: Color(0xFF13288E),
+                  fontSize: 22,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              const SizedBox(height: 14),
+              _resumenTotal("Afiliado", _precio(_totalAfiliado)),
+              _resumenTotal("Publico", _precio(_totalPublico)),
+              _resumenTotal("L.P.", _totalLp.toString()),
+              const SizedBox(height: 16),
+              ElevatedButton.icon(
+                onPressed: () => Share.share(_resumenCompartir()),
+                icon: const Icon(Icons.share_rounded),
+                label: const Text("Compartir resultado"),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF17218D),
+                  foregroundColor: Colors.white,
+                  minimumSize: const Size(double.infinity, 52),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   double get _totalAfiliado =>
@@ -1881,6 +1985,119 @@ class _PaginaCalculadoraPreciosState extends State<PaginaCalculadoraPrecios> {
     return buffer.toString();
   }
 
+  void _abrirCatalogo() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
+      ),
+      builder: (context) => DraggableScrollableSheet(
+        expand: false,
+        initialChildSize: 0.82,
+        minChildSize: 0.55,
+        maxChildSize: 0.94,
+        builder: (context, scrollController) {
+          return Column(
+            children: [
+              const SizedBox(height: 10),
+              Container(
+                width: 46,
+                height: 5,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFD8DCEB),
+                  borderRadius: BorderRadius.circular(99),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 18, 12, 10),
+                child: Row(
+                  children: [
+                    const Expanded(
+                      child: Text(
+                        "Catalogo",
+                        style: TextStyle(
+                          color: Color(0xFF11258B),
+                          fontSize: 24,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      tooltip: "Cerrar",
+                      onPressed: () => Navigator.pop(context),
+                      icon: const Icon(Icons.close_rounded),
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: GridView.builder(
+                  controller: scrollController,
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 22),
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 3,
+                    mainAxisSpacing: 14,
+                    crossAxisSpacing: 14,
+                    childAspectRatio: 0.86,
+                  ),
+                  itemCount: productosConPrecio4Life.length,
+                  itemBuilder: (context, index) {
+                    final producto = productosConPrecio4Life[index];
+                    final imagen = imagenesProducto4Life[producto.nombre];
+                    final seleccionado = _productos
+                        .any((item) => item.nombre == producto.nombre);
+                    return InkWell(
+                      borderRadius: BorderRadius.circular(16),
+                      onTap: () {
+                        _agregarProducto(producto);
+                        Navigator.pop(context);
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: seleccionado
+                              ? const Color(0xFFE9ECFF)
+                              : const Color(0xFFF8F9FF),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: seleccionado
+                                ? const Color(0xFF17218D)
+                                : const Color(0xFFE1E4F0),
+                            width: seleccionado ? 2 : 1,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFF17218D)
+                                  .withValues(alpha: 0.07),
+                              blurRadius: 12,
+                              offset: const Offset(0, 6),
+                            ),
+                          ],
+                        ),
+                        child: imagen == null
+                            ? const Icon(
+                                Icons.image_not_supported_outlined,
+                                color: Color(0xFF17218D),
+                              )
+                            : Image.asset(
+                                imagen,
+                                fit: BoxFit.contain,
+                                filterQuality: FilterQuality.high,
+                              ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
   @override
   void dispose() {
     _controller.dispose();
@@ -1890,141 +2107,655 @@ class _PaginaCalculadoraPreciosState extends State<PaginaCalculadoraPrecios> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text("Consultora y calculadora"),
-        backgroundColor: const Color(0xFF1A237E),
-        foregroundColor: Colors.white,
-      ),
-      body: Column(
+      backgroundColor: const Color(0xFFF7F7FB),
+      body: Stack(
         children: [
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              children: [
-                TextField(
-                  controller: _controller,
-                  minLines: 1,
-                  maxLines: 4,
-                  decoration: const InputDecoration(
-                    labelText: "Producto(s)",
-                    hintText: "Ej: Bioefa, Transfer factor plus",
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.shopping_bag),
-                  ),
-                  onSubmitted: (_) => _calcular(),
+          Container(
+            height: 230,
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [Color(0xFF132890), Color(0xFF0B176B)],
+              ),
+            ),
+          ),
+          SafeArea(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
+              child: Column(
+                children: [
+                  _encabezado(),
+                  const SizedBox(height: 26),
+                  _tarjetaSeleccion(),
+                  const SizedBox(height: 18),
+                  _tarjetaProductosSeleccionados(),
+                  const SizedBox(height: 18),
+                  _botonCalcular(),
+                  const SizedBox(height: 18),
+                  _accionesSecundarias(),
+                  const SizedBox(height: 18),
+                  _tarjetaAyuda(),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _encabezado() {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        IconButton(
+          onPressed: () => Navigator.pop(context),
+          icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
+          iconSize: 34,
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints.tightFor(width: 42, height: 42),
+        ),
+        const SizedBox(width: 10),
+        const Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                "Consultora y calculadora",
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 32,
+                  height: 1.08,
+                  fontWeight: FontWeight.w900,
                 ),
-                const SizedBox(height: 12),
-                Row(
+              ),
+              SizedBox(height: 8),
+              Text(
+                "Consulta precios y L.P. de productos",
+                style: TextStyle(
+                  color: Color(0xFFDCE2FF),
+                  fontSize: 20,
+                  height: 1.2,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        ),
+        Container(
+          width: 78,
+          height: 78,
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.10),
+            shape: BoxShape.circle,
+          ),
+          child: const Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.help_outline_rounded, color: Colors.white, size: 32),
+              SizedBox(height: 3),
+              Text(
+                "Ayuda",
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _tarjetaSeleccion() {
+    return _contenedorTarjeta(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        onPressed: _calcular,
-                        icon: const Icon(Icons.calculate),
-                        label: const Text("Calcular"),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF1A237E),
-                          foregroundColor: Colors.white,
-                          minimumSize: const Size(double.infinity, 48),
-                        ),
+                    Text(
+                      "Selecciona producto(s)",
+                      style: TextStyle(
+                        color: Color(0xFF11258B),
+                        fontSize: 24,
+                        fontWeight: FontWeight.w900,
                       ),
                     ),
-                    const SizedBox(width: 8),
-                    IconButton(
-                      tooltip: "Copiar resumen",
-                      onPressed: _productos.isEmpty
-                          ? null
-                          : () {
-                              Clipboard.setData(
-                                  ClipboardData(text: _resumenCompartir()));
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                    content: Text("Resumen copiado")),
-                              );
-                            },
-                      icon: const Icon(Icons.copy),
-                    ),
-                    IconButton(
-                      tooltip: "Compartir resumen",
-                      onPressed: _productos.isEmpty
-                          ? null
-                          : () => Share.share(_resumenCompartir()),
-                      icon: const Icon(Icons.share),
+                    SizedBox(height: 14),
+                    Text(
+                      "Busca y anade uno o varios productos para consultar precios y L.P.",
+                      style: TextStyle(
+                        color: Color(0xFF47527E),
+                        fontSize: 18,
+                        height: 1.38,
+                      ),
                     ),
                   ],
+                ),
+              ),
+              const SizedBox(width: 12),
+              _ilustracionProductos(),
+            ],
+          ),
+          const SizedBox(height: 24),
+          TextField(
+            controller: _controller,
+            minLines: 1,
+            maxLines: 2,
+            textInputAction: TextInputAction.done,
+            onSubmitted: (_) => _agregarDesdeTexto(),
+            decoration: InputDecoration(
+              hintText: "Buscar producto(s)",
+              hintStyle: const TextStyle(
+                color: Color(0xFF858AA5),
+                fontSize: 19,
+                fontWeight: FontWeight.w500,
+              ),
+              prefixIcon: const Icon(
+                Icons.search_rounded,
+                color: Color(0xFF6E748F),
+                size: 34,
+              ),
+              suffixIcon: IconButton(
+                tooltip: "Agregar",
+                onPressed: _agregarDesdeTexto,
+                icon: const Icon(Icons.add_circle_rounded),
+                color: const Color(0xFF17218D),
+              ),
+              filled: true,
+              fillColor: Colors.white,
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 18, vertical: 20),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide:
+                    const BorderSide(color: Color(0xFFD1D5E3), width: 1.4),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide:
+                    const BorderSide(color: Color(0xFF17218D), width: 1.7),
+              ),
+            ),
+          ),
+          const SizedBox(height: 18),
+          InkWell(
+            borderRadius: BorderRadius.circular(10),
+            onTap: _abrirCatalogo,
+            child: Container(
+              height: 74,
+              padding: const EdgeInsets.symmetric(horizontal: 22),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: const Color(0xFFD1D5E3), width: 1.4),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.format_list_bulleted_rounded,
+                      color: Color(0xFF12248B), size: 34),
+                  SizedBox(width: 18),
+                  Expanded(
+                    child: Text(
+                      "Explorar catalogo",
+                      style: TextStyle(
+                        color: Color(0xFF12248B),
+                        fontSize: 18,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ),
+                  Icon(Icons.chevron_right_rounded,
+                      color: Color(0xFF12248B), size: 34),
+                ],
+              ),
+            ),
+          ),
+          if (_noEncontrados.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Text(
+              "No encontrados: ${_noEncontrados.join(', ')}",
+              style: const TextStyle(
+                color: Color(0xFFC0392B),
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _ilustracionProductos() {
+    final imagen = imagenesProducto4Life['Transfer factor plus'];
+    return SizedBox(
+      width: 126,
+      height: 120,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          Positioned(
+            right: 4,
+            bottom: 12,
+            child: Container(
+              width: 82,
+              height: 72,
+              decoration: BoxDecoration(
+                color: const Color(0xFF4153D9).withValues(alpha: 0.18),
+                borderRadius: BorderRadius.circular(18),
+              ),
+            ),
+          ),
+          Positioned(
+            left: 8,
+            top: 16,
+            child: Icon(
+              Icons.shopping_bag_rounded,
+              size: 88,
+              color: const Color(0xFF635CE8).withValues(alpha: 0.86),
+            ),
+          ),
+          if (imagen != null)
+            Positioned(
+              right: 0,
+              bottom: 4,
+              child: SizedBox(
+                width: 78,
+                height: 82,
+                child: Image.asset(
+                  imagen,
+                  fit: BoxFit.contain,
+                  filterQuality: FilterQuality.high,
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _tarjetaProductosSeleccionados() {
+    return _contenedorTarjeta(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Expanded(
+                child: Text(
+                  "Productos seleccionados",
+                  style: TextStyle(
+                    color: Color(0xFF11258B),
+                    fontSize: 22,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE9EAFF),
+                  borderRadius: BorderRadius.circular(18),
+                ),
+                child: Text(
+                  "${_productos.length} productos",
+                  style: const TextStyle(
+                    color: Color(0xFF2832A1),
+                    fontSize: 15,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 22),
+          if (_productos.isEmpty) _estadoVacio() else _listaSeleccionados(),
+        ],
+      ),
+    );
+  }
+
+  Widget _estadoVacio() {
+    return const Center(
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(18, 4, 18, 22),
+        child: Column(
+          children: [
+            CircleAvatar(
+              radius: 46,
+              backgroundColor: Color(0xFFECEEFF),
+              child: Icon(
+                Icons.shopping_bag_outlined,
+                color: Color(0xFF3143B8),
+                size: 46,
+              ),
+            ),
+            SizedBox(height: 24),
+            Text(
+              "Aun no has agregado productos",
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: Color(0xFF3B467A),
+                fontSize: 18,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+            SizedBox(height: 12),
+            Text(
+              "Busca y selecciona los productos que deseas consultar.",
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: Color(0xFF58618C),
+                fontSize: 17,
+                height: 1.35,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _listaSeleccionados() {
+    return Column(
+      children: [
+        for (final producto in _productos)
+          Container(
+            margin: const EdgeInsets.only(bottom: 10),
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF8F9FF),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: const Color(0xFFE1E4F0)),
+            ),
+            child: Row(
+              children: [
+                SizedBox(
+                  width: 58,
+                  height: 58,
+                  child: Image.asset(
+                    imagenesProducto4Life[producto.nombre] ?? '',
+                    fit: BoxFit.contain,
+                    errorBuilder: (_, __, ___) =>
+                        const Icon(Icons.inventory_2_outlined),
+                    filterQuality: FilterQuality.high,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        producto.nombre,
+                        style: const TextStyle(
+                          color: Color(0xFF152179),
+                          fontSize: 15,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        "${_precio(producto.afiliado)} afiliado  |  LP ${producto.lp ?? 0}",
+                        style: const TextStyle(
+                          color: Color(0xFF687092),
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  tooltip: "Quitar",
+                  onPressed: () => _quitarProducto(producto),
+                  icon: const Icon(Icons.close_rounded),
+                  color: const Color(0xFF17218D),
                 ),
               ],
             ),
           ),
-          Expanded(
-            child: _productos.isEmpty && _noEncontrados.isEmpty
-                ? const Center(
-                    child: Text(
-                      "Escribe uno o varios productos para consultar precios y LP.",
-                      textAlign: TextAlign.center,
-                      style: TextStyle(fontSize: 16, color: Colors.grey),
+      ],
+    );
+  }
+
+  Widget _botonCalcular() {
+    return InkWell(
+      borderRadius: BorderRadius.circular(18),
+      onTap: _calcular,
+      child: Container(
+        height: 96,
+        padding: const EdgeInsets.symmetric(horizontal: 26),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [Color(0xFF172394), Color(0xFF0B176B)],
+          ),
+          borderRadius: BorderRadius.circular(18),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF0B176B).withValues(alpha: 0.25),
+              blurRadius: 14,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+        child: const Row(
+          children: [
+            Icon(Icons.calculate_outlined, color: Colors.white, size: 38),
+            SizedBox(width: 24),
+            Expanded(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    "Calcular",
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 22,
+                      fontWeight: FontWeight.w900,
                     ),
-                  )
-                : ListView(
-                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                    children: [
-                      for (final producto in _productos)
-                        Card(
-                          child: ListTile(
-                            leading: imagenesProducto4Life[producto.nombre] ==
-                                    null
-                                ? null
-                                : SizedBox(
-                                    width: 58,
-                                    height: 58,
-                                    child: Image.asset(
-                                      imagenesProducto4Life[producto.nombre]!,
-                                      fit: BoxFit.contain,
-                                      filterQuality: FilterQuality.high,
-                                    ),
-                                  ),
-                            title: Text(producto.nombre),
-                            subtitle: Text(
-                              "Afiliado: ${_precio(producto.afiliado)}\n"
-                              "Publico: ${_precio(producto.publico)}\n"
-                              "LP: ${producto.lp?.toString() ?? 'Sin dato'}",
-                            ),
-                          ),
-                        ),
-                      if (_productos.isNotEmpty)
-                        Card(
-                          color: const Color(0xFFE8EAF6),
-                          child: Padding(
-                            padding: const EdgeInsets.all(16),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text(
-                                  "Totales",
-                                  style: TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                const SizedBox(height: 8),
-                                Text("Afiliado: ${_precio(_totalAfiliado)}"),
-                                Text("Publico: ${_precio(_totalPublico)}"),
-                                Text("LP: $_totalLp"),
-                              ],
-                            ),
-                          ),
-                        ),
-                      for (final item in _noEncontrados)
-                        Card(
-                          child: ListTile(
-                            leading: const Icon(Icons.info_outline),
-                            title: Text(item),
-                            subtitle: const Text(
-                              "No se encontro precio para este producto en la lista cargada.",
-                            ),
-                          ),
-                        ),
-                    ],
                   ),
+                  SizedBox(height: 7),
+                  Text(
+                    "Consulta precios y L.P.",
+                    style: TextStyle(
+                      color: Color(0xFFDDE3FF),
+                      fontSize: 17,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(Icons.chevron_right_rounded, color: Colors.white, size: 42),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _accionesSecundarias() {
+    return Container(
+      height: 86,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: const Color(0xFFE4E6EF)),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF111A5B).withValues(alpha: 0.08),
+            blurRadius: 16,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: _accionSecundaria(
+              icono: Icons.copy_rounded,
+              texto: "Limpiar seleccion",
+              onTap: _limpiarSeleccion,
+            ),
+          ),
+          Container(width: 1, height: 42, color: const Color(0xFFE0E3EF)),
+          Expanded(
+            child: _accionSecundaria(
+              icono: Icons.share_rounded,
+              texto: "Compartir lista",
+              onTap: _productos.isEmpty
+                  ? null
+                  : () => Share.share(_resumenCompartir()),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _accionSecundaria({
+    required IconData icono,
+    required String texto,
+    required VoidCallback? onTap,
+  }) {
+    final activo = onTap != null;
+    return InkWell(
+      borderRadius: BorderRadius.circular(18),
+      onTap: onTap,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            icono,
+            color: activo ? const Color(0xFF12248B) : const Color(0xFF9AA0B6),
+            size: 30,
+          ),
+          const SizedBox(width: 14),
+          Flexible(
+            child: Text(
+              texto,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color:
+                    activo ? const Color(0xFF12248B) : const Color(0xFF9AA0B6),
+                fontSize: 16,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _tarjetaAyuda() {
+    return Container(
+      padding: const EdgeInsets.all(22),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF2F6FF),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: const Color(0xFFDDE5FF), width: 1.4),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF1A237E).withValues(alpha: 0.08),
+            blurRadius: 10,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
+      child: const Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          CircleAvatar(
+            radius: 23,
+            backgroundColor: Color(0xFF4865DF),
+            child: Icon(Icons.info_rounded, color: Colors.white, size: 30),
+          ),
+          SizedBox(width: 18),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  "Como funciona?",
+                  style: TextStyle(
+                    color: Color(0xFF12248B),
+                    fontSize: 20,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                SizedBox(height: 10),
+                Text(
+                  "Selecciona uno o varios productos y presiona calcular para obtener los precios y el L.P. correspondientes.",
+                  style: TextStyle(
+                    color: Color(0xFF46527E),
+                    fontSize: 17,
+                    height: 1.38,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _contenedorTarjeta({required Widget child}) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(22),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(22),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF0B176B).withValues(alpha: 0.10),
+            blurRadius: 22,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: child,
+    );
+  }
+
+  Widget _resumenTotal(String etiqueta, String valor) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              etiqueta,
+              style: const TextStyle(
+                color: Color(0xFF46527E),
+                fontSize: 17,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+          Text(
+            valor,
+            style: const TextStyle(
+              color: Color(0xFF12248B),
+              fontSize: 20,
+              fontWeight: FontWeight.w900,
+            ),
           ),
         ],
       ),
