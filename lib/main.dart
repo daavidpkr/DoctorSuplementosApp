@@ -6,39 +6,40 @@ import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:file_picker/file_picker.dart';
 import 'dart:async';
 import 'dart:convert';
 
 const List<String> productosPermitidos4Life = [
-  'Transfer factor plus',
-  'Riovida stix',
-  'Energy go stix',
-  'Renuvo',
-  'Glucoach',
+  'Agpro',
   'Bcv',
-  'Malepro',
-  'Colageno tipo i',
-  'Transfer factor tri factor',
-  'Nutrastart',
-  'Riovida burst',
-  'Protf',
-  'Bioefa',
   'Belle vie',
+  'Bioefa',
+  'Colageno tipo i',
+  'Crema cuerpo',
+  'Crema humectante',
+  'Crema para los ojos',
+  'Energy go stix',
+  'Fibre',
+  'Glucoach',
   'Glutamine prime',
   'Kbu',
-  'Vistari',
-  'Preo biotics',
-  'Fibre',
-  'Agpro',
-  'Suero',
-  'Crema para los ojos',
-  'Tonico',
-  'Crema humectante',
-  'Pasta de dientes',
-  'Crema cuerpo',
   'Limpiador',
+  'Malepro',
+  'Nutrastart',
+  'Pasta de dientes',
+  'Preo biotics',
+  'Protf',
   'Recall',
+  'Renuvo',
+  'Riovida burst',
+  'Riovida stix',
+  'Suero',
   'TF Boost',
+  'Tonico',
+  'Transfer factor plus',
+  'Transfer factor tri factor',
+  'Vistari',
 ];
 
 final String catalogoPermitido4Life = productosPermitidos4Life.join(', ');
@@ -87,6 +88,33 @@ class ProductoPrecio {
     required this.afiliado,
     required this.publico,
     required this.lp,
+  });
+}
+
+class LineaProductoPrecio {
+  final ProductoPrecio producto;
+  final int cantidad;
+
+  const LineaProductoPrecio({
+    required this.producto,
+    required this.cantidad,
+  });
+
+  LineaProductoPrecio copyWith({int? cantidad}) {
+    return LineaProductoPrecio(
+      producto: producto,
+      cantidad: cantidad ?? this.cantidad,
+    );
+  }
+}
+
+class ConsultaProductoCantidad {
+  final String texto;
+  final int cantidad;
+
+  const ConsultaProductoCantidad({
+    required this.texto,
+    required this.cantidad,
   });
 }
 
@@ -266,6 +294,21 @@ List<String> dividirConsultaProductos(String texto) {
       .toList();
 }
 
+ConsultaProductoCantidad extraerConsultaConCantidad(String texto) {
+  final limpio = texto.trim();
+  final match = RegExp(r'^(\d+)\s*[xX]?\s+(.+)$').firstMatch(limpio);
+  if (match == null) {
+    return ConsultaProductoCantidad(texto: limpio, cantidad: 1);
+  }
+
+  final cantidad = int.tryParse(match.group(1) ?? '') ?? 1;
+  final producto = (match.group(2) ?? limpio).trim();
+  return ConsultaProductoCantidad(
+    texto: producto,
+    cantidad: cantidad.clamp(1, 999).toInt(),
+  );
+}
+
 Future<XFile> imagenProductoComoPng(String assetPath, String nombre) async {
   final data = await rootBundle.load(assetPath);
   final bytes = data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
@@ -275,6 +318,21 @@ Future<XFile> imagenProductoComoPng(String assetPath, String nombre) async {
     name: '$archivo.png',
     mimeType: 'image/png',
   );
+}
+
+class ArchivoAdjuntoIA {
+  final String nombre;
+  final String mimeType;
+  final Uint8List bytes;
+
+  const ArchivoAdjuntoIA({
+    required this.nombre,
+    required this.mimeType,
+    required this.bytes,
+  });
+
+  bool get esImagen => mimeType.startsWith('image/');
+  bool get esPdf => mimeType == 'application/pdf';
 }
 
 class PerfilAsesor {
@@ -774,8 +832,8 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
           ),
           _accesoRapido(
             context,
-            "Clientes",
-            Icons.groups_2_outlined,
+            "Diagnosticos",
+            Icons.assignment_turned_in_outlined,
             const PaginaHistorial(),
           ),
           _accesoRapido(
@@ -1119,10 +1177,18 @@ class _PaginaPerfilState extends State<PaginaPerfil> {
                 backgroundImage:
                     fotoBytes == null ? null : MemoryImage(fotoBytes),
                 child: fotoBytes == null
-                    ? const Icon(
-                        Icons.person_rounded,
-                        color: Color(0xFF172394),
-                        size: 86,
+                    ? ClipOval(
+                        child: Image.asset(
+                          'assets/icon.png',
+                          width: 144,
+                          height: 144,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => const Icon(
+                            Icons.person_rounded,
+                            color: Color(0xFF172394),
+                            size: 86,
+                          ),
+                        ),
                       )
                     : null,
               ),
@@ -1723,6 +1789,7 @@ class _FormularioPacienteState extends State<FormularioPaciente> {
   late TextEditingController edadController;
   late TextEditingController historialController;
   String? _generoSeleccionado;
+  ArchivoAdjuntoIA? _adjunto;
   bool cargando = false;
 
   @override
@@ -1740,7 +1807,7 @@ class _FormularioPacienteState extends State<FormularioPaciente> {
   }
 
   Future<void> generarDiagnostico() async {
-    if (historialController.text.isEmpty) return;
+    if (historialController.text.isEmpty && _adjunto == null) return;
     if (_generoSeleccionado == null || _generoSeleccionado!.isEmpty) {
       _mostrarDialogoSimple("Falta género", "Por favor, selecciona el género.");
       return;
@@ -1808,7 +1875,17 @@ class _FormularioPacienteState extends State<FormularioPaciente> {
     *Nota de seguridad:* Los productos de 4Life están diseñados para respaldar y potenciar la inteligencia de tu sistema inmunitario y funciones metabólicas generales; no reemplazan las indicaciones de su médico de cabecera.""";
 
     try {
-      final content = [Content.text(prompt)];
+      final content = [
+        if (_adjunto == null)
+          Content.text(prompt)
+        else
+          Content.multi([
+            TextPart(
+              "$prompt\n\nAnaliza tambien el archivo adjunto. Extrae solo la informacion relevante para orientar la recomendacion y usala como contexto complementario; no afirmes diagnosticos medicos definitivos.",
+            ),
+            DataPart(_adjunto!.mimeType, _adjunto!.bytes),
+          ]),
+      ];
       final response = await model.generateContent(content);
       String textoFinal = response.text ?? "Sin respuesta";
 
@@ -1857,6 +1934,56 @@ class _FormularioPacienteState extends State<FormularioPaciente> {
     showDialog(
         context: context,
         builder: (c) => AlertDialog(title: Text(t), content: Text(m)));
+  }
+
+  Future<void> _tomarFotoDiagnostico() async {
+    final imagen = await ImagePicker().pickImage(
+      source: ImageSource.camera,
+      imageQuality: 88,
+    );
+    if (imagen == null) return;
+
+    final bytes = await imagen.readAsBytes();
+    if (!mounted) return;
+    setState(() {
+      _adjunto = ArchivoAdjuntoIA(
+        nombre: imagen.name,
+        mimeType: imagen.mimeType ?? 'image/jpeg',
+        bytes: bytes,
+      );
+    });
+  }
+
+  Future<void> _seleccionarArchivoDiagnostico() async {
+    final resultado = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['pdf', 'png', 'jpg', 'jpeg', 'webp'],
+      withData: true,
+    );
+    final archivo = resultado?.files.single;
+    final bytes = archivo?.bytes;
+    if (archivo == null || bytes == null) return;
+
+    final extension = (archivo.extension ?? '').toLowerCase();
+    final mime = switch (extension) {
+      'pdf' => 'application/pdf',
+      'png' => 'image/png',
+      'webp' => 'image/webp',
+      _ => 'image/jpeg',
+    };
+
+    if (!mounted) return;
+    setState(() {
+      _adjunto = ArchivoAdjuntoIA(
+        nombre: archivo.name,
+        mimeType: mime,
+        bytes: bytes,
+      );
+    });
+  }
+
+  void _quitarAdjuntoDiagnostico() {
+    setState(() => _adjunto = null);
   }
 
   @override
@@ -1996,7 +2123,7 @@ class _FormularioPacienteState extends State<FormularioPaciente> {
                       hint: "Ingresa tu edad",
                       prefixIcon: Icons.calendar_month_outlined,
                       keyboardType: TextInputType.number,
-                      suffixText: "Anos",
+                      suffixText: "Años",
                       textInputAction: TextInputAction.next,
                     ),
                   ),
@@ -2012,6 +2139,8 @@ class _FormularioPacienteState extends State<FormularioPaciente> {
                     icono: Icons.medical_services_outlined,
                     child: _campoSintomasDiagnostico(),
                   ),
+                  const SizedBox(height: 16),
+                  _tarjetaAdjuntoDiagnostico(),
                   const SizedBox(height: 20),
                   _tarjetaConfidencialidad(),
                   const SizedBox(height: 26),
@@ -2315,6 +2444,122 @@ class _FormularioPacienteState extends State<FormularioPaciente> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _tarjetaAdjuntoDiagnostico() {
+    return _tarjetaCampoDiagnostico(
+      titulo: "Archivo para analizar",
+      icono: Icons.attach_file_rounded,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: _tomarFotoDiagnostico,
+                  icon: const Icon(Icons.photo_camera_rounded),
+                  label: const Text("Camara"),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: const Color(0xFF12248B),
+                    minimumSize: const Size(0, 48),
+                    side: const BorderSide(color: Color(0xFFD1D5E3)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: _seleccionarArchivoDiagnostico,
+                  icon: const Icon(Icons.attach_file_rounded),
+                  label: const Text("Archivo"),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: const Color(0xFF12248B),
+                    minimumSize: const Size(0, 48),
+                    side: const BorderSide(color: Color(0xFFD1D5E3)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          if (_adjunto != null)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF5F7FF),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: const Color(0xFFE1E4F0)),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    _adjunto!.esPdf
+                        ? Icons.picture_as_pdf_rounded
+                        : Icons.image_outlined,
+                    color: const Color(0xFF4059EA),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      _adjunto!.nombre,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Color(0xFF27315F),
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    tooltip: "Quitar archivo",
+                    onPressed: _quitarAdjuntoDiagnostico,
+                    icon: const Icon(Icons.close_rounded),
+                    color: const Color(0xFF12248B),
+                  ),
+                ],
+              ),
+            ),
+          const SizedBox(height: 12),
+          _burbujaPrivacidadAdjunto(),
+        ],
+      ),
+    );
+  }
+
+  Widget _burbujaPrivacidadAdjunto() {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+      decoration: BoxDecoration(
+        color: const Color(0xFFEFF8F5),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFCDEBE2)),
+      ),
+      child: const Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.lock_outline_rounded, color: Color(0xFF08735F), size: 20),
+          SizedBox(width: 9),
+          Expanded(
+            child: Text(
+              "Este documento o foto no se guarda dentro de la app.",
+              style: TextStyle(
+                color: Color(0xFF175B50),
+                fontSize: 13,
+                height: 1.25,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -3360,19 +3605,27 @@ class PaginaCalculadoraPrecios extends StatefulWidget {
 
 class _PaginaCalculadoraPreciosState extends State<PaginaCalculadoraPrecios> {
   final TextEditingController _controller = TextEditingController();
-  List<ProductoPrecio> _productos = [];
+  List<LineaProductoPrecio> _productos = [];
   List<String> _noEncontrados = [];
 
-  void _agregarProducto(ProductoPrecio producto) {
-    if (_productos.any((item) => item.nombre == producto.nombre)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("${producto.nombre} ya esta seleccionado")),
-      );
-      return;
-    }
-
+  void _agregarProducto(ProductoPrecio producto, {int cantidad = 1}) {
+    final indice = _productos.indexWhere(
+      (item) => item.producto.nombre == producto.nombre,
+    );
     setState(() {
-      _productos = [..._productos, producto];
+      if (indice == -1) {
+        _productos = [
+          ..._productos,
+          LineaProductoPrecio(producto: producto, cantidad: cantidad),
+        ];
+      } else {
+        final actualizada = [..._productos];
+        final actual = actualizada[indice];
+        actualizada[indice] = actual.copyWith(
+          cantidad: (actual.cantidad + cantidad).clamp(1, 999).toInt(),
+        );
+        _productos = actualizada;
+      }
       _noEncontrados = [];
     });
   }
@@ -3385,14 +3638,29 @@ class _PaginaCalculadoraPreciosState extends State<PaginaCalculadoraPrecios> {
     var agregados = 0;
 
     for (final consulta in consultas) {
-      final producto = buscarProductoConPrecio(consulta);
+      final item = extraerConsultaConCantidad(consulta);
+      final producto = buscarProductoConPrecio(item.texto);
       if (producto == null) {
         noEncontrados.add(consulta);
         continue;
       }
-      if (_productos.any((item) => item.nombre == producto.nombre)) continue;
-      _productos = [..._productos, producto];
-      agregados++;
+      final indice = _productos.indexWhere(
+        (linea) => linea.producto.nombre == producto.nombre,
+      );
+      if (indice == -1) {
+        _productos = [
+          ..._productos,
+          LineaProductoPrecio(producto: producto, cantidad: item.cantidad),
+        ];
+      } else {
+        final actualizada = [..._productos];
+        final actual = actualizada[indice];
+        actualizada[indice] = actual.copyWith(
+          cantidad: (actual.cantidad + item.cantidad).clamp(1, 999).toInt(),
+        );
+        _productos = actualizada;
+      }
+      agregados += item.cantidad;
     }
 
     setState(() {
@@ -3409,8 +3677,30 @@ class _PaginaCalculadoraPreciosState extends State<PaginaCalculadoraPrecios> {
 
   void _quitarProducto(ProductoPrecio producto) {
     setState(() {
-      _productos =
-          _productos.where((item) => item.nombre != producto.nombre).toList();
+      _productos = _productos
+          .where((item) => item.producto.nombre != producto.nombre)
+          .toList();
+    });
+  }
+
+  void _cambiarCantidad(ProductoPrecio producto, int cambio) {
+    final indice = _productos.indexWhere(
+      (item) => item.producto.nombre == producto.nombre,
+    );
+    if (indice == -1) return;
+
+    setState(() {
+      final actualizada = [..._productos];
+      final actual = actualizada[indice];
+      final nuevaCantidad = actual.cantidad + cambio;
+      if (nuevaCantidad <= 0) {
+        actualizada.removeAt(indice);
+      } else {
+        actualizada[indice] = actual.copyWith(
+          cantidad: nuevaCantidad.clamp(1, 999).toInt(),
+        );
+      }
+      _productos = actualizada;
     });
   }
 
@@ -3431,15 +3721,17 @@ class _PaginaCalculadoraPreciosState extends State<PaginaCalculadoraPrecios> {
       return;
     }
 
-    await ImpactoService.registrar(
+    unawaited(ImpactoService.registrar(
       tipo: 'calculadora_productos',
       titulo: 'Calculadora de precios',
       datos: {
-        'cantidad': _productos.length,
-        'productos': _productos.map((p) => p.nombre).toList(),
+        'cantidad': _cantidadTotalProductos,
+        'productos': _productos
+            .map((p) => {'nombre': p.producto.nombre, 'cantidad': p.cantidad})
+            .toList(),
         'noEncontrados': _noEncontrados,
       },
-    );
+    ));
 
     if (!mounted) return;
     showModalBottomSheet(
@@ -3500,24 +3792,30 @@ class _PaginaCalculadoraPreciosState extends State<PaginaCalculadoraPrecios> {
     );
   }
 
-  double get _totalAfiliado =>
-      _productos.fold(0, (total, p) => total + p.afiliado);
+  int get _cantidadTotalProductos =>
+      _productos.fold(0, (total, p) => total + p.cantidad);
 
-  double get _totalPublico =>
-      _productos.fold(0, (total, p) => total + p.publico);
+  double get _totalAfiliado => _productos.fold(
+      0, (total, p) => total + (p.producto.afiliado * p.cantidad));
 
-  int get _totalLp => _productos.fold(0, (total, p) => total + (p.lp ?? 0));
+  double get _totalPublico => _productos.fold(
+      0, (total, p) => total + (p.producto.publico * p.cantidad));
+
+  int get _totalLp => _productos.fold(
+      0, (total, p) => total + ((p.producto.lp ?? 0) * p.cantidad));
 
   String _precio(double valor) => '\$${valor.toStringAsFixed(2)}';
 
   String _resumenCompartir() {
     final buffer = StringBuffer('Consulta de precios 4Life\n\n');
-    for (final producto in _productos) {
-      buffer.writeln(producto.nombre);
-      buffer.writeln('Afiliado: ${_precio(producto.afiliado)}');
-      buffer.writeln('Publico: ${_precio(producto.publico)}');
+    for (final linea in _productos) {
+      final producto = linea.producto;
+      buffer.writeln('${linea.cantidad} x ${producto.nombre}');
+      buffer
+          .writeln('Afiliado: ${_precio(producto.afiliado * linea.cantidad)}');
+      buffer.writeln('Publico: ${_precio(producto.publico * linea.cantidad)}');
       buffer.writeln(
-          'LP: Life Points (Puntos de Vida): ${producto.lp?.toString() ?? 'Sin dato'}\n');
+          'LP: Life Points (Puntos de Vida): ${(producto.lp ?? 0) * linea.cantidad}\n');
     }
     buffer.writeln('Total afiliado: ${_precio(_totalAfiliado)}');
     buffer.writeln('Total publico: ${_precio(_totalPublico)}');
@@ -3526,6 +3824,11 @@ class _PaginaCalculadoraPreciosState extends State<PaginaCalculadoraPrecios> {
   }
 
   void _abrirCatalogo() {
+    final productosCatalogo = [...productosConPrecio4Life]
+      ..sort((a, b) => normalizarTexto(a.nombre).compareTo(
+            normalizarTexto(b.nombre),
+          ));
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -3582,17 +3885,19 @@ class _PaginaCalculadoraPreciosState extends State<PaginaCalculadoraPrecios> {
                     crossAxisSpacing: 14,
                     childAspectRatio: 0.86,
                   ),
-                  itemCount: productosConPrecio4Life.length,
+                  itemCount: productosCatalogo.length,
                   itemBuilder: (context, index) {
-                    final producto = productosConPrecio4Life[index];
+                    final producto = productosCatalogo[index];
                     final imagen = imagenesProducto4Life[producto.nombre];
-                    final seleccionado = _productos
-                        .any((item) => item.nombre == producto.nombre);
+                    final cantidad = _productos
+                        .where(
+                            (item) => item.producto.nombre == producto.nombre)
+                        .fold<int>(0, (total, item) => total + item.cantidad);
+                    final seleccionado = cantidad > 0;
                     return InkWell(
                       borderRadius: BorderRadius.circular(16),
                       onTap: () {
                         _agregarProducto(producto);
-                        Navigator.pop(context);
                       },
                       child: Container(
                         padding: const EdgeInsets.all(10),
@@ -3616,16 +3921,39 @@ class _PaginaCalculadoraPreciosState extends State<PaginaCalculadoraPrecios> {
                             ),
                           ],
                         ),
-                        child: imagen == null
-                            ? const Icon(
-                                Icons.image_not_supported_outlined,
-                                color: Color(0xFF17218D),
-                              )
-                            : Image.asset(
-                                imagen,
-                                fit: BoxFit.contain,
-                                filterQuality: FilterQuality.high,
+                        child: Stack(
+                          children: [
+                            Center(
+                              child: imagen == null
+                                  ? const Icon(
+                                      Icons.image_not_supported_outlined,
+                                      color: Color(0xFF17218D),
+                                    )
+                                  : Image.asset(
+                                      imagen,
+                                      fit: BoxFit.contain,
+                                      filterQuality: FilterQuality.high,
+                                    ),
+                            ),
+                            if (seleccionado)
+                              Positioned(
+                                right: 0,
+                                top: 0,
+                                child: CircleAvatar(
+                                  radius: 15,
+                                  backgroundColor: const Color(0xFF17218D),
+                                  child: Text(
+                                    'x$cantidad',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w900,
+                                    ),
+                                  ),
+                                ),
                               ),
+                          ],
+                        ),
                       ),
                     );
                   },
@@ -3877,7 +4205,6 @@ class _PaginaCalculadoraPreciosState extends State<PaginaCalculadoraPrecios> {
   }
 
   Widget _ilustracionProductos() {
-    final imagen = imagenesProducto4Life['Transfer factor plus'];
     return SizedBox(
       width: 126,
       height: 120,
@@ -3905,20 +4232,15 @@ class _PaginaCalculadoraPreciosState extends State<PaginaCalculadoraPrecios> {
               color: const Color(0xFF635CE8).withValues(alpha: 0.86),
             ),
           ),
-          if (imagen != null)
-            Positioned(
-              right: 0,
-              bottom: 4,
-              child: SizedBox(
-                width: 78,
-                height: 82,
-                child: Image.asset(
-                  imagen,
-                  fit: BoxFit.contain,
-                  filterQuality: FilterQuality.high,
-                ),
-              ),
+          const Positioned(
+            right: 12,
+            bottom: 18,
+            child: Icon(
+              Icons.add_shopping_cart_rounded,
+              size: 62,
+              color: Color(0xFF17218D),
             ),
+          ),
         ],
       ),
     );
@@ -3949,7 +4271,7 @@ class _PaginaCalculadoraPreciosState extends State<PaginaCalculadoraPrecios> {
                   borderRadius: BorderRadius.circular(18),
                 ),
                 child: Text(
-                  "${_productos.length} productos",
+                  "$_cantidadTotalProductos productos",
                   style: const TextStyle(
                     color: Color(0xFF2832A1),
                     fontSize: 15,
@@ -4010,7 +4332,7 @@ class _PaginaCalculadoraPreciosState extends State<PaginaCalculadoraPrecios> {
   Widget _listaSeleccionados() {
     return Column(
       children: [
-        for (final producto in _productos)
+        for (final linea in _productos)
           Container(
             margin: const EdgeInsets.only(bottom: 10),
             padding: const EdgeInsets.all(10),
@@ -4025,7 +4347,7 @@ class _PaginaCalculadoraPreciosState extends State<PaginaCalculadoraPrecios> {
                   width: 58,
                   height: 58,
                   child: Image.asset(
-                    imagenesProducto4Life[producto.nombre] ?? '',
+                    imagenesProducto4Life[linea.producto.nombre] ?? '',
                     fit: BoxFit.contain,
                     errorBuilder: (_, __, ___) =>
                         const Icon(Icons.inventory_2_outlined),
@@ -4038,7 +4360,7 @@ class _PaginaCalculadoraPreciosState extends State<PaginaCalculadoraPrecios> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        producto.nombre,
+                        linea.producto.nombre,
                         style: const TextStyle(
                           color: Color(0xFF152179),
                           fontSize: 15,
@@ -4047,7 +4369,7 @@ class _PaginaCalculadoraPreciosState extends State<PaginaCalculadoraPrecios> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        "${_precio(producto.afiliado)} afiliado  |  LP: Life Points (Puntos de Vida) ${producto.lp ?? 0}",
+                        "${_precio(linea.producto.afiliado)} afiliado  |  LP: Life Points (Puntos de Vida) ${linea.producto.lp ?? 0}",
                         style: const TextStyle(
                           color: Color(0xFF687092),
                           fontSize: 13,
@@ -4057,9 +4379,10 @@ class _PaginaCalculadoraPreciosState extends State<PaginaCalculadoraPrecios> {
                     ],
                   ),
                 ),
+                _controlCantidad(linea),
                 IconButton(
                   tooltip: "Quitar",
-                  onPressed: () => _quitarProducto(producto),
+                  onPressed: () => _quitarProducto(linea.producto),
                   icon: const Icon(Icons.close_rounded),
                   color: const Color(0xFF17218D),
                 ),
@@ -4067,6 +4390,44 @@ class _PaginaCalculadoraPreciosState extends State<PaginaCalculadoraPrecios> {
             ),
           ),
       ],
+    );
+  }
+
+  Widget _controlCantidad(LineaProductoPrecio linea) {
+    return Container(
+      height: 38,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(19),
+        border: Border.all(color: const Color(0xFFDDE1F0)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          IconButton(
+            tooltip: "Restar",
+            visualDensity: VisualDensity.compact,
+            onPressed: () => _cambiarCantidad(linea.producto, -1),
+            icon: const Icon(Icons.remove_rounded, size: 18),
+            color: const Color(0xFF17218D),
+          ),
+          Text(
+            '${linea.cantidad}',
+            style: const TextStyle(
+              color: Color(0xFF12248B),
+              fontSize: 15,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          IconButton(
+            tooltip: "Sumar",
+            visualDensity: VisualDensity.compact,
+            onPressed: () => _cambiarCantidad(linea.producto, 1),
+            icon: const Icon(Icons.add_rounded, size: 18),
+            color: const Color(0xFF17218D),
+          ),
+        ],
+      ),
     );
   }
 
@@ -4733,6 +5094,7 @@ class PaginaChatbot extends StatefulWidget {
 class _PaginaChatbotState extends State<PaginaChatbot> {
   final TextEditingController _controller = TextEditingController();
   final List<Map<String, String>> mensajes = [];
+  ArchivoAdjuntoIA? _adjunto;
   bool enviando = false;
   late String _conversacionId;
 
@@ -4749,10 +5111,13 @@ class _PaginaChatbotState extends State<PaginaChatbot> {
 
   Future<void> enviarMensaje() async {
     final textoUsuario = _controller.text.trim();
-    if (textoUsuario.isEmpty || enviando) return;
+    if ((textoUsuario.isEmpty && _adjunto == null) || enviando) return;
+    final textoVisible = textoUsuario.isEmpty
+        ? "Analiza el documento o foto adjunta."
+        : textoUsuario;
 
     setState(() {
-      mensajes.add({"rol": "usuario", "texto": textoUsuario});
+      mensajes.add({"rol": "usuario", "texto": textoVisible});
       enviando = true;
     });
     _controller.clear();
@@ -4767,7 +5132,7 @@ class _PaginaChatbotState extends State<PaginaChatbot> {
         .map((mensaje) =>
             "${mensaje['rol'] == 'ia' ? 'Asesor IA' : 'Socio'}: ${mensaje['texto']}")
         .join("\n");
-    final productoCoincidente = buscarProductoPermitido(textoUsuario);
+    final productoCoincidente = buscarProductoPermitido(textoVisible);
     final instruccionProducto = productoCoincidente == null
         ? ""
         : "Si la consulta menciona un producto mal escrito, responde directamente sobre $productoCoincidente. No digas que fue una coincidencia ni que estaba mal escrito.";
@@ -4790,17 +5155,27 @@ class _PaginaChatbotState extends State<PaginaChatbot> {
     $historialPrevio
 
     Consulta actual:
-    $textoUsuario
+    $textoVisible
     """;
 
     try {
-      final response =
-          await model.generateContent([Content.text(promptLimpioParaChatbot)]);
+      final response = await model.generateContent([
+        if (_adjunto == null)
+          Content.text(promptLimpioParaChatbot)
+        else
+          Content.multi([
+            TextPart(
+              "$promptLimpioParaChatbot\n\nAnaliza el archivo adjunto como contexto temporal. No menciones que fue guardado, porque no se guarda en la app.",
+            ),
+            DataPart(_adjunto!.mimeType, _adjunto!.bytes),
+          ]),
+      ]);
       final respuestaIA = response.text ?? "No pude generar una respuesta.";
 
       if (!mounted) return;
       setState(() {
         mensajes.add({"rol": "ia", "texto": respuestaIA});
+        _adjunto = null;
       });
       await ChatHistoryService.guardarConversacion(_conversacionId, mensajes);
     } catch (e) {
@@ -4823,6 +5198,56 @@ class _PaginaChatbotState extends State<PaginaChatbot> {
   void dispose() {
     _controller.dispose();
     super.dispose();
+  }
+
+  Future<void> tomarFotoChat() async {
+    final imagen = await ImagePicker().pickImage(
+      source: ImageSource.camera,
+      imageQuality: 88,
+    );
+    if (imagen == null) return;
+
+    final bytes = await imagen.readAsBytes();
+    if (!mounted) return;
+    setState(() {
+      _adjunto = ArchivoAdjuntoIA(
+        nombre: imagen.name,
+        mimeType: imagen.mimeType ?? 'image/jpeg',
+        bytes: bytes,
+      );
+    });
+  }
+
+  Future<void> seleccionarArchivoChat() async {
+    final resultado = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['pdf', 'png', 'jpg', 'jpeg', 'webp'],
+      withData: true,
+    );
+    final archivo = resultado?.files.single;
+    final bytes = archivo?.bytes;
+    if (archivo == null || bytes == null) return;
+
+    final extension = (archivo.extension ?? '').toLowerCase();
+    final mime = switch (extension) {
+      'pdf' => 'application/pdf',
+      'png' => 'image/png',
+      'webp' => 'image/webp',
+      _ => 'image/jpeg',
+    };
+
+    if (!mounted) return;
+    setState(() {
+      _adjunto = ArchivoAdjuntoIA(
+        nombre: archivo.name,
+        mimeType: mime,
+        bytes: bytes,
+      );
+    });
+  }
+
+  void quitarAdjuntoChat() {
+    setState(() => _adjunto = null);
   }
 
   @override
@@ -5379,6 +5804,46 @@ extension _PaginaChatbotUi on _PaginaChatbotState {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
+          if (_adjunto != null) ...[
+            Container(
+              margin: const EdgeInsets.only(bottom: 10),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF5F7FF),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFFE1E4F0)),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    _adjunto!.esPdf
+                        ? Icons.picture_as_pdf_rounded
+                        : Icons.image_outlined,
+                    color: const Color(0xFF4059EA),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      _adjunto!.nombre,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Color(0xFF27315F),
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    tooltip: "Quitar archivo",
+                    visualDensity: VisualDensity.compact,
+                    onPressed: quitarAdjuntoChat,
+                    icon: const Icon(Icons.close_rounded),
+                    color: const Color(0xFF12248B),
+                  ),
+                ],
+              ),
+            ),
+          ],
           Container(
             padding: const EdgeInsets.fromLTRB(18, 6, 8, 6),
             decoration: BoxDecoration(
@@ -5388,12 +5853,20 @@ extension _PaginaChatbotUi on _PaginaChatbotState {
             ),
             child: Row(
               children: [
-                const Icon(
-                  Icons.auto_awesome,
-                  color: Color(0xFF535B86),
-                  size: 28,
+                IconButton(
+                  tooltip: "Tomar foto",
+                  visualDensity: VisualDensity.compact,
+                  onPressed: enviando ? null : tomarFotoChat,
+                  icon: const Icon(Icons.photo_camera_rounded),
+                  color: const Color(0xFF535B86),
                 ),
-                const SizedBox(width: 14),
+                IconButton(
+                  tooltip: "Adjuntar archivo",
+                  visualDensity: VisualDensity.compact,
+                  onPressed: enviando ? null : seleccionarArchivoChat,
+                  icon: const Icon(Icons.attach_file_rounded),
+                  color: const Color(0xFF535B86),
+                ),
                 Expanded(
                   child: TextField(
                     controller: _controller,
@@ -5451,6 +5924,27 @@ extension _PaginaChatbotUi on _PaginaChatbotState {
                     fontSize: 13.5,
                     height: 1.35,
                     fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          const Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.lock_outline_rounded,
+                  color: Color(0xFF08735F), size: 18),
+              SizedBox(width: 8),
+              Flexible(
+                child: Text(
+                  "Este documento o foto no se guarda dentro de la app.",
+                  textAlign: TextAlign.left,
+                  style: TextStyle(
+                    color: Color(0xFF175B50),
+                    fontSize: 12.5,
+                    height: 1.25,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
               ),

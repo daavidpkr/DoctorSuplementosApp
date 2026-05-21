@@ -25,6 +25,7 @@ dependencies:
   cloud_firestore: ^6.4.1
   shared_preferences: ^2.3.2
   image_picker: ^1.1.2
+  file_picker: ^8.1.7
 
 dev_dependencies:
   flutter_test:
@@ -44,4 +45,5 @@ flutter:
   # Activa el diseño Material Design para botones y campos de texto
   uses-material-design: true
   assets:
+    - assets/icon.png
     - assets/productos/
