@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:google_generative_ai/google_generative_ai.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:flutter/services.dart'; // <--- PARA COPIAR (Clipboard)
-import 'package:share_plus/share_plus.dart'; // <--- PARA COMPARTIR
+import 'package:flutter/services.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:async';
@@ -475,7 +475,7 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
                       context,
                       titulo: "Calculadora de precios",
                       descripcion:
-                          "Calcula precios, LP y totales para uno o varios productos.",
+                          "Calcula precios, LP: Life Points (Puntos de Vida) y totales para uno o varios productos.",
                       icono: Icons.calculate_rounded,
                       colores: const [Color(0xFF008C7E), Color(0xFF006B61)],
                       destino: const PaginaCalculadoraPrecios(),
@@ -1019,68 +1019,382 @@ class _PaginaPerfilState extends State<PaginaPerfil> {
     final fotoBytes = _fotoBase64.isEmpty ? null : base64Decode(_fotoBase64);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text("Perfil del asesor"),
-        backgroundColor: const Color(0xFF1A237E),
-        foregroundColor: Colors.white,
+      backgroundColor: const Color(0xFFF7F7FB),
+      body: Stack(
+        children: [
+          Container(
+            height: 150,
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [Color(0xFF172B98), Color(0xFF07125E)],
+              ),
+            ),
+          ),
+          SafeArea(
+            child: _cargando
+                ? const Center(
+                    child: CircularProgressIndicator(
+                      color: Color(0xFF172394),
+                    ),
+                  )
+                : SingleChildScrollView(
+                    padding: const EdgeInsets.fromLTRB(16, 10, 16, 30),
+                    child: Column(
+                      children: [
+                        _encabezadoPerfil(),
+                        const SizedBox(height: 44),
+                        _tarjetaFotoPerfil(fotoBytes),
+                        const SizedBox(height: 22),
+                        _tarjetaInformacionAsesor(),
+                        const SizedBox(height: 28),
+                        _botonGuardarPerfil(),
+                        const SizedBox(height: 28),
+                        _tarjetaSeguridadPerfil(),
+                      ],
+                    ),
+                  ),
+          ),
+        ],
       ),
-      body: _cargando
-          ? const Center(child: CircularProgressIndicator())
-          : ListView(
-              padding: const EdgeInsets.all(20),
-              children: [
-                Center(
-                  child: Stack(
-                    alignment: Alignment.bottomRight,
-                    children: [
-                      CircleAvatar(
-                        radius: 58,
-                        backgroundColor: const Color(0xFFE8EAF6),
-                        backgroundImage:
-                            fotoBytes == null ? null : MemoryImage(fotoBytes),
-                        child: fotoBytes == null
-                            ? const Icon(Icons.person,
-                                size: 62, color: Color(0xFF1A237E))
-                            : null,
-                      ),
-                      FloatingActionButton.small(
-                        heroTag: 'fotoPerfil',
-                        onPressed: _seleccionarFoto,
-                        backgroundColor: const Color(0xFF1A237E),
-                        foregroundColor: Colors.white,
-                        child: const Icon(Icons.photo_camera),
-                      ),
-                    ],
+    );
+  }
+
+  Widget _encabezadoPerfil() {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        IconButton(
+          onPressed: () => Navigator.pop(context),
+          icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
+          iconSize: 34,
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints.tightFor(width: 44, height: 44),
+        ),
+        const SizedBox(width: 12),
+        const Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                "Perfil del asesor",
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 31,
+                  height: 1.1,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              SizedBox(height: 10),
+              Text(
+                "Gestiona tu informacion personal",
+                style: TextStyle(
+                  color: Color(0xFFD9DFFF),
+                  fontSize: 18,
+                  height: 1.2,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _tarjetaFotoPerfil(Uint8List? fotoBytes) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(28, 30, 28, 30),
+      decoration: _decoracionTarjetaPerfil(),
+      child: Row(
+        children: [
+          Stack(
+            alignment: Alignment.bottomRight,
+            children: [
+              CircleAvatar(
+                radius: 72,
+                backgroundColor: const Color(0xFFE7EAFF),
+                backgroundImage:
+                    fotoBytes == null ? null : MemoryImage(fotoBytes),
+                child: fotoBytes == null
+                    ? const Icon(
+                        Icons.person_rounded,
+                        color: Color(0xFF172394),
+                        size: 86,
+                      )
+                    : null,
+              ),
+              InkWell(
+                borderRadius: BorderRadius.circular(36),
+                onTap: _seleccionarFoto,
+                child: Container(
+                  width: 64,
+                  height: 64,
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF4059EA), Color(0xFF172394)],
+                    ),
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white, width: 4),
+                  ),
+                  child: const Icon(
+                    Icons.photo_camera_rounded,
+                    color: Colors.white,
+                    size: 30,
                   ),
                 ),
-                const SizedBox(height: 28),
-                TextField(
-                  controller: _nombreController,
-                  decoration: const InputDecoration(
-                    labelText: "Nombre del asesor",
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.badge_outlined),
+              ),
+            ],
+          ),
+          const SizedBox(width: 34),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  "Foto de perfil",
+                  style: TextStyle(
+                    color: Color(0xFF12248B),
+                    fontSize: 24,
+                    fontWeight: FontWeight.w900,
                   ),
                 ),
                 const SizedBox(height: 18),
-                ElevatedButton.icon(
-                  onPressed: _guardando ? null : _guardar,
-                  icon: _guardando
-                      ? const SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Icon(Icons.save),
-                  label: const Text("Guardar perfil"),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF1A237E),
-                    foregroundColor: Colors.white,
-                    minimumSize: const Size(double.infinity, 50),
+                const Text(
+                  "Agrega una foto para personalizar tu perfil y que otros te reconozcan facilmente.",
+                  style: TextStyle(
+                    color: Color(0xFF3F4A82),
+                    fontSize: 18,
+                    height: 1.35,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 26),
+                InkWell(
+                  borderRadius: BorderRadius.circular(16),
+                  onTap: _seleccionarFoto,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 28,
+                      vertical: 18,
+                    ),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFEFF1FF),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.photo_camera_rounded,
+                            color: Color(0xFF4059EA), size: 28),
+                        SizedBox(width: 14),
+                        Text(
+                          "Cambiar foto",
+                          style: TextStyle(
+                            color: Color(0xFF3150D9),
+                            fontSize: 18,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ],
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _tarjetaInformacionAsesor() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(22, 28, 22, 28),
+      decoration: _decoracionTarjetaPerfil(),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            "Informacion del asesor",
+            style: TextStyle(
+              color: Color(0xFF12248B),
+              fontSize: 21,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          const SizedBox(height: 24),
+          const Text(
+            "Nombre del asesor",
+            style: TextStyle(
+              color: Color(0xFF2F3A78),
+              fontSize: 17,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _nombreController,
+            textInputAction: TextInputAction.done,
+            decoration: InputDecoration(
+              hintText: "Ingresa tu nombre completo",
+              hintStyle: const TextStyle(
+                color: Color(0xFF6B7192),
+                fontSize: 17,
+                fontWeight: FontWeight.w500,
+              ),
+              prefixIcon: const Icon(
+                Icons.person_outline_rounded,
+                color: Color(0xFF5B628C),
+                size: 30,
+              ),
+              filled: true,
+              fillColor: Colors.white,
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 18, vertical: 20),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide:
+                    const BorderSide(color: Color(0xFFC8CDE0), width: 1.5),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide:
+                    const BorderSide(color: Color(0xFF4059EA), width: 1.8),
+              ),
+            ),
+          ),
+          const SizedBox(height: 14),
+          const Text(
+            "Este nombre sera visible para tus clientes y en tus reportes.",
+            style: TextStyle(
+              color: Color(0xFF2F3A78),
+              fontSize: 16,
+              height: 1.35,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _botonGuardarPerfil() {
+    return InkWell(
+      borderRadius: BorderRadius.circular(36),
+      onTap: _guardando ? null : _guardar,
+      child: Container(
+        height: 76,
+        width: double.infinity,
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [Color(0xFF172394), Color(0xFF0B176B)],
+          ),
+          borderRadius: BorderRadius.circular(36),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF0B176B).withValues(alpha: 0.22),
+              blurRadius: 18,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+        child: Center(
+          child: _guardando
+              ? const SizedBox(
+                  width: 28,
+                  height: 28,
+                  child: CircularProgressIndicator(
+                    color: Colors.white,
+                    strokeWidth: 3,
+                  ),
+                )
+              : const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.save_rounded, color: Colors.white, size: 30),
+                    SizedBox(width: 18),
+                    Text(
+                      "Guardar perfil",
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 21,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ],
+                ),
+        ),
+      ),
+    );
+  }
+
+  Widget _tarjetaSeguridadPerfil() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(22, 28, 22, 28),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFFEAF0FF), Color(0xFFF5F7FF)],
+        ),
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: const Row(
+        children: [
+          CircleAvatar(
+            radius: 36,
+            backgroundColor: Color(0xFFE1E6FF),
+            child: Icon(
+              Icons.health_and_safety_outlined,
+              color: Color(0xFF172394),
+              size: 42,
+            ),
+          ),
+          SizedBox(width: 26),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  "Tu informacion esta segura",
+                  style: TextStyle(
+                    color: Color(0xFF12248B),
+                    fontSize: 21,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                SizedBox(height: 14),
+                Text(
+                  "Tus datos personales estan protegidos y solo se utilizaran dentro de la aplicacion.",
+                  style: TextStyle(
+                    color: Color(0xFF17246B),
+                    fontSize: 18,
+                    height: 1.35,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  BoxDecoration _decoracionTarjetaPerfil() {
+    return BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(22),
+      boxShadow: [
+        BoxShadow(
+          color: const Color(0xFF0B176B).withValues(alpha: 0.08),
+          blurRadius: 22,
+          offset: const Offset(0, 10),
+        ),
+      ],
     );
   }
 }
@@ -1420,6 +1734,9 @@ class _FormularioPacienteState extends State<FormularioPaciente> {
         TextEditingController(text: widget.infoPrevia?['datos']?['edad'] ?? "");
     _generoSeleccionado = widget.infoPrevia?['datos']?['genero'];
     historialController = TextEditingController();
+    historialController.addListener(() {
+      if (mounted) setState(() {});
+    });
   }
 
   Future<void> generarDiagnostico() async {
@@ -1543,7 +1860,20 @@ class _FormularioPacienteState extends State<FormularioPaciente> {
   }
 
   @override
+  void dispose() {
+    nombreController.dispose();
+    edadController.dispose();
+    historialController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    return _buildFormularioDiagnosticoNuevo();
+  }
+
+  // ignore: unused_element
+  Widget _buildFormularioDiagnosticoAnterior(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text("Formulario de Diagnóstico")),
       body: SingleChildScrollView(
@@ -1622,6 +1952,547 @@ class _FormularioPacienteState extends State<FormularioPaciente> {
       ),
     );
   }
+
+  Widget _buildFormularioDiagnosticoNuevo() {
+    return Scaffold(
+      backgroundColor: const Color(0xFFF7F7FB),
+      body: Stack(
+        children: [
+          Container(
+            height: 286,
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [Color(0xFF172B98), Color(0xFF07125E)],
+              ),
+            ),
+          ),
+          SafeArea(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(16, 10, 16, 30),
+              child: Column(
+                children: [
+                  _encabezadoDiagnostico(),
+                  const SizedBox(height: 48),
+                  _tarjetaProgreso(),
+                  const SizedBox(height: 22),
+                  _tarjetaCampoDiagnostico(
+                    titulo: "Nombre completo",
+                    icono: Icons.person_outline_rounded,
+                    child: _campoTextoDiagnostico(
+                      controller: nombreController,
+                      hint: "Ingresa tu nombre",
+                      prefixIcon: Icons.person_outline_rounded,
+                      textInputAction: TextInputAction.next,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  _tarjetaCampoDiagnostico(
+                    titulo: "Edad",
+                    icono: Icons.calendar_month_rounded,
+                    child: _campoTextoDiagnostico(
+                      controller: edadController,
+                      hint: "Ingresa tu edad",
+                      prefixIcon: Icons.calendar_month_outlined,
+                      keyboardType: TextInputType.number,
+                      suffixText: "Anos",
+                      textInputAction: TextInputAction.next,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  _tarjetaCampoDiagnostico(
+                    titulo: "Genero",
+                    icono: Icons.transgender_rounded,
+                    child: _selectorGeneroDiagnostico(),
+                  ),
+                  const SizedBox(height: 16),
+                  _tarjetaCampoDiagnostico(
+                    titulo: "Sintomas actuales",
+                    icono: Icons.medical_services_outlined,
+                    child: _campoSintomasDiagnostico(),
+                  ),
+                  const SizedBox(height: 20),
+                  _tarjetaConfidencialidad(),
+                  const SizedBox(height: 26),
+                  _botonGenerarDiagnostico(),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _encabezadoDiagnostico() {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        IconButton(
+          onPressed: () => Navigator.pop(context),
+          icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
+          iconSize: 34,
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints.tightFor(width: 44, height: 44),
+        ),
+        const SizedBox(width: 12),
+        const Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                "Formulario de Diagnostico",
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 30,
+                  height: 1.1,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              SizedBox(height: 10),
+              Text(
+                "Completa los datos para un diagnostico preciso",
+                style: TextStyle(
+                  color: Color(0xFFD9DFFF),
+                  fontSize: 18,
+                  height: 1.25,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(width: 8),
+        InkWell(
+          borderRadius: BorderRadius.circular(38),
+          onTap: _mostrarAyudaDiagnostico,
+          child: Container(
+            width: 76,
+            height: 76,
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.10),
+              shape: BoxShape.circle,
+            ),
+            child: const Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.help_outline_rounded, color: Colors.white, size: 34),
+                SizedBox(height: 3),
+                Text(
+                  "Ayuda",
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _tarjetaProgreso() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(18, 22, 18, 22),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(22),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF0B176B).withValues(alpha: 0.10),
+            blurRadius: 24,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 104,
+                height: 104,
+                decoration: const BoxDecoration(
+                  color: Color(0xFFE2E7FF),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.fact_check_outlined,
+                  color: Color(0xFF4865F4),
+                  size: 54,
+                ),
+              ),
+              const SizedBox(width: 22),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      "Completa el formulario",
+                      style: TextStyle(
+                        color: Color(0xFF12248B),
+                        fontSize: 22,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    SizedBox(height: 14),
+                    Text(
+                      "Proporciona informacion precisa para mejores resultados.",
+                      style: TextStyle(
+                        color: Color(0xFF3F4A82),
+                        fontSize: 18,
+                        height: 1.35,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 15, vertical: 10),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFEFF1FF),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Text(
+                  "Paso 1 de 4",
+                  style: TextStyle(
+                    color: Color(0xFF4565F0),
+                    fontSize: 16,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(99),
+            child: const LinearProgressIndicator(
+              value: 0.30,
+              minHeight: 8,
+              backgroundColor: Color(0xFFE5E8FF),
+              valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF4865F4)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _tarjetaCampoDiagnostico({
+    required String titulo,
+    required IconData icono,
+    required Widget child,
+  }) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(22, 22, 22, 22),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(22),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF0B176B).withValues(alpha: 0.07),
+            blurRadius: 20,
+            offset: const Offset(0, 9),
+          ),
+        ],
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 64,
+            height: 64,
+            decoration: BoxDecoration(
+              color: const Color(0xFFE3E7FF),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Icon(icono, color: const Color(0xFF4059EA), size: 36),
+          ),
+          const SizedBox(width: 20),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  titulo,
+                  style: const TextStyle(
+                    color: Color(0xFF12248B),
+                    fontSize: 20,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 14),
+                child,
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _campoTextoDiagnostico({
+    required TextEditingController controller,
+    required String hint,
+    required IconData prefixIcon,
+    TextInputType? keyboardType,
+    String? suffixText,
+    TextInputAction? textInputAction,
+  }) {
+    return TextField(
+      controller: controller,
+      keyboardType: keyboardType,
+      textInputAction: textInputAction,
+      decoration: _inputDecoracionDiagnostico(
+        hint: hint,
+        prefixIcon: prefixIcon,
+        suffixText: suffixText,
+      ),
+    );
+  }
+
+  Widget _selectorGeneroDiagnostico() {
+    return DropdownButtonFormField<String>(
+      initialValue: _generoSeleccionado,
+      icon: const Icon(Icons.keyboard_arrow_down_rounded,
+          color: Color(0xFF12248B), size: 32),
+      decoration: _inputDecoracionDiagnostico(hint: "Selecciona una opcion"),
+      hint: const Text(
+        "Selecciona una opcion",
+        style: TextStyle(
+          color: Color(0xFF6B7192),
+          fontSize: 17,
+          fontWeight: FontWeight.w500,
+        ),
+      ),
+      items: const [
+        DropdownMenuItem(value: 'Hombre', child: Text('Hombre')),
+        DropdownMenuItem(value: 'Mujer', child: Text('Mujer')),
+      ],
+      onChanged: (String? nuevoValor) {
+        setState(() {
+          _generoSeleccionado = nuevoValor;
+        });
+      },
+    );
+  }
+
+  Widget _campoSintomasDiagnostico() {
+    final conteo = historialController.text.characters.length;
+    return Stack(
+      children: [
+        TextField(
+          controller: historialController,
+          minLines: 6,
+          maxLines: 6,
+          maxLength: 500,
+          textInputAction: TextInputAction.newline,
+          decoration: _inputDecoracionDiagnostico(
+            hint: "Describe tus sintomas actuales...",
+            alignLabelWithHint: true,
+          ).copyWith(counterText: ""),
+        ),
+        Positioned(
+          right: 18,
+          bottom: 16,
+          child: Text(
+            "$conteo/500",
+            style: const TextStyle(
+              color: Color(0xFF4C5687),
+              fontSize: 15,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  InputDecoration _inputDecoracionDiagnostico({
+    required String hint,
+    IconData? prefixIcon,
+    String? suffixText,
+    bool alignLabelWithHint = false,
+  }) {
+    return InputDecoration(
+      hintText: hint,
+      alignLabelWithHint: alignLabelWithHint,
+      hintStyle: const TextStyle(
+        color: Color(0xFF6B7192),
+        fontSize: 17,
+        fontWeight: FontWeight.w500,
+      ),
+      prefixIcon: prefixIcon == null
+          ? null
+          : Icon(prefixIcon, color: const Color(0xFF535B86), size: 28),
+      suffixIcon: suffixText == null
+          ? null
+          : Container(
+              width: 96,
+              alignment: Alignment.center,
+              decoration: const BoxDecoration(
+                border: Border(
+                  left: BorderSide(color: Color(0xFFE5E7F0), width: 1.2),
+                ),
+              ),
+              child: Text(
+                suffixText,
+                style: const TextStyle(
+                  color: Color(0xFF12248B),
+                  fontSize: 17,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ),
+      filled: true,
+      fillColor: Colors.white,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10),
+        borderSide: const BorderSide(color: Color(0xFFC8CDE0), width: 1.5),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10),
+        borderSide: const BorderSide(color: Color(0xFF4059EA), width: 1.8),
+      ),
+      errorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10),
+        borderSide: const BorderSide(color: Color(0xFFD74A4A), width: 1.5),
+      ),
+      focusedErrorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10),
+        borderSide: const BorderSide(color: Color(0xFFD74A4A), width: 1.8),
+      ),
+    );
+  }
+
+  Widget _tarjetaConfidencialidad() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(22, 24, 22, 24),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFFEAF0FF), Color(0xFFF5F7FF)],
+        ),
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: const Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          CircleAvatar(
+            radius: 24,
+            backgroundColor: Color(0xFF5367F2),
+            child: Icon(Icons.info_rounded, color: Colors.white, size: 30),
+          ),
+          SizedBox(width: 20),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  "Tu informacion es confidencial",
+                  style: TextStyle(
+                    color: Color(0xFF12248B),
+                    fontSize: 20,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                SizedBox(height: 12),
+                Text(
+                  "Todos los datos ingresados estan protegidos y se utilizan unicamente para generar tu diagnostico personalizado.",
+                  style: TextStyle(
+                    color: Color(0xFF17246B),
+                    fontSize: 17,
+                    height: 1.4,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _botonGenerarDiagnostico() {
+    return InkWell(
+      borderRadius: BorderRadius.circular(36),
+      onTap: cargando ? null : generarDiagnostico,
+      child: Container(
+        height: 76,
+        width: double.infinity,
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [Color(0xFF172394), Color(0xFF0B176B)],
+          ),
+          borderRadius: BorderRadius.circular(36),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF0B176B).withValues(alpha: 0.24),
+              blurRadius: 18,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+        child: Center(
+          child: cargando
+              ? const SizedBox(
+                  width: 28,
+                  height: 28,
+                  child: CircularProgressIndicator(
+                    color: Colors.white,
+                    strokeWidth: 3,
+                  ),
+                )
+              : const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.fact_check_outlined,
+                        color: Colors.white, size: 34),
+                    SizedBox(width: 18),
+                    Text(
+                      "GENERAR DIAGNOSTICO",
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 20,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ],
+                ),
+        ),
+      ),
+    );
+  }
+
+  void _mostrarAyudaDiagnostico() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Ayuda"),
+        content: const Text(
+          "Completa nombre, edad, genero y sintomas actuales. Mientras mas claro sea el contexto, mas util sera el diagnostico generado.",
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("Entendido"),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 // --- PANTALLA: CONSULTA DE PRODUCTO ---
@@ -1635,6 +2506,46 @@ class ConsultaProductoPagina extends StatefulWidget {
 class _ConsultaProductoPaginaState extends State<ConsultaProductoPagina> {
   final controller = TextEditingController();
   bool consultando = false;
+  List<String> _busquedasRecientes = [];
+
+  static const String _prefsRecientesKey = 'consultas_productos_recientes';
+  static const List<String> _ejemplosPopulares = [
+    'Transfer factor plus',
+    'Riovida stix',
+    'Renuvo',
+    'Bioefa',
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _cargarRecientes();
+  }
+
+  Future<void> _cargarRecientes() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (!mounted) return;
+    setState(() {
+      _busquedasRecientes = prefs.getStringList(_prefsRecientesKey) ?? [];
+    });
+  }
+
+  Future<void> _guardarReciente(String busqueda) async {
+    final texto = busqueda.trim();
+    if (texto.isEmpty) return;
+
+    final prefs = await SharedPreferences.getInstance();
+    final actualizadas = [
+      texto,
+      ..._busquedasRecientes.where(
+        (item) => normalizarTexto(item) != normalizarTexto(texto),
+      ),
+    ].take(6).toList();
+
+    await prefs.setStringList(_prefsRecientesKey, actualizadas);
+    if (!mounted) return;
+    setState(() => _busquedasRecientes = actualizadas);
+  }
 
   Future<void> consultar() async {
     final productoBuscado = controller.text.trim();
@@ -1693,6 +2604,9 @@ class _ConsultaProductoPaginaState extends State<ConsultaProductoPagina> {
       final imagenProducto = productoIdentificado == null
           ? null
           : imagenesProducto4Life[productoIdentificado];
+      final precioProducto = productoIdentificado == null
+          ? buscarProductoConPrecio(productoBuscado)
+          : buscarProductoConPrecio(productoIdentificado);
       await ImpactoService.registrar(
         tipo: 'consulta_producto',
         titulo: productoIdentificado ?? productoBuscado,
@@ -1703,63 +2617,17 @@ class _ConsultaProductoPaginaState extends State<ConsultaProductoPagina> {
       );
 
       if (!mounted) return;
+      await _guardarReciente(productoIdentificado ?? productoBuscado);
+      if (!mounted) return;
       showDialog(
         context: context,
-        builder: (c) => AlertDialog(
-          title: Text(productoIdentificado ?? "Info: $productoBuscado"),
-          content: SizedBox(
-            width: 460,
-            child: SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (imagenProducto != null) ...[
-                    Container(
-                      height: 230,
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF8F8F2),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: const Color(0xFFE1E1D7)),
-                      ),
-                      child: Image.asset(
-                        imagenProducto,
-                        fit: BoxFit.contain,
-                        filterQuality: FilterQuality.high,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                  ],
-                  Text(resultado),
-                ],
-              ),
-            ),
-          ),
-          actions: [
-            IconButton(
-                icon: const Icon(Icons.copy),
-                onPressed: () {
-                  Clipboard.setData(ClipboardData(text: resultado));
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text("Copiado al portapapeles")),
-                  );
-                }),
-            IconButton(
-                icon: const Icon(Icons.share),
-                onPressed: () async {
-                  if (imagenProducto == null || productoIdentificado == null) {
-                    await Share.share(resultado);
-                    return;
-                  }
-
-                  final imagen = await imagenProductoComoPng(
-                      imagenProducto, productoIdentificado);
-                  await Share.shareXFiles([imagen], text: resultado);
-                }),
-            TextButton(
-                onPressed: () => Navigator.pop(c), child: const Text("Cerrar")),
-          ],
+        builder: (c) => _dialogoResultado(
+          dialogContext: c,
+          titulo: productoIdentificado ?? "Info: $productoBuscado",
+          resultado: resultado,
+          imagenProducto: imagenProducto,
+          productoIdentificado: productoIdentificado,
+          precioProducto: precioProducto,
         ),
       );
     } catch (e) {
@@ -1791,23 +2659,693 @@ class _ConsultaProductoPaginaState extends State<ConsultaProductoPagina> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Consultar Productos")),
-      body: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
+      backgroundColor: const Color(0xFFF7F7FB),
+      body: Stack(
+        children: [
+          Container(
+            height: 252,
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [Color(0xFF172B98), Color(0xFF07125E)],
+              ),
+            ),
+          ),
+          SafeArea(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(16, 10, 16, 30),
+              child: Column(
+                children: [
+                  _encabezadoConsulta(),
+                  const SizedBox(height: 32),
+                  _tarjetaBusqueda(),
+                  const SizedBox(height: 18),
+                  _tarjetaConsejo(),
+                  const SizedBox(height: 20),
+                  _botonConsultar(),
+                  const SizedBox(height: 22),
+                  _tarjetaRecientes(),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _encabezadoConsulta() {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        IconButton(
+          onPressed: () => Navigator.pop(context),
+          icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
+          iconSize: 34,
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints.tightFor(width: 44, height: 44),
+        ),
+        const SizedBox(width: 12),
+        const Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                "Consultar Productos",
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 31,
+                  height: 1.1,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              SizedBox(height: 9),
+              Text(
+                "Busca informacion de suplementos",
+                style: TextStyle(
+                  color: Color(0xFFD9DFFF),
+                  fontSize: 19,
+                  height: 1.2,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _tarjetaBusqueda() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(22, 28, 22, 24),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(22),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF0B176B).withValues(alpha: 0.10),
+            blurRadius: 24,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      "Busca el producto que necesitas",
+                      style: TextStyle(
+                        color: Color(0xFF12248B),
+                        fontSize: 24,
+                        height: 1.15,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    SizedBox(height: 16),
+                    Text(
+                      "Encuentra informacion detallada, precios y LP: Life Points (Puntos de Vida).",
+                      style: TextStyle(
+                        color: Color(0xFF293573),
+                        fontSize: 18,
+                        height: 1.42,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 10),
+              _ilustracionBusqueda(),
+            ],
+          ),
+          const SizedBox(height: 28),
+          TextField(
+            controller: controller,
+            minLines: 1,
+            maxLines: 1,
+            textInputAction: TextInputAction.search,
+            onSubmitted: (_) => consultar(),
+            decoration: InputDecoration(
+              hintText: "Escribe el nombre del producto",
+              hintStyle: const TextStyle(
+                color: Color(0xFF858AA5),
+                fontSize: 18,
+                fontWeight: FontWeight.w500,
+              ),
+              prefixIcon: const Icon(
+                Icons.search_rounded,
+                color: Color(0xFF666C8F),
+                size: 33,
+              ),
+              suffixIcon: controller.text.isEmpty
+                  ? null
+                  : IconButton(
+                      tooltip: "Limpiar",
+                      onPressed: () => setState(controller.clear),
+                      icon: const Icon(Icons.cancel_rounded),
+                      color: const Color(0xFF666C8F),
+                    ),
+              filled: true,
+              fillColor: Colors.white,
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide:
+                    const BorderSide(color: Color(0xFFD6D9E6), width: 1.5),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide:
+                    const BorderSide(color: Color(0xFF4056E8), width: 1.7),
+              ),
+            ),
+            onChanged: (_) => setState(() {}),
+          ),
+          const SizedBox(height: 24),
+          const Text(
+            "Ejemplos populares:",
+            style: TextStyle(
+              color: Color(0xFF12248B),
+              fontSize: 17,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          const SizedBox(height: 14),
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: [
+              for (final ejemplo in _ejemplosPopulares) _chipEjemplo(ejemplo),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _chipEjemplo(String texto) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(22),
+      onTap: () {
+        setState(() => controller.text = texto);
+        consultar();
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
+        decoration: BoxDecoration(
+          color: const Color(0xFFEFF1FF),
+          borderRadius: BorderRadius.circular(22),
+        ),
+        child: Text(
+          texto,
+          style: const TextStyle(
+            color: Color(0xFF4565F0),
+            fontSize: 16,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _ilustracionBusqueda() {
+    final imagen = imagenesProducto4Life['Transfer factor plus'];
+    return SizedBox(
+      width: 120,
+      height: 126,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          Positioned(
+            right: 6,
+            bottom: 10,
+            child: Container(
+              width: 62,
+              height: 84,
+              decoration: BoxDecoration(
+                color: const Color(0xFFAAB7FF).withValues(alpha: 0.42),
+                borderRadius: BorderRadius.circular(16),
+              ),
+            ),
+          ),
+          Positioned(
+            left: 4,
+            bottom: 8,
+            child: Icon(
+              Icons.local_florist_rounded,
+              color: const Color(0xFF263BBE).withValues(alpha: 0.82),
+              size: 72,
+            ),
+          ),
+          if (imagen != null)
+            Positioned(
+              right: 22,
+              bottom: 12,
+              child: SizedBox(
+                width: 58,
+                height: 86,
+                child: Image.asset(
+                  imagen,
+                  fit: BoxFit.contain,
+                  filterQuality: FilterQuality.high,
+                ),
+              ),
+            ),
+          Positioned(
+            left: 0,
+            top: 8,
+            child: Transform.rotate(
+              angle: -0.78,
+              child: const Icon(
+                Icons.search_rounded,
+                color: Color(0xFF4960EC),
+                size: 86,
+              ),
+            ),
+          ),
+          Positioned(
+            left: 11,
+            top: 20,
+            child: Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.50),
+                shape: BoxShape.circle,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _tarjetaConsejo() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(22, 24, 22, 24),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFFEFF2FF), Color(0xFFF7F8FF)],
+        ),
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: const Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          CircleAvatar(
+            radius: 25,
+            backgroundColor: Color(0xFF5367F2),
+            child: Icon(Icons.info_rounded, color: Colors.white, size: 31),
+          ),
+          SizedBox(width: 20),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  "Consejo",
+                  style: TextStyle(
+                    color: Color(0xFF12248B),
+                    fontSize: 21,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                SizedBox(height: 10),
+                Text(
+                  "Escribe el nombre exacto o parte del producto para obtener mejores resultados.",
+                  style: TextStyle(
+                    color: Color(0xFF09196B),
+                    fontSize: 18,
+                    height: 1.35,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _botonConsultar() {
+    return InkWell(
+      borderRadius: BorderRadius.circular(36),
+      onTap: consultando ? null : consultar,
+      child: Container(
+        height: 70,
+        width: double.infinity,
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [Color(0xFF172394), Color(0xFF0B176B)],
+          ),
+          borderRadius: BorderRadius.circular(36),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF0B176B).withValues(alpha: 0.24),
+              blurRadius: 18,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+        child: Center(
+          child: consultando
+              ? const SizedBox(
+                  width: 26,
+                  height: 26,
+                  child: CircularProgressIndicator(
+                    color: Colors.white,
+                    strokeWidth: 3,
+                  ),
+                )
+              : const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.search_rounded, color: Colors.white, size: 34),
+                    SizedBox(width: 16),
+                    Text(
+                      "Consultar",
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 22,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ],
+                ),
+        ),
+      ),
+    );
+  }
+
+  Widget _tarjetaRecientes() {
+    return InkWell(
+      borderRadius: BorderRadius.circular(18),
+      onTap: _busquedasRecientes.isEmpty ? null : _mostrarRecientes,
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(18),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF0B176B).withValues(alpha: 0.08),
+              blurRadius: 18,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+        child: Row(
           children: [
-            TextField(
-                controller: controller,
-                decoration:
-                    const InputDecoration(labelText: "Nombre del producto")),
-            const SizedBox(height: 20),
-            consultando
-                ? const CircularProgressIndicator()
-                : ElevatedButton(
-                    onPressed: consultar, child: const Text("Consultar")),
+            Container(
+              width: 64,
+              height: 64,
+              decoration: BoxDecoration(
+                color: const Color(0xFFEFF1FF),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: const Icon(
+                Icons.history_rounded,
+                color: Color(0xFF12248B),
+                size: 36,
+              ),
+            ),
+            const SizedBox(width: 18),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    "Busquedas recientes",
+                    style: TextStyle(
+                      color: Color(0xFF12248B),
+                      fontSize: 19,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    _busquedasRecientes.isEmpty
+                        ? "Aun no tienes consultas recientes"
+                        : "Ver productos consultados recientemente",
+                    style: const TextStyle(
+                      color: Color(0xFF2F3C7D),
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(
+              Icons.chevron_right_rounded,
+              color: Color(0xFF5A607E),
+              size: 36,
+            ),
           ],
         ),
       ),
+    );
+  }
+
+  void _mostrarRecientes() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(18, 10, 18, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 44,
+                  height: 5,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFD8DCEB),
+                    borderRadius: BorderRadius.circular(99),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 18),
+              const Text(
+                "Busquedas recientes",
+                style: TextStyle(
+                  color: Color(0xFF12248B),
+                  fontSize: 23,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              const SizedBox(height: 10),
+              for (final item in _busquedasRecientes)
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(
+                    Icons.history_rounded,
+                    color: Color(0xFF12248B),
+                  ),
+                  title: Text(
+                    item,
+                    style: const TextStyle(fontWeight: FontWeight.w800),
+                  ),
+                  onTap: () {
+                    Navigator.pop(context);
+                    setState(() => controller.text = item);
+                    consultar();
+                  },
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _dialogoResultado({
+    required BuildContext dialogContext,
+    required String titulo,
+    required String resultado,
+    required String? imagenProducto,
+    required String? productoIdentificado,
+    required ProductoPrecio? precioProducto,
+  }) {
+    return Dialog(
+      backgroundColor: Colors.white,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 24),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 520),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(18, 18, 18, 12),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      titulo,
+                      style: const TextStyle(
+                        color: Color(0xFF12248B),
+                        fontSize: 22,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    tooltip: "Cerrar",
+                    onPressed: () => Navigator.pop(dialogContext),
+                    icon: const Icon(Icons.close_rounded),
+                  ),
+                ],
+              ),
+              Flexible(
+                child: SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      if (imagenProducto != null) ...[
+                        Container(
+                          height: 220,
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF8F9FF),
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(color: const Color(0xFFE1E4F0)),
+                          ),
+                          child: Image.asset(
+                            imagenProducto,
+                            fit: BoxFit.contain,
+                            filterQuality: FilterQuality.high,
+                          ),
+                        ),
+                        const SizedBox(height: 14),
+                      ],
+                      if (precioProducto != null) ...[
+                        _precioResumenProducto(precioProducto),
+                        const SizedBox(height: 14),
+                      ],
+                      Text(
+                        resultado,
+                        style: const TextStyle(
+                          color: Color(0xFF27315F),
+                          fontSize: 15.5,
+                          height: 1.35,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  IconButton(
+                    tooltip: "Copiar",
+                    icon: const Icon(Icons.copy_rounded),
+                    color: const Color(0xFF12248B),
+                    onPressed: () {
+                      Clipboard.setData(ClipboardData(text: resultado));
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                            content: Text("Copiado al portapapeles")),
+                      );
+                    },
+                  ),
+                  IconButton(
+                    tooltip: "Compartir",
+                    icon: const Icon(Icons.share_rounded),
+                    color: const Color(0xFF12248B),
+                    onPressed: () async {
+                      if (imagenProducto == null ||
+                          productoIdentificado == null) {
+                        await Share.share(resultado);
+                        return;
+                      }
+
+                      final imagen = await imagenProductoComoPng(
+                          imagenProducto, productoIdentificado);
+                      await Share.shareXFiles([imagen], text: resultado);
+                    },
+                  ),
+                  const Spacer(),
+                  TextButton(
+                    onPressed: () => Navigator.pop(dialogContext),
+                    child: const Text("Cerrar"),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _precioResumenProducto(ProductoPrecio producto) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFEFF2FF),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _datoPrecio("Afiliado", '\$${producto.afiliado.toStringAsFixed(2)}'),
+          const SizedBox(height: 6),
+          _datoPrecio("Publico", '\$${producto.publico.toStringAsFixed(2)}'),
+          const SizedBox(height: 6),
+          _datoPrecio(
+            "LP: Life Points (Puntos de Vida)",
+            producto.lp?.toString() ?? 'Sin dato',
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _datoPrecio(String etiqueta, String valor) {
+    return Row(
+      children: [
+        Expanded(
+          child: Text(
+            etiqueta,
+            style: const TextStyle(
+              color: Color(0xFF46527E),
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
+        Text(
+          valor,
+          style: const TextStyle(
+            color: Color(0xFF12248B),
+            fontSize: 16,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+      ],
     );
   }
 }
@@ -1939,7 +3477,8 @@ class _PaginaCalculadoraPreciosState extends State<PaginaCalculadoraPrecios> {
               const SizedBox(height: 14),
               _resumenTotal("Afiliado", _precio(_totalAfiliado)),
               _resumenTotal("Publico", _precio(_totalPublico)),
-              _resumenTotal("L.P.", _totalLp.toString()),
+              _resumenTotal(
+                  "LP: Life Points (Puntos de Vida)", _totalLp.toString()),
               const SizedBox(height: 16),
               ElevatedButton.icon(
                 onPressed: () => Share.share(_resumenCompartir()),
@@ -1977,11 +3516,12 @@ class _PaginaCalculadoraPreciosState extends State<PaginaCalculadoraPrecios> {
       buffer.writeln(producto.nombre);
       buffer.writeln('Afiliado: ${_precio(producto.afiliado)}');
       buffer.writeln('Publico: ${_precio(producto.publico)}');
-      buffer.writeln('LP: ${producto.lp?.toString() ?? 'Sin dato'}\n');
+      buffer.writeln(
+          'LP: Life Points (Puntos de Vida): ${producto.lp?.toString() ?? 'Sin dato'}\n');
     }
     buffer.writeln('Total afiliado: ${_precio(_totalAfiliado)}');
     buffer.writeln('Total publico: ${_precio(_totalPublico)}');
-    buffer.writeln('Total LP: $_totalLp');
+    buffer.writeln('Total LP: Life Points (Puntos de Vida): $_totalLp');
     return buffer.toString();
   }
 
@@ -2172,7 +3712,7 @@ class _PaginaCalculadoraPreciosState extends State<PaginaCalculadoraPrecios> {
               ),
               SizedBox(height: 8),
               Text(
-                "Consulta precios y L.P. de productos",
+                "Consulta precios y LP: Life Points (Puntos de Vida)",
                 style: TextStyle(
                   color: Color(0xFFDCE2FF),
                   fontSize: 20,
@@ -2232,7 +3772,7 @@ class _PaginaCalculadoraPreciosState extends State<PaginaCalculadoraPrecios> {
                     ),
                     SizedBox(height: 14),
                     Text(
-                      "Busca y anade uno o varios productos para consultar precios y L.P.",
+                      "Busca y anade uno o varios productos para consultar precios y LP: Life Points (Puntos de Vida).",
                       style: TextStyle(
                         color: Color(0xFF47527E),
                         fontSize: 18,
@@ -2507,7 +4047,7 @@ class _PaginaCalculadoraPreciosState extends State<PaginaCalculadoraPrecios> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        "${_precio(producto.afiliado)} afiliado  |  LP ${producto.lp ?? 0}",
+                        "${_precio(producto.afiliado)} afiliado  |  LP: Life Points (Puntos de Vida) ${producto.lp ?? 0}",
                         style: const TextStyle(
                           color: Color(0xFF687092),
                           fontSize: 13,
@@ -2569,7 +4109,7 @@ class _PaginaCalculadoraPreciosState extends State<PaginaCalculadoraPrecios> {
                   ),
                   SizedBox(height: 7),
                   Text(
-                    "Consulta precios y L.P.",
+                    "Consulta precios y LP: Life Points (Puntos de Vida)",
                     style: TextStyle(
                       color: Color(0xFFDDE3FF),
                       fontSize: 17,
@@ -2699,7 +4239,7 @@ class _PaginaCalculadoraPreciosState extends State<PaginaCalculadoraPrecios> {
                 ),
                 SizedBox(height: 10),
                 Text(
-                  "Selecciona uno o varios productos y presiona calcular para obtener los precios y el L.P. correspondientes.",
+                  "Selecciona uno o varios productos y presiona calcular para obtener los precios y LP: Life Points (Puntos de Vida).",
                   style: TextStyle(
                     color: Color(0xFF46527E),
                     fontSize: 17,
@@ -3287,6 +4827,11 @@ class _PaginaChatbotState extends State<PaginaChatbot> {
 
   @override
   Widget build(BuildContext context) {
+    return _buildChatbotNuevo();
+  }
+
+  // ignore: unused_element
+  Widget _buildChatbotAnterior(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text("Asesor IA 4Life"),
@@ -3381,6 +4926,535 @@ class _PaginaChatbotState extends State<PaginaChatbot> {
                 ),
               ],
             ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+extension _PaginaChatbotUi on _PaginaChatbotState {
+  Widget _buildChatbotNuevo() {
+    return Scaffold(
+      backgroundColor: const Color(0xFFF8F8FB),
+      body: Stack(
+        children: [
+          Container(
+            height: 206,
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [Color(0xFF172B98), Color(0xFF07125E)],
+              ),
+            ),
+          ),
+          SafeArea(
+            child: Column(
+              children: [
+                _encabezadoChatbot(),
+                Expanded(
+                  child: mensajes.isEmpty
+                      ? _estadoInicialChat()
+                      : _listaMensajesChat(),
+                ),
+                if (enviando)
+                  const LinearProgressIndicator(
+                    minHeight: 3,
+                    color: Color(0xFF4059EA),
+                    backgroundColor: Color(0xFFE5E8FF),
+                  ),
+                _barraEntradaChat(),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _encabezadoChatbot() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 18),
+      child: Row(
+        children: [
+          IconButton(
+            onPressed: () => Navigator.pop(context),
+            icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
+            iconSize: 34,
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints.tightFor(width: 44, height: 44),
+          ),
+          const SizedBox(width: 12),
+          const Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  "Asesor IA 4Life",
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 30,
+                    height: 1.1,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                SizedBox(height: 8),
+                Text(
+                  "Tu asistente inteligente de suplementos",
+                  style: TextStyle(
+                    color: Color(0xFFD9DFFF),
+                    fontSize: 18,
+                    height: 1.2,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          IconButton(
+            tooltip: "Historial de chats",
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const PaginaHistorialChatbot(),
+              ),
+            ),
+            icon: const Icon(Icons.history_rounded, color: Colors.white),
+            iconSize: 38,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _estadoInicialChat() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+      child: Column(
+        children: [
+          _tarjetaBienvenidaChat(),
+          const SizedBox(height: 82),
+          _ilustracionConversacion(),
+          const SizedBox(height: 30),
+          const Text(
+            "En que puedo ayudarte hoy?",
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: Color(0xFF12248B),
+              fontSize: 24,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          const SizedBox(height: 18),
+          const Text(
+            "Haz una pregunta para iniciar la conversacion.\nEstoy aqui para ayudarte.",
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: Color(0xFF4D5689),
+              fontSize: 17,
+              height: 1.35,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _tarjetaBienvenidaChat() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(22, 26, 22, 24),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(22),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF0B176B).withValues(alpha: 0.10),
+            blurRadius: 24,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 128,
+                height: 128,
+                decoration: const BoxDecoration(
+                  color: Color(0xFFEFF1FF),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.smart_toy_outlined,
+                  color: Color(0xFF4D66F2),
+                  size: 76,
+                ),
+              ),
+              const SizedBox(width: 26),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      "Hola, soy tu Asesor IA 4Life",
+                      style: TextStyle(
+                        color: Color(0xFF12248B),
+                        fontSize: 22,
+                        height: 1.18,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    SizedBox(height: 18),
+                    Text(
+                      "Estoy aqui para ayudarte con informacion sobre productos, beneficios, dosis y recomendaciones personalizadas.",
+                      style: TextStyle(
+                        color: Color(0xFF4D5689),
+                        fontSize: 17,
+                        height: 1.45,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 30),
+          Row(
+            children: [
+              Expanded(
+                child: _preguntaRapida(
+                  icono: Icons.medication_liquid_outlined,
+                  texto: "Recomiendame un suplemento para tener mas energia",
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _preguntaRapida(
+                  icono: Icons.shield_outlined,
+                  texto: "Cual es la funcion del Transfer Factor 4Life?",
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _preguntaRapida(
+                  icono: Icons.favorite_border_rounded,
+                  texto: "Que productos apoyan el sistema inmunologico?",
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _preguntaRapida({
+    required IconData icono,
+    required String texto,
+  }) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(10),
+      onTap: () {
+        _controller.text = texto;
+        enviarMensaje();
+      },
+      child: Container(
+        height: 112,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+        decoration: BoxDecoration(
+          color: const Color(0xFFEFF1FF),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Row(
+          children: [
+            Icon(icono, color: const Color(0xFF4D66F2), size: 32),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                texto,
+                maxLines: 4,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: Color(0xFF12248B),
+                  fontSize: 14.5,
+                  height: 1.3,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _ilustracionConversacion() {
+    return SizedBox(
+      width: 230,
+      height: 150,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          Positioned(
+            bottom: 18,
+            child: Container(
+              width: 150,
+              height: 18,
+              decoration: BoxDecoration(
+                color: const Color(0xFF0B176B).withValues(alpha: 0.06),
+                borderRadius: BorderRadius.circular(99),
+              ),
+            ),
+          ),
+          Positioned(
+            left: 30,
+            top: 10,
+            child: Container(
+              width: 126,
+              height: 92,
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF526BFA), Color(0xFF263BCB)],
+                ),
+                borderRadius: BorderRadius.circular(34),
+              ),
+              child: const Center(
+                child: Text(
+                  "...",
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 48,
+                    height: 0.72,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+            ),
+          ),
+          Positioned(
+            right: 20,
+            bottom: 18,
+            child: Container(
+              width: 98,
+              height: 72,
+              decoration: BoxDecoration(
+                color: const Color(0xFFDDE3FF),
+                borderRadius: BorderRadius.circular(30),
+              ),
+              child: const Icon(
+                Icons.notes_rounded,
+                color: Color(0xFF7E8FD4),
+                size: 48,
+              ),
+            ),
+          ),
+          const Positioned(
+            left: 0,
+            top: 24,
+            child: Icon(Icons.auto_awesome, color: Color(0xFFC4CCFA), size: 26),
+          ),
+          const Positioned(
+            right: 16,
+            top: 0,
+            child: Icon(Icons.auto_awesome, color: Color(0xFFC4CCFA), size: 20),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _listaMensajesChat() {
+    return ListView.builder(
+      padding: const EdgeInsets.fromLTRB(16, 18, 16, 18),
+      itemCount: mensajes.length,
+      itemBuilder: (context, i) {
+        final esIA = mensajes[i]["rol"] == "ia";
+        final texto = mensajes[i]["texto"] ?? "";
+        return _burbujaMensaje(esIA: esIA, texto: texto);
+      },
+    );
+  }
+
+  Widget _burbujaMensaje({
+    required bool esIA,
+    required String texto,
+  }) {
+    return Align(
+      alignment: esIA ? Alignment.centerLeft : Alignment.centerRight,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        constraints: const BoxConstraints(maxWidth: 620),
+        padding: const EdgeInsets.fromLTRB(14, 12, 14, 10),
+        decoration: BoxDecoration(
+          color: esIA ? Colors.white : const Color(0xFF172394),
+          borderRadius: BorderRadius.circular(16).copyWith(
+            bottomLeft: esIA ? const Radius.circular(4) : null,
+            bottomRight: esIA ? null : const Radius.circular(4),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF0B176B).withValues(alpha: 0.08),
+              blurRadius: 14,
+              offset: const Offset(0, 6),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment:
+              esIA ? CrossAxisAlignment.start : CrossAxisAlignment.end,
+          children: [
+            Text(
+              esIA ? "Asesor IA" : "Tu",
+              style: TextStyle(
+                color: esIA ? const Color(0xFF12248B) : Colors.white,
+                fontSize: 13,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              texto,
+              style: TextStyle(
+                color: esIA ? const Color(0xFF27315F) : Colors.white,
+                fontSize: 15.5,
+                height: 1.35,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            if (esIA) ...[
+              const SizedBox(height: 8),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    tooltip: "Copiar",
+                    visualDensity: VisualDensity.compact,
+                    icon: const Icon(Icons.copy_rounded, size: 20),
+                    color: const Color(0xFF4059EA),
+                    onPressed: () {
+                      Clipboard.setData(ClipboardData(text: texto));
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                            content: Text("Copiado al portapapeles")),
+                      );
+                    },
+                  ),
+                  IconButton(
+                    tooltip: "Compartir",
+                    visualDensity: VisualDensity.compact,
+                    icon: const Icon(Icons.share_rounded, size: 20),
+                    color: const Color(0xFF4059EA),
+                    onPressed: () => Share.share(texto),
+                  ),
+                ],
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _barraEntradaChat() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(22)),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF0B176B).withValues(alpha: 0.10),
+            blurRadius: 18,
+            offset: const Offset(0, -5),
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            padding: const EdgeInsets.fromLTRB(18, 6, 8, 6),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: const Color(0xFFD6D9E6), width: 1.5),
+            ),
+            child: Row(
+              children: [
+                const Icon(
+                  Icons.auto_awesome,
+                  color: Color(0xFF535B86),
+                  size: 28,
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: TextField(
+                    controller: _controller,
+                    minLines: 1,
+                    maxLines: 4,
+                    textInputAction: TextInputAction.send,
+                    onSubmitted: (_) => enviarMensaje(),
+                    decoration: const InputDecoration(
+                      hintText: "Pregunta lo que sea...",
+                      hintStyle: TextStyle(
+                        color: Color(0xFF8C91A8),
+                        fontSize: 17,
+                        fontWeight: FontWeight.w500,
+                      ),
+                      border: InputBorder.none,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                InkWell(
+                  borderRadius: BorderRadius.circular(32),
+                  onTap: enviando ? null : enviarMensaje,
+                  child: Container(
+                    width: 58,
+                    height: 58,
+                    decoration: const BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [Color(0xFF172394), Color(0xFF0B176B)],
+                      ),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.send_rounded,
+                      color: Colors.white,
+                      size: 32,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 18),
+          const Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.health_and_safety_outlined,
+                  color: Color(0xFF5C6592), size: 22),
+              SizedBox(width: 12),
+              Flexible(
+                child: Text(
+                  "La informacion proporcionada por la IA no sustituye el consejo de un profesional de la salud.",
+                  textAlign: TextAlign.left,
+                  style: TextStyle(
+                    color: Color(0xFF5C6592),
+                    fontSize: 13.5,
+                    height: 1.35,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
       ),
