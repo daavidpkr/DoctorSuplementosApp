@@ -7,8 +7,11 @@ import 'package:share_plus/share_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:record/record.dart';
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
 const List<String> productosPermitidos4Life = [
   'Agpro',
@@ -41,6 +44,8 @@ const List<String> productosPermitidos4Life = [
   'Transfer factor tri factor',
   'Vistari',
 ];
+
+const double escalaTextoInterfaces = 0.90;
 
 final String catalogoPermitido4Life = productosPermitidos4Life.join(', ');
 
@@ -333,6 +338,7 @@ class ArchivoAdjuntoIA {
 
   bool get esImagen => mimeType.startsWith('image/');
   bool get esPdf => mimeType == 'application/pdf';
+  bool get esAudio => mimeType.startsWith('audio/');
 }
 
 class PerfilAsesor {
@@ -413,6 +419,7 @@ class ImpactoService {
     required String tipo,
     required String titulo,
     Map<String, dynamic> datos = const {},
+    bool guardarEnFirebase = true,
   }) async {
     final registro = {
       'tipo': tipo,
@@ -425,6 +432,8 @@ class ImpactoService {
     final raw = prefs.getStringList(_prefsKey) ?? [];
     raw.insert(0, jsonEncode(registro));
     await prefs.setStringList(_prefsKey, raw);
+
+    if (!guardarEnFirebase) return;
 
     try {
       await FirebaseFirestore.instance.collection('impacto_4life').add({
@@ -443,6 +452,14 @@ class ImpactoService {
   }
 }
 
+const FirebaseOptions _firebaseOptionsEscritorio = FirebaseOptions(
+  apiKey: 'AIzaSyDY1ZyaLp8i8KVtcEnyUzgNFz0b0M191kA',
+  appId: '1:916760929366:android:13656f89d780918867c7f7',
+  messagingSenderId: '916760929366',
+  projectId: 'doctorsuplementos-4bbb1',
+  storageBucket: 'doctorsuplementos-4bbb1.firebasestorage.app',
+);
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await inicializarFirebaseSeguro();
@@ -451,7 +468,12 @@ Future<void> main() async {
 
 Future<void> inicializarFirebaseSeguro() async {
   try {
-    await Firebase.initializeApp().timeout(const Duration(seconds: 5));
+    try {
+      await Firebase.initializeApp().timeout(const Duration(seconds: 5));
+    } catch (_) {
+      await Firebase.initializeApp(options: _firebaseOptionsEscritorio)
+          .timeout(const Duration(seconds: 5));
+    }
     FirebaseFirestore.instance.settings = const Settings(
       persistenceEnabled: true,
     );
@@ -468,6 +490,18 @@ class DoctorSuplementos extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'Doctor de Suplementos',
+      builder: (context, child) {
+        final media = MediaQuery.of(context);
+        return MediaQuery(
+          data: media.copyWith(
+            textScaler: media.textScaler.clamp(
+              minScaleFactor: 0.82,
+              maxScaleFactor: escalaTextoInterfaces,
+            ),
+          ),
+          child: child ?? const SizedBox.shrink(),
+        );
+      },
       theme: ThemeData(
         scaffoldBackgroundColor: const Color(0xFFF5F5EE),
         primaryColor: const Color(0xFF1A237E),
@@ -1534,6 +1568,35 @@ class _PaginaImpacto4LifeState extends State<PaginaImpacto4Life> {
     return grupos;
   }
 
+  _ResumenImpactoMes _resumenMes(List<Map<String, dynamic>> eventos) {
+    final diagnosticos =
+        eventos.where((e) => e['tipo'] == 'diagnostico').length;
+    final consultasProducto =
+        eventos.where((e) => e['tipo'] == 'consulta_producto').length;
+    final calculadoras =
+        eventos.where((e) => e['tipo'] == 'calculadora_productos').length;
+    final productos = eventos
+        .map((e) => e['datos'])
+        .whereType<Map>()
+        .expand((datos) {
+          final lista = datos['productos'];
+          if (lista is List) return lista.map((e) => '$e');
+          final producto = datos['producto']?.toString();
+          return producto == null || producto.isEmpty
+              ? const Iterable<String>.empty()
+              : [producto];
+        })
+        .toSet()
+        .toList();
+
+    return _ResumenImpactoMes(
+      diagnosticos: diagnosticos,
+      consultasProducto: consultasProducto,
+      calculadoras: calculadoras,
+      productos: productos,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final grupos = _eventosPorMes();
@@ -1559,62 +1622,290 @@ class _PaginaImpacto4LifeState extends State<PaginaImpacto4Life> {
                   itemCount: claves.length,
                   itemBuilder: (context, index) {
                     final clave = claves[index];
-                    final eventos = grupos[clave] ?? [];
-                    final diagnosticos =
-                        eventos.where((e) => e['tipo'] == 'diagnostico').length;
-                    final consultasProducto = eventos
-                        .where((e) => e['tipo'] == 'consulta_producto')
-                        .length;
-                    final calculadoras = eventos
-                        .where((e) => e['tipo'] == 'calculadora_productos')
-                        .length;
-                    final productos = eventos
-                        .map((e) => e['datos'])
-                        .whereType<Map>()
-                        .expand((datos) {
-                          final lista = datos['productos'];
-                          if (lista is List) return lista.map((e) => '$e');
-                          final producto = datos['producto']?.toString();
-                          return producto == null || producto.isEmpty
-                              ? const Iterable<String>.empty()
-                              : [producto];
-                        })
-                        .toSet()
-                        .toList();
-
-                    return Card(
-                      child: Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              _tituloMes(clave),
-                              style: const TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                                color: Color(0xFF1A237E),
-                              ),
-                            ),
-                            const SizedBox(height: 10),
-                            Text("Diagnósticos realizados: $diagnosticos"),
-                            Text("Consultas de productos: $consultasProducto"),
-                            Text("Consultas en calculadora: $calculadoras"),
-                            if (productos.isNotEmpty) ...[
-                              const SizedBox(height: 10),
-                              const Text(
-                                "Productos consultados:",
-                                style: TextStyle(fontWeight: FontWeight.bold),
-                              ),
-                              Text(productos.take(8).join(', ')),
-                            ],
-                          ],
-                        ),
-                      ),
+                    final resumen = _resumenMes(grupos[clave] ?? []);
+                    return _TarjetaImpactoGrafica(
+                      titulo: _tituloMes(clave),
+                      resumen: resumen,
                     );
                   },
                 ),
     );
+  }
+}
+
+class _ResumenImpactoMes {
+  final int diagnosticos;
+  final int consultasProducto;
+  final int calculadoras;
+  final List<String> productos;
+
+  const _ResumenImpactoMes({
+    required this.diagnosticos,
+    required this.consultasProducto,
+    required this.calculadoras,
+    required this.productos,
+  });
+
+  int get total => diagnosticos + consultasProducto + calculadoras;
+}
+
+class _TarjetaImpactoGrafica extends StatelessWidget {
+  final String titulo;
+  final _ResumenImpactoMes resumen;
+
+  const _TarjetaImpactoGrafica({
+    required this.titulo,
+    required this.resumen,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    const azul = Color(0xFF2839C7);
+    final maximo = [
+      resumen.diagnosticos,
+      resumen.consultasProducto,
+      resumen.calculadoras,
+      1,
+    ].reduce((a, b) => a > b ? a : b);
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.07),
+            blurRadius: 18,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            titulo,
+            style: const TextStyle(
+              color: Color(0xFF12248B),
+              fontSize: 19,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              SizedBox(
+                width: 112,
+                height: 112,
+                child: CustomPaint(
+                  painter: _GraficoCircularImpacto(
+                    diagnosticos: resumen.diagnosticos,
+                    consultasProducto: resumen.consultasProducto,
+                    calculadoras: resumen.calculadoras,
+                  ),
+                  child: Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          '${resumen.total}',
+                          style: const TextStyle(
+                            color: azul,
+                            fontSize: 27,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                        const Text(
+                          'acciones',
+                          style: TextStyle(
+                            color: Color(0xFF68708C),
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 18),
+              Expanded(
+                child: Column(
+                  children: [
+                    _BarraImpacto(
+                      etiqueta: 'Diagnósticos',
+                      valor: resumen.diagnosticos,
+                      maximo: maximo,
+                      color: const Color(0xFF14983E),
+                    ),
+                    const SizedBox(height: 12),
+                    _BarraImpacto(
+                      etiqueta: 'Productos',
+                      valor: resumen.consultasProducto,
+                      maximo: maximo,
+                      color: azul,
+                    ),
+                    const SizedBox(height: 12),
+                    _BarraImpacto(
+                      etiqueta: 'Calculadora',
+                      valor: resumen.calculadoras,
+                      maximo: maximo,
+                      color: const Color(0xFFF29A00),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          if (resumen.productos.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            const Text(
+              'Productos consultados',
+              style: TextStyle(
+                color: Color(0xFF12248B),
+                fontSize: 15,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final producto in resumen.productos.take(8))
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFEFF1FF),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      producto,
+                      style: const TextStyle(
+                        color: azul,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _BarraImpacto extends StatelessWidget {
+  final String etiqueta;
+  final int valor;
+  final int maximo;
+  final Color color;
+
+  const _BarraImpacto({
+    required this.etiqueta,
+    required this.valor,
+    required this.maximo,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final porcentaje = maximo == 0 ? 0.0 : (valor / maximo).clamp(0.0, 1.0);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                etiqueta,
+                style: const TextStyle(
+                  color: Color(0xFF27315F),
+                  fontSize: 14,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+            Text(
+              '$valor',
+              style: TextStyle(
+                color: color,
+                fontSize: 15,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 6),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(99),
+          child: LinearProgressIndicator(
+            value: porcentaje,
+            minHeight: 10,
+            color: color,
+            backgroundColor: const Color(0xFFE8EBF6),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _GraficoCircularImpacto extends CustomPainter {
+  final int diagnosticos;
+  final int consultasProducto;
+  final int calculadoras;
+
+  const _GraficoCircularImpacto({
+    required this.diagnosticos,
+    required this.consultasProducto,
+    required this.calculadoras,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final total = diagnosticos + consultasProducto + calculadoras;
+    final centro = Offset(size.width / 2, size.height / 2);
+    final rect = Rect.fromCircle(center: centro, radius: (size.width / 2) - 7);
+    final base = Paint()
+      ..color = const Color(0xFFE8EBF6)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 13
+      ..strokeCap = StrokeCap.round;
+
+    canvas.drawArc(rect, 0, 6.28318, false, base);
+    if (total == 0) return;
+
+    final segmentos = [
+      (diagnosticos, const Color(0xFF14983E)),
+      (consultasProducto, const Color(0xFF2839C7)),
+      (calculadoras, const Color(0xFFF29A00)),
+    ];
+    var inicio = -1.5708;
+    for (final segmento in segmentos) {
+      if (segmento.$1 <= 0) continue;
+      final sweep = (segmento.$1 / total) * 6.28318;
+      final paint = Paint()
+        ..color = segmento.$2
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 13
+        ..strokeCap = StrokeCap.round;
+      canvas.drawArc(rect, inicio, sweep, false, paint);
+      inicio += sweep;
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _GraficoCircularImpacto oldDelegate) {
+    return oldDelegate.diagnosticos != diagnosticos ||
+        oldDelegate.consultasProducto != consultasProducto ||
+        oldDelegate.calculadoras != calculadoras;
   }
 }
 
@@ -1788,9 +2079,11 @@ class _FormularioPacienteState extends State<FormularioPaciente> {
   late TextEditingController nombreController;
   late TextEditingController edadController;
   late TextEditingController historialController;
+  final AudioRecorder _audioRecorder = AudioRecorder();
   String? _generoSeleccionado;
   ArchivoAdjuntoIA? _adjunto;
   bool cargando = false;
+  bool _grabandoAudio = false;
 
   @override
   void initState() {
@@ -1801,10 +2094,30 @@ class _FormularioPacienteState extends State<FormularioPaciente> {
         TextEditingController(text: widget.infoPrevia?['datos']?['edad'] ?? "");
     _generoSeleccionado = widget.infoPrevia?['datos']?['genero'];
     historialController = TextEditingController();
+    nombreController.addListener(_actualizarProgresoFormulario);
+    edadController.addListener(_actualizarProgresoFormulario);
     historialController.addListener(() {
       if (mounted) setState(() {});
     });
   }
+
+  void _actualizarProgresoFormulario() {
+    if (mounted) setState(() {});
+  }
+
+  int get _camposCompletosFormulario {
+    var completos = 0;
+    if (nombreController.text.trim().isNotEmpty) completos++;
+    if (edadController.text.trim().isNotEmpty) completos++;
+    if ((_generoSeleccionado ?? '').trim().isNotEmpty) completos++;
+    if (historialController.text.trim().isNotEmpty ||
+        _adjunto?.esAudio == true) {
+      completos++;
+    }
+    return completos;
+  }
+
+  double get _progresoFormulario => _camposCompletosFormulario / 4;
 
   Future<void> generarDiagnostico() async {
     if (historialController.text.isEmpty && _adjunto == null) return;
@@ -1881,7 +2194,9 @@ class _FormularioPacienteState extends State<FormularioPaciente> {
         else
           Content.multi([
             TextPart(
-              "$prompt\n\nAnaliza tambien el archivo adjunto. Extrae solo la informacion relevante para orientar la recomendacion y usala como contexto complementario; no afirmes diagnosticos medicos definitivos.",
+              _adjunto!.esAudio
+                  ? "$prompt\n\nAnaliza la nota de voz adjunta. Extrae los sintomas, contexto y datos relevantes mencionados por el paciente para orientar la recomendacion; no guardes ni menciones que el audio fue almacenado."
+                  : "$prompt\n\nAnaliza tambien el archivo adjunto. Extrae solo la informacion relevante para orientar la recomendacion y usala como contexto complementario; no afirmes diagnosticos medicos definitivos.",
             ),
             DataPart(_adjunto!.mimeType, _adjunto!.bytes),
           ]),
@@ -1894,7 +2209,10 @@ class _FormularioPacienteState extends State<FormularioPaciente> {
         'nombre': nombreController.text,
         'edad': edadController.text,
         'genero': _generoSeleccionado!,
-        'sintomas': historialController.text,
+        'sintomas':
+            historialController.text.trim().isEmpty && _adjunto?.esAudio == true
+                ? 'Sintomas enviados por nota de voz (audio no guardado)'
+                : historialController.text,
       });
 
       _mostrarResultado(textoFinal);
@@ -1982,12 +2300,61 @@ class _FormularioPacienteState extends State<FormularioPaciente> {
     });
   }
 
+  Future<void> _alternarAudioDiagnostico() async {
+    if (_grabandoAudio) {
+      final path = await _audioRecorder.stop();
+      if (!mounted) return;
+      setState(() => _grabandoAudio = false);
+      if (path == null) return;
+
+      final archivo = File(path);
+      final bytes = await archivo.readAsBytes();
+      await archivo.delete().catchError((_) => archivo);
+      if (bytes.isEmpty || !mounted) return;
+
+      setState(() {
+        _adjunto = ArchivoAdjuntoIA(
+          nombre: 'Nota de voz para diagnostico.m4a',
+          mimeType: 'audio/mp4',
+          bytes: bytes,
+        );
+      });
+      return;
+    }
+
+    if (!await _audioRecorder.hasPermission()) {
+      _mostrarDialogoSimple(
+        "Permiso de microfono",
+        "Activa el permiso del microfono para grabar la nota de voz.",
+      );
+      return;
+    }
+
+    final carpetaTemporal = await getTemporaryDirectory();
+    final path =
+        '${carpetaTemporal.path}/diagnostico_${DateTime.now().microsecondsSinceEpoch}.m4a';
+    await _audioRecorder.start(
+      const RecordConfig(
+        encoder: AudioEncoder.aacLc,
+        numChannels: 1,
+        bitRate: 64000,
+      ),
+      path: path,
+    );
+    if (!mounted) return;
+    setState(() => _grabandoAudio = true);
+  }
+
   void _quitarAdjuntoDiagnostico() {
     setState(() => _adjunto = null);
   }
 
   @override
   void dispose() {
+    if (_grabandoAudio) {
+      unawaited(_audioRecorder.cancel());
+    }
+    _audioRecorder.dispose();
     nombreController.dispose();
     edadController.dispose();
     historialController.dispose();
@@ -2290,9 +2657,9 @@ class _FormularioPacienteState extends State<FormularioPaciente> {
                   color: const Color(0xFFEFF1FF),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Text(
-                  "Paso 1 de 4",
-                  style: TextStyle(
+                child: Text(
+                  "$_camposCompletosFormulario de 4",
+                  style: const TextStyle(
                     color: Color(0xFF4565F0),
                     fontSize: 16,
                     fontWeight: FontWeight.w900,
@@ -2304,11 +2671,12 @@ class _FormularioPacienteState extends State<FormularioPaciente> {
           const SizedBox(height: 24),
           ClipRRect(
             borderRadius: BorderRadius.circular(99),
-            child: const LinearProgressIndicator(
-              value: 0.30,
+            child: LinearProgressIndicator(
+              value: _progresoFormulario,
               minHeight: 8,
-              backgroundColor: Color(0xFFE5E8FF),
-              valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF4865F4)),
+              backgroundColor: const Color(0xFFE5E8FF),
+              valueColor:
+                  const AlwaysStoppedAnimation<Color>(Color(0xFF4865F4)),
             ),
           ),
         ],
@@ -2454,9 +2822,12 @@ class _FormularioPacienteState extends State<FormularioPaciente> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
             children: [
-              Expanded(
+              SizedBox(
+                width: 120,
                 child: OutlinedButton.icon(
                   onPressed: _tomarFotoDiagnostico,
                   icon: const Icon(Icons.photo_camera_rounded),
@@ -2471,8 +2842,8 @@ class _FormularioPacienteState extends State<FormularioPaciente> {
                   ),
                 ),
               ),
-              const SizedBox(width: 12),
-              Expanded(
+              SizedBox(
+                width: 124,
                 child: OutlinedButton.icon(
                   onPressed: _seleccionarArchivoDiagnostico,
                   icon: const Icon(Icons.attach_file_rounded),
@@ -2481,6 +2852,30 @@ class _FormularioPacienteState extends State<FormularioPaciente> {
                     foregroundColor: const Color(0xFF12248B),
                     minimumSize: const Size(0, 48),
                     side: const BorderSide(color: Color(0xFFD1D5E3)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                ),
+              ),
+              SizedBox(
+                width: 128,
+                child: OutlinedButton.icon(
+                  onPressed: cargando ? null : _alternarAudioDiagnostico,
+                  icon: Icon(_grabandoAudio
+                      ? Icons.stop_circle_outlined
+                      : Icons.mic_none_rounded),
+                  label: Text(_grabandoAudio ? "Detener" : "Audio"),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: _grabandoAudio
+                        ? const Color(0xFFD33B3B)
+                        : const Color(0xFF12248B),
+                    minimumSize: const Size(0, 48),
+                    side: BorderSide(
+                      color: _grabandoAudio
+                          ? const Color(0xFFD33B3B)
+                          : const Color(0xFFD1D5E3),
+                    ),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10),
                     ),
@@ -2501,9 +2896,11 @@ class _FormularioPacienteState extends State<FormularioPaciente> {
               child: Row(
                 children: [
                   Icon(
-                    _adjunto!.esPdf
-                        ? Icons.picture_as_pdf_rounded
-                        : Icons.image_outlined,
+                    _adjunto!.esAudio
+                        ? Icons.mic_none_rounded
+                        : _adjunto!.esPdf
+                            ? Icons.picture_as_pdf_rounded
+                            : Icons.image_outlined,
                     color: const Color(0xFF4059EA),
                   ),
                   const SizedBox(width: 10),
@@ -2549,7 +2946,7 @@ class _FormularioPacienteState extends State<FormularioPaciente> {
           SizedBox(width: 9),
           Expanded(
             child: Text(
-              "Este documento o foto no se guarda dentro de la app.",
+              "Este documento, foto o audio no se guarda dentro de la app.",
               style: TextStyle(
                 color: Color(0xFF175B50),
                 fontSize: 13,
@@ -3125,68 +3522,73 @@ class _ConsultaProductoPaginaState extends State<ConsultaProductoPagina> {
   }
 
   Widget _ilustracionBusqueda() {
-    final imagen = imagenesProducto4Life['Transfer factor plus'];
     return SizedBox(
-      width: 120,
-      height: 126,
+      width: 104,
+      height: 112,
       child: Stack(
         alignment: Alignment.center,
         children: [
           Positioned(
-            right: 6,
-            bottom: 10,
+            right: 0,
+            bottom: 6,
             child: Container(
-              width: 62,
-              height: 84,
+              width: 76,
+              height: 76,
               decoration: BoxDecoration(
-                color: const Color(0xFFAAB7FF).withValues(alpha: 0.42),
-                borderRadius: BorderRadius.circular(16),
+                color: const Color(0xFFE8ECFF),
+                borderRadius: BorderRadius.circular(22),
+              ),
+              child: const Icon(
+                Icons.inventory_2_outlined,
+                color: Color(0xFF2839C7),
+                size: 38,
               ),
             ),
           ),
-          Positioned(
-            left: 4,
-            bottom: 8,
-            child: Icon(
-              Icons.local_florist_rounded,
-              color: const Color(0xFF263BBE).withValues(alpha: 0.82),
-              size: 72,
-            ),
-          ),
-          if (imagen != null)
-            Positioned(
-              right: 22,
-              bottom: 12,
-              child: SizedBox(
-                width: 58,
-                height: 86,
-                child: Image.asset(
-                  imagen,
-                  fit: BoxFit.contain,
-                  filterQuality: FilterQuality.high,
-                ),
-              ),
-            ),
           Positioned(
             left: 0,
-            top: 8,
-            child: Transform.rotate(
-              angle: -0.78,
+            top: 4,
+            child: Container(
+              width: 58,
+              height: 58,
+              decoration: BoxDecoration(
+                color: const Color(0xFF2839C7),
+                borderRadius: BorderRadius.circular(18),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF2839C7).withValues(alpha: 0.20),
+                    blurRadius: 14,
+                    offset: const Offset(0, 7),
+                  ),
+                ],
+              ),
               child: const Icon(
                 Icons.search_rounded,
-                color: Color(0xFF4960EC),
-                size: 86,
+                color: Colors.white,
+                size: 34,
               ),
             ),
           ),
           Positioned(
-            left: 11,
-            top: 20,
+            right: 10,
+            top: 4,
             child: Container(
-              width: 36,
-              height: 36,
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.50),
+              width: 28,
+              height: 28,
+              decoration: const BoxDecoration(
+                color: Color(0xFFDDE5FF),
+                shape: BoxShape.circle,
+              ),
+            ),
+          ),
+          Positioned(
+            left: 16,
+            bottom: 8,
+            child: Container(
+              width: 28,
+              height: 28,
+              decoration: const BoxDecoration(
+                color: Color(0xFFEEF1FF),
                 shape: BoxShape.circle,
               ),
             ),
@@ -3724,6 +4126,7 @@ class _PaginaCalculadoraPreciosState extends State<PaginaCalculadoraPrecios> {
     unawaited(ImpactoService.registrar(
       tipo: 'calculadora_productos',
       titulo: 'Calculadora de precios',
+      guardarEnFirebase: false,
       datos: {
         'cantidad': _cantidadTotalProductos,
         'productos': _productos
@@ -3898,6 +4301,7 @@ class _PaginaCalculadoraPreciosState extends State<PaginaCalculadoraPrecios> {
                       borderRadius: BorderRadius.circular(16),
                       onTap: () {
                         _agregarProducto(producto);
+                        Navigator.pop(context);
                       },
                       child: Container(
                         padding: const EdgeInsets.all(10),
@@ -4206,38 +4610,58 @@ class _PaginaCalculadoraPreciosState extends State<PaginaCalculadoraPrecios> {
 
   Widget _ilustracionProductos() {
     return SizedBox(
-      width: 126,
-      height: 120,
+      width: 108,
+      height: 110,
       child: Stack(
         alignment: Alignment.center,
         children: [
           Positioned(
-            right: 4,
-            bottom: 12,
+            right: 0,
+            bottom: 8,
             child: Container(
-              width: 82,
-              height: 72,
+              width: 78,
+              height: 78,
               decoration: BoxDecoration(
-                color: const Color(0xFF4153D9).withValues(alpha: 0.18),
-                borderRadius: BorderRadius.circular(18),
+                color: const Color(0xFFE8ECFF),
+                borderRadius: BorderRadius.circular(24),
+              ),
+              child: const Icon(
+                Icons.calculate_outlined,
+                color: Color(0xFF2839C7),
+                size: 38,
               ),
             ),
           ),
           Positioned(
-            left: 8,
-            top: 16,
-            child: Icon(
-              Icons.shopping_bag_rounded,
-              size: 88,
-              color: const Color(0xFF635CE8).withValues(alpha: 0.86),
+            left: 0,
+            top: 4,
+            child: Container(
+              width: 58,
+              height: 58,
+              decoration: BoxDecoration(
+                color: const Color(0xFF2839C7),
+                borderRadius: BorderRadius.circular(18),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF2839C7).withValues(alpha: 0.20),
+                    blurRadius: 14,
+                    offset: const Offset(0, 7),
+                  ),
+                ],
+              ),
+              child: const Icon(
+                Icons.shopping_bag_outlined,
+                color: Colors.white,
+                size: 34,
+              ),
             ),
           ),
           const Positioned(
-            right: 12,
-            bottom: 18,
+            right: 8,
+            top: 8,
             child: Icon(
-              Icons.add_shopping_cart_rounded,
-              size: 62,
+              Icons.add_circle,
+              size: 28,
               color: Color(0xFF17218D),
             ),
           ),
@@ -4770,10 +5194,16 @@ class _PaginaHistorialState extends State<PaginaHistorial> {
   void _filtrarHistorial(String query) {
     final busqueda = query.toLowerCase().trim();
     setState(() {
-      _historialFiltrado = _todoElHistorial
-          .where((paciente) =>
-              _nombrePaciente(paciente).toLowerCase().contains(busqueda))
-          .toList();
+      _historialFiltrado = _todoElHistorial.where((paciente) {
+        final nombre = _nombrePaciente(paciente).toLowerCase();
+        final fecha = paciente['fecha']?.toString().toLowerCase() ?? '';
+        final resultado = paciente['resultado']?.toString().toLowerCase() ?? '';
+        final titulo = paciente['titulo']?.toString().toLowerCase() ?? '';
+        return nombre.contains(busqueda) ||
+            fecha.contains(busqueda) ||
+            resultado.contains(busqueda) ||
+            titulo.contains(busqueda);
+      }).toList();
     });
   }
 
@@ -4894,6 +5324,81 @@ class _PaginaHistorialState extends State<PaginaHistorial> {
     );
   }
 
+  String _fechaPaciente(dynamic valor) {
+    final texto = valor?.toString() ?? '';
+    final fecha = DateTime.tryParse(texto);
+    if (fecha == null) return texto.isEmpty ? 'Sin fecha' : texto;
+    const meses = [
+      'Enero',
+      'Febrero',
+      'Marzo',
+      'Abril',
+      'Mayo',
+      'Junio',
+      'Julio',
+      'Agosto',
+      'Septiembre',
+      'Octubre',
+      'Noviembre',
+      'Diciembre',
+    ];
+    return '${fecha.day} ${meses[fecha.month - 1]} ${fecha.year}';
+  }
+
+  String _horaPaciente(dynamic valor) {
+    final texto = valor?.toString() ?? '';
+    final fecha = DateTime.tryParse(texto);
+    if (fecha == null) return '--:--';
+    final hora = fecha.hour.toString().padLeft(2, '0');
+    final minuto = fecha.minute.toString().padLeft(2, '0');
+    return '$hora:$minuto';
+  }
+
+  _EstadoPaciente _estadoPaciente(Map<String, dynamic> registro) {
+    final resultado = registro['resultado']?.toString().trim() ?? '';
+    if (resultado.isEmpty) {
+      return const _EstadoPaciente(
+        texto: 'Pendiente',
+        icono: Icons.schedule_rounded,
+        color: Color(0xFFF29A00),
+      );
+    }
+    return const _EstadoPaciente(
+      texto: 'Diagnóstico completo',
+      icono: Icons.check_circle_outline,
+      color: Color(0xFF14983E),
+    );
+  }
+
+  Color _colorAvatar(String nombre) {
+    final colores = [
+      const Color(0xFFDDE8FF),
+      const Color(0xFFD8F4DA),
+      const Color(0xFFE8DBFF),
+      const Color(0xFFD8F3F8),
+    ];
+    if (nombre.isEmpty) return colores.first;
+    return colores[nombre.codeUnitAt(0) % colores.length];
+  }
+
+  Color _colorInicial(String nombre) {
+    final colores = [
+      const Color(0xFF1D65C1),
+      const Color(0xFF128E32),
+      const Color(0xFF5A34C9),
+      const Color(0xFF11899A),
+    ];
+    if (nombre.isEmpty) return colores.first;
+    return colores[nombre.codeUnitAt(0) % colores.length];
+  }
+
+  void _nuevoDiagnostico() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const FormularioPaciente()),
+    ).then((_) => _cargarDatos());
+  }
+
   @override
   void dispose() {
     _searchController.dispose();
@@ -4902,48 +5407,483 @@ class _PaginaHistorialState extends State<PaginaHistorial> {
 
   @override
   Widget build(BuildContext context) {
+    const azul = Color(0xFF2839C7);
+    const azulOscuro = Color(0xFF111B7D);
+    final cantidad = _historialFiltrado.length;
+
     return Scaffold(
-      appBar: AppBar(
-        title: const Text("Historial 4Life"),
-        backgroundColor: const Color(0xFF1A237E),
-        foregroundColor: Colors.white,
-      ),
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(10),
-            child: TextField(
-              controller: _searchController,
-              onChanged: _filtrarHistorial,
-              decoration: const InputDecoration(
-                labelText: 'Buscar paciente por nombre...',
-                prefixIcon: Icon(Icons.search),
-                border: OutlineInputBorder(),
+      backgroundColor: const Color(0xFFF7F8FC),
+      body: SafeArea(
+        top: false,
+        child: Column(
+          children: [
+            Container(
+              height: 112,
+              padding: EdgeInsets.only(
+                left: 22,
+                right: 22,
+                top: MediaQuery.of(context).padding.top + 12,
+              ),
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [azul, azulOscuro],
+                  begin: Alignment.centerLeft,
+                  end: Alignment.centerRight,
+                ),
+              ),
+              child: Row(
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.arrow_back, size: 32),
+                    color: Colors.white,
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(
+                      minWidth: 44,
+                      minHeight: 44,
+                    ),
+                    onPressed: () => Navigator.maybePop(context),
+                  ),
+                  const SizedBox(width: 24),
+                  const Expanded(
+                    child: Text(
+                      'Historial de Pacientes',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 31,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    tooltip: 'Filtros',
+                    icon: const Icon(Icons.filter_list_rounded, size: 34),
+                    color: Colors.white,
+                    onPressed: () {},
+                  ),
+                ],
               ),
             ),
-          ),
-          Expanded(
-            child: _historialFiltrado.isEmpty
-                ? const Center(child: Text("No se encontraron registros"))
-                : ListView.builder(
-                    itemCount: _historialFiltrado.length,
-                    itemBuilder: (context, i) {
-                      final item = _historialFiltrado[i];
-                      return ListTile(
-                        leading: const Icon(Icons.assignment_ind),
-                        title: Text(_nombrePaciente(item)),
-                        subtitle:
-                            Text("Fecha: ${item['fecha'] ?? 'Sin fecha'}"),
-                        trailing: IconButton(
-                          icon: const Icon(Icons.refresh, color: Colors.blue),
-                          onPressed: () => _reDiagnosticar(item),
+            Expanded(
+              child: Stack(
+                children: [
+                  ListView(
+                    padding: const EdgeInsets.fromLTRB(24, 28, 24, 138),
+                    children: [
+                      Container(
+                        height: 86,
+                        padding: const EdgeInsets.symmetric(horizontal: 24),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(20),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.08),
+                              blurRadius: 18,
+                              offset: const Offset(0, 8),
+                            ),
+                          ],
                         ),
-                        onTap: () => _verReporteAnterior(item),
-                      );
-                    },
+                        child: TextField(
+                          controller: _searchController,
+                          onChanged: _filtrarHistorial,
+                          style: const TextStyle(
+                            color: Color(0xFF0D1430),
+                            fontSize: 20,
+                          ),
+                          decoration: const InputDecoration(
+                            border: InputBorder.none,
+                            hintText: 'Buscar paciente, fecha o diagnóstico...',
+                            hintStyle: TextStyle(
+                              color: Color(0xFF747A9E),
+                              fontSize: 20,
+                            ),
+                            icon: Icon(
+                              Icons.search,
+                              color: Color(0xFF68709D),
+                              size: 34,
+                            ),
+                            suffixIcon: Icon(
+                              Icons.calendar_today_outlined,
+                              color: azul,
+                              size: 30,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 30),
+                      Row(
+                        children: [
+                          const Expanded(
+                            child: Text(
+                              'Historial reciente',
+                              style: TextStyle(
+                                color: Color(0xFF646B88),
+                                fontSize: 23,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                          ),
+                          Text(
+                            '$cantidad ${cantidad == 1 ? 'resultado' : 'resultados'}',
+                            style: const TextStyle(
+                              color: azul,
+                              fontSize: 20,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 22),
+                      if (_historialFiltrado.isEmpty)
+                        const _EstadoHistorialVacio(
+                          texto: 'No se encontraron registros',
+                        )
+                      else
+                        ..._historialFiltrado.map((item) {
+                          final nombre = _nombrePaciente(item);
+                          return _TarjetaPacienteHistorial(
+                            nombre: nombre,
+                            inicial:
+                                nombre.isEmpty ? '?' : nombre[0].toUpperCase(),
+                            fecha: _fechaPaciente(item['fecha']),
+                            hora: _horaPaciente(item['fecha']),
+                            estado: _estadoPaciente(item),
+                            colorAvatar: _colorAvatar(nombre),
+                            colorInicial: _colorInicial(nombre),
+                            onVer: () => _verReporteAnterior(item),
+                            onRepetir: () => _reDiagnosticar(item),
+                            onAbrir: () => _verReporteAnterior(item),
+                          );
+                        }),
+                    ],
                   ),
+                  Positioned(
+                    right: 28,
+                    bottom: 72,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        SizedBox(
+                          width: 112,
+                          height: 112,
+                          child: FloatingActionButton(
+                            heroTag: 'nuevo-diagnostico-historial',
+                            backgroundColor: azul,
+                            foregroundColor: Colors.white,
+                            elevation: 9,
+                            shape: const CircleBorder(),
+                            onPressed: _nuevoDiagnostico,
+                            child: const Icon(Icons.add, size: 58),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        const Text(
+                          'Nuevo diagnóstico',
+                          style: TextStyle(
+                            color: azul,
+                            fontSize: 17,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+      bottomNavigationBar: Padding(
+        padding: const EdgeInsets.fromLTRB(24, 0, 24, 14),
+        child: Container(
+          height: 82,
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(34),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.07),
+                blurRadius: 18,
+                offset: const Offset(0, 8),
+              ),
+            ],
           ),
-        ],
+          child: Row(
+            children: [
+              const Expanded(
+                child: _ItemNavegacionHistorial(
+                  icono: Icons.history,
+                  texto: 'Historial',
+                  activo: true,
+                ),
+              ),
+              Expanded(
+                child: _ItemNavegacionHistorial(
+                  icono: Icons.people_outline,
+                  texto: 'Pacientes',
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const PaginaDatosPaciente(),
+                    ),
+                  ),
+                ),
+              ),
+              Expanded(
+                child: _ItemNavegacionHistorial(
+                  icono: Icons.bar_chart,
+                  texto: 'Estadísticas',
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const PaginaImpacto4Life(),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _EstadoPaciente {
+  final String texto;
+  final IconData icono;
+  final Color color;
+
+  const _EstadoPaciente({
+    required this.texto,
+    required this.icono,
+    required this.color,
+  });
+}
+
+class _TarjetaPacienteHistorial extends StatelessWidget {
+  final String nombre;
+  final String inicial;
+  final String fecha;
+  final String hora;
+  final _EstadoPaciente estado;
+  final Color colorAvatar;
+  final Color colorInicial;
+  final VoidCallback onVer;
+  final VoidCallback onRepetir;
+  final VoidCallback onAbrir;
+
+  const _TarjetaPacienteHistorial({
+    required this.nombre,
+    required this.inicial,
+    required this.fecha,
+    required this.hora,
+    required this.estado,
+    required this.colorAvatar,
+    required this.colorInicial,
+    required this.onVer,
+    required this.onRepetir,
+    required this.onAbrir,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    const azul = Color(0xFF2839C7);
+
+    return Container(
+      height: 156,
+      margin: const EdgeInsets.only(bottom: 10),
+      child: Material(
+        color: Colors.white,
+        elevation: 1.5,
+        shadowColor: Colors.black.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(24),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(24),
+          onTap: onAbrir,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 18),
+            child: Row(
+              children: [
+                Container(
+                  width: 74,
+                  height: 74,
+                  decoration: BoxDecoration(
+                    color: colorAvatar,
+                    shape: BoxShape.circle,
+                  ),
+                  alignment: Alignment.center,
+                  child: Text(
+                    inicial,
+                    style: TextStyle(
+                      color: colorInicial,
+                      fontSize: 36,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 22),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              nombre,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                color: Color(0xFF10162F),
+                                fontSize: 24,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                          ),
+                          const Icon(
+                            Icons.chevron_right_rounded,
+                            color: azul,
+                            size: 36,
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          const Icon(
+                            Icons.calendar_month_outlined,
+                            color: Color(0xFF68708C),
+                            size: 20,
+                          ),
+                          const SizedBox(width: 7),
+                          Flexible(
+                            child: Text(
+                              fecha,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                color: Color(0xFF68708C),
+                                fontSize: 17,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 20),
+                          const Icon(
+                            Icons.access_time,
+                            color: Color(0xFF68708C),
+                            size: 20,
+                          ),
+                          const SizedBox(width: 7),
+                          Text(
+                            hora,
+                            style: const TextStyle(
+                              color: Color(0xFF68708C),
+                              fontSize: 17,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Row(
+                              children: [
+                                Icon(
+                                  estado.icono,
+                                  color: estado.color,
+                                  size: 20,
+                                ),
+                                const SizedBox(width: 7),
+                                Flexible(
+                                  child: Text(
+                                    estado.texto,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      color: estado.color,
+                                      fontSize: 17,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          _BotonAccionPaciente(
+                            icono: Icons.visibility_outlined,
+                            texto: 'Ver',
+                            onTap: onVer,
+                            relleno: false,
+                          ),
+                          const SizedBox(width: 10),
+                          _BotonAccionPaciente(
+                            icono: Icons.refresh,
+                            texto: 'Repetir',
+                            onTap: onRepetir,
+                            relleno: true,
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _BotonAccionPaciente extends StatelessWidget {
+  final IconData icono;
+  final String texto;
+  final VoidCallback onTap;
+  final bool relleno;
+
+  const _BotonAccionPaciente({
+    required this.icono,
+    required this.texto,
+    required this.onTap,
+    required this.relleno,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    const azul = Color(0xFF2839C7);
+
+    return SizedBox(
+      width: relleno ? 98 : 82,
+      height: 40,
+      child: OutlinedButton.icon(
+        onPressed: onTap,
+        icon: Icon(icono, size: 22),
+        label: Text(texto),
+        style: OutlinedButton.styleFrom(
+          backgroundColor: relleno ? const Color(0xFFEDEEFF) : Colors.white,
+          foregroundColor: azul,
+          side: BorderSide(
+            color: relleno ? const Color(0xFFEDEEFF) : const Color(0xFFD6D9F1),
+            width: 1.4,
+          ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(13),
+          ),
+          textStyle: const TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
       ),
     );
   }
@@ -4986,6 +5926,8 @@ class PaginaHistorialChatbot extends StatefulWidget {
 
 class _PaginaHistorialChatbotState extends State<PaginaHistorialChatbot> {
   List<Map<String, dynamic>> _conversaciones = [];
+  List<Map<String, dynamic>> _conversacionesFiltradas = [];
+  final TextEditingController _busquedaController = TextEditingController();
   bool _cargando = true;
 
   @override
@@ -4999,7 +5941,31 @@ class _PaginaHistorialChatbotState extends State<PaginaHistorialChatbot> {
     if (!mounted) return;
     setState(() {
       _conversaciones = datos;
+      _conversacionesFiltradas = _filtrar(datos, _busquedaController.text);
       _cargando = false;
+    });
+  }
+
+  List<Map<String, dynamic>> _filtrar(
+    List<Map<String, dynamic>> conversaciones,
+    String query,
+  ) {
+    final texto = query.trim().toLowerCase();
+    if (texto.isEmpty) return conversaciones;
+    return conversaciones.where((chat) {
+      final titulo = chat['titulo']?.toString().toLowerCase() ?? '';
+      final fecha = chat['fecha']?.toString().toLowerCase() ?? '';
+      final mensajes =
+          _mensajes(chat).map((m) => m['texto'] ?? '').join(' ').toLowerCase();
+      return titulo.contains(texto) ||
+          fecha.contains(texto) ||
+          mensajes.contains(texto);
+    }).toList();
+  }
+
+  void _buscar(String query) {
+    setState(() {
+      _conversacionesFiltradas = _filtrar(_conversaciones, query);
     });
   }
 
@@ -5032,44 +5998,585 @@ class _PaginaHistorialChatbotState extends State<PaginaHistorialChatbot> {
     ).then((_) => _cargar());
   }
 
+  String _fechaLegible(dynamic valor) {
+    final texto = valor?.toString() ?? '';
+    final fecha = DateTime.tryParse(texto);
+    if (fecha == null) return texto.isEmpty ? 'Sin fecha' : texto;
+    const meses = [
+      'Enero',
+      'Febrero',
+      'Marzo',
+      'Abril',
+      'Mayo',
+      'Junio',
+      'Julio',
+      'Agosto',
+      'Septiembre',
+      'Octubre',
+      'Noviembre',
+      'Diciembre',
+    ];
+    final hora = fecha.hour.toString().padLeft(2, '0');
+    final minuto = fecha.minute.toString().padLeft(2, '0');
+    return '${fecha.day} ${meses[fecha.month - 1]} ${fecha.year} · $hora:$minuto';
+  }
+
+  _CategoriaChat _categoriaPara(String titulo) {
+    final t = titulo.toLowerCase();
+    if (t.contains('sueño') ||
+        t.contains('sueno') ||
+        t.contains('insomnio') ||
+        t.contains('descanso')) {
+      return const _CategoriaChat(
+        texto: 'Sueño y descanso',
+        icono: Icons.nightlight_round,
+        color: Color(0xFF5E46D8),
+        fondo: Color(0xFFEAE6FF),
+      );
+    }
+    if (t.contains('dolor') ||
+        t.contains('lesion') ||
+        t.contains('lesión') ||
+        t.contains('espalda') ||
+        t.contains('migraña')) {
+      return const _CategoriaChat(
+        texto: 'Dolor y lesiones',
+        icono: Icons.accessibility_new_rounded,
+        color: Color(0xFF2876DF),
+        fondo: Color(0xFFE7F1FF),
+      );
+    }
+    if (t.contains('gastritis') ||
+        t.contains('digest') ||
+        t.contains('estomago') ||
+        t.contains('estómago')) {
+      return const _CategoriaChat(
+        texto: 'Salud digestiva',
+        icono: Icons.local_fire_department_outlined,
+        color: Color(0xFFC45B20),
+        fondo: Color(0xFFFFE8D8),
+      );
+    }
+    if (t.contains('prote') ||
+        t.contains('creatina') ||
+        t.contains('vitamina') ||
+        t.contains('suplement')) {
+      return const _CategoriaChat(
+        texto: 'Suplementos',
+        icono: Icons.spa_outlined,
+        color: Color(0xFF3F9A4B),
+        fondo: Color(0xFFE1F4E2),
+      );
+    }
+    return const _CategoriaChat(
+      texto: 'Salud general',
+      icono: Icons.health_and_safety_outlined,
+      color: Color(0xFF3047CC),
+      fondo: Color(0xFFE8ECFF),
+    );
+  }
+
+  void _nuevoChat() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const PaginaChatbot()),
+    ).then((_) => _cargar());
+  }
+
+  @override
+  void dispose() {
+    _busquedaController.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
+    const azul = Color(0xFF2839C7);
+    const azulOscuro = Color(0xFF111B7D);
+    final cantidad = _conversacionesFiltradas.length;
+
     return Scaffold(
-      appBar: AppBar(
-        title: const Text("Historial de chats"),
-        backgroundColor: const Color(0xFF1A237E),
-        foregroundColor: Colors.white,
-      ),
-      body: _cargando
-          ? const Center(child: CircularProgressIndicator())
-          : _conversaciones.isEmpty
-              ? const Center(child: Text("No hay conversaciones guardadas"))
-              : ListView.builder(
-                  itemCount: _conversaciones.length,
-                  itemBuilder: (context, index) {
-                    final chat = _conversaciones[index];
-                    final id = chat['id']?.toString() ?? '';
-                    return ListTile(
-                      leading: const Icon(Icons.chat_bubble_outline),
-                      title: Text(chat['titulo']?.toString() ?? 'Chat 4Life'),
-                      subtitle: Text("Fecha: ${chat['fecha'] ?? 'Sin fecha'}"),
-                      onTap: () => _abrirChat(chat),
-                      trailing: IconButton(
-                        tooltip: "Eliminar",
-                        icon: const Icon(Icons.delete_outline),
-                        onPressed: id.isEmpty ? null : () => _eliminar(id),
-                      ),
-                    );
-                  },
+      backgroundColor: const Color(0xFFF7F8FC),
+      body: SafeArea(
+        top: false,
+        child: Column(
+          children: [
+            Container(
+              height: 112,
+              padding: EdgeInsets.only(
+                left: 22,
+                right: 22,
+                top: MediaQuery.of(context).padding.top + 12,
+              ),
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [azul, azulOscuro],
+                  begin: Alignment.centerLeft,
+                  end: Alignment.centerRight,
                 ),
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: const Color(0xFF1A237E),
-        foregroundColor: Colors.white,
-        onPressed: () => Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => const PaginaChatbot()),
-        ).then((_) => _cargar()),
-        child: const Icon(Icons.add),
+              ),
+              child: Row(
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.arrow_back, size: 32),
+                    color: Colors.white,
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(
+                      minWidth: 44,
+                      minHeight: 44,
+                    ),
+                    onPressed: () => Navigator.maybePop(context),
+                  ),
+                  const SizedBox(width: 22),
+                  const Expanded(
+                    child: Text(
+                      'Historial de chats',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 32,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    tooltip: 'Filtros',
+                    icon: const Icon(Icons.filter_list_rounded, size: 34),
+                    color: Colors.white,
+                    onPressed: () {},
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: Stack(
+                children: [
+                  _cargando
+                      ? const Center(child: CircularProgressIndicator())
+                      : ListView(
+                          padding: const EdgeInsets.fromLTRB(24, 24, 24, 138),
+                          children: [
+                            Container(
+                              height: 86,
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 24),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(20),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: 0.08),
+                                    blurRadius: 18,
+                                    offset: const Offset(0, 8),
+                                  ),
+                                ],
+                              ),
+                              child: TextField(
+                                controller: _busquedaController,
+                                onChanged: _buscar,
+                                style: const TextStyle(
+                                  color: Color(0xFF0D1430),
+                                  fontSize: 20,
+                                ),
+                                decoration: const InputDecoration(
+                                  border: InputBorder.none,
+                                  hintText: 'Buscar en el historial...',
+                                  hintStyle: TextStyle(
+                                    color: Color(0xFF747A9E),
+                                    fontSize: 20,
+                                  ),
+                                  icon: Icon(
+                                    Icons.search,
+                                    color: Color(0xFF68709D),
+                                    size: 34,
+                                  ),
+                                  suffixIcon: Icon(
+                                    Icons.calendar_today_outlined,
+                                    color: azul,
+                                    size: 30,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 26),
+                            Row(
+                              children: [
+                                const Expanded(
+                                  child: Text(
+                                    'Conversaciones recientes',
+                                    style: TextStyle(
+                                      color: Color(0xFF646B88),
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.w800,
+                                    ),
+                                  ),
+                                ),
+                                Text(
+                                  '$cantidad ${cantidad == 1 ? 'conversación' : 'conversaciones'}',
+                                  style: const TextStyle(
+                                    color: azul,
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 22),
+                            if (_conversaciones.isEmpty)
+                              const _EstadoHistorialVacio(
+                                texto: 'No hay conversaciones guardadas',
+                              )
+                            else if (_conversacionesFiltradas.isEmpty)
+                              const _EstadoHistorialVacio(
+                                texto: 'No se encontraron conversaciones',
+                              )
+                            else
+                              ..._conversacionesFiltradas.map((chat) {
+                                final id = chat['id']?.toString() ?? '';
+                                final titulo =
+                                    chat['titulo']?.toString() ?? 'Chat 4Life';
+                                return _TarjetaConversacion(
+                                  titulo: titulo,
+                                  fecha: _fechaLegible(chat['fecha']),
+                                  categoria: _categoriaPara(titulo),
+                                  onAbrir: () => _abrirChat(chat),
+                                  onEliminar:
+                                      id.isEmpty ? null : () => _eliminar(id),
+                                );
+                              }),
+                          ],
+                        ),
+                  Positioned(
+                    right: 28,
+                    bottom: 72,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        SizedBox(
+                          width: 112,
+                          height: 112,
+                          child: FloatingActionButton(
+                            heroTag: 'nuevo-chat-historial',
+                            backgroundColor: azul,
+                            foregroundColor: Colors.white,
+                            elevation: 9,
+                            shape: const CircleBorder(),
+                            onPressed: _nuevoChat,
+                            child: const Icon(Icons.add, size: 58),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        const Text(
+                          'Nuevo chat',
+                          style: TextStyle(
+                            color: azul,
+                            fontSize: 18,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+      bottomNavigationBar: Padding(
+        padding: const EdgeInsets.fromLTRB(24, 0, 24, 14),
+        child: Container(
+          height: 82,
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(34),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.07),
+                blurRadius: 18,
+                offset: const Offset(0, 8),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: _ItemNavegacionHistorial(
+                  icono: Icons.history,
+                  texto: 'Historial',
+                  activo: true,
+                ),
+              ),
+              Expanded(
+                child: _ItemNavegacionHistorial(
+                  icono: Icons.people_outline,
+                  texto: 'Pacientes',
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const PaginaDatosPaciente(),
+                    ),
+                  ),
+                ),
+              ),
+              Expanded(
+                child: _ItemNavegacionHistorial(
+                  icono: Icons.bar_chart,
+                  texto: 'Estadísticas',
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const PaginaImpacto4Life(),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _CategoriaChat {
+  final String texto;
+  final IconData icono;
+  final Color color;
+  final Color fondo;
+
+  const _CategoriaChat({
+    required this.texto,
+    required this.icono,
+    required this.color,
+    required this.fondo,
+  });
+}
+
+class _TarjetaConversacion extends StatelessWidget {
+  final String titulo;
+  final String fecha;
+  final _CategoriaChat categoria;
+  final VoidCallback onAbrir;
+  final VoidCallback? onEliminar;
+
+  const _TarjetaConversacion({
+    required this.titulo,
+    required this.fecha,
+    required this.categoria,
+    required this.onAbrir,
+    required this.onEliminar,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    const azul = Color(0xFF2839C7);
+
+    return Container(
+      height: 142,
+      margin: const EdgeInsets.only(bottom: 8),
+      child: Material(
+        color: Colors.white,
+        elevation: 1.5,
+        shadowColor: Colors.black.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(22),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(22),
+          onTap: onAbrir,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 18),
+            child: Row(
+              children: [
+                Container(
+                  width: 78,
+                  height: 78,
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFEDEEFF),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.chat_bubble_outline_rounded,
+                    color: azul,
+                    size: 34,
+                  ),
+                ),
+                const SizedBox(width: 26),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        titulo,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: Color(0xFF10162F),
+                          fontSize: 20,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      const SizedBox(height: 9),
+                      Row(
+                        children: [
+                          const Icon(
+                            Icons.calendar_month_outlined,
+                            color: Color(0xFF68708C),
+                            size: 20,
+                          ),
+                          const SizedBox(width: 7),
+                          Expanded(
+                            child: Text(
+                              fecha,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                color: Color(0xFF68708C),
+                                fontSize: 18,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 11,
+                            vertical: 5,
+                          ),
+                          decoration: BoxDecoration(
+                            color: categoria.fondo,
+                            borderRadius: BorderRadius.circular(13),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                categoria.icono,
+                                color: categoria.color,
+                                size: 17,
+                              ),
+                              const SizedBox(width: 5),
+                              Text(
+                                categoria.texto,
+                                style: TextStyle(
+                                  color: categoria.color,
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 12),
+                IconButton(
+                  tooltip: 'Eliminar',
+                  onPressed: onEliminar,
+                  style: IconButton.styleFrom(
+                    backgroundColor: const Color(0xFFF0F1F8),
+                    fixedSize: const Size(58, 58),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
+                  icon: const Icon(
+                    Icons.delete_outline,
+                    color: Color(0xFF5E637C),
+                    size: 28,
+                  ),
+                ),
+                const SizedBox(width: 14),
+                const Icon(
+                  Icons.chevron_right_rounded,
+                  color: azul,
+                  size: 36,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _EstadoHistorialVacio extends StatelessWidget {
+  final String texto;
+
+  const _EstadoHistorialVacio({required this.texto});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 180,
+      alignment: Alignment.center,
+      child: Text(
+        texto,
+        textAlign: TextAlign.center,
+        style: const TextStyle(
+          color: Color(0xFF646B88),
+          fontSize: 18,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
+  }
+}
+
+class _ItemNavegacionHistorial extends StatelessWidget {
+  final IconData icono;
+  final String texto;
+  final bool activo;
+  final VoidCallback? onTap;
+
+  const _ItemNavegacionHistorial({
+    required this.icono,
+    required this.texto,
+    this.activo = false,
+    this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final color = activo ? const Color(0xFF2839C7) : const Color(0xFF737892);
+
+    return Material(
+      color: activo ? const Color(0xFFEDEEFF) : Colors.transparent,
+      borderRadius: BorderRadius.circular(30),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(30),
+        onTap: activo ? null : onTap,
+        child: SizedBox(
+          height: 62,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icono, color: color, size: 27),
+              const SizedBox(width: 9),
+              Flexible(
+                child: Text(
+                  texto,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: color,
+                    fontSize: 17,
+                    fontWeight: activo ? FontWeight.w800 : FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -5093,9 +6600,11 @@ class PaginaChatbot extends StatefulWidget {
 
 class _PaginaChatbotState extends State<PaginaChatbot> {
   final TextEditingController _controller = TextEditingController();
+  final AudioRecorder _audioRecorder = AudioRecorder();
   final List<Map<String, String>> mensajes = [];
   ArchivoAdjuntoIA? _adjunto;
   bool enviando = false;
+  bool _grabandoAudio = false;
   late String _conversacionId;
 
   @override
@@ -5113,7 +6622,9 @@ class _PaginaChatbotState extends State<PaginaChatbot> {
     final textoUsuario = _controller.text.trim();
     if ((textoUsuario.isEmpty && _adjunto == null) || enviando) return;
     final textoVisible = textoUsuario.isEmpty
-        ? "Analiza el documento o foto adjunta."
+        ? (_adjunto?.esAudio == true
+            ? "Analiza esta nota de voz."
+            : "Analiza el archivo adjunto.")
         : textoUsuario;
 
     setState(() {
@@ -5165,7 +6676,9 @@ class _PaginaChatbotState extends State<PaginaChatbot> {
         else
           Content.multi([
             TextPart(
-              "$promptLimpioParaChatbot\n\nAnaliza el archivo adjunto como contexto temporal. No menciones que fue guardado, porque no se guarda en la app.",
+              _adjunto!.esAudio
+                  ? "$promptLimpioParaChatbot\n\nAnaliza la nota de voz adjunta como contexto temporal. Extrae la consulta y responde con base en el audio. No menciones que fue guardado, porque no se guarda en la app."
+                  : "$promptLimpioParaChatbot\n\nAnaliza el archivo adjunto como contexto temporal. No menciones que fue guardado, porque no se guarda en la app.",
             ),
             DataPart(_adjunto!.mimeType, _adjunto!.bytes),
           ]),
@@ -5196,6 +6709,10 @@ class _PaginaChatbotState extends State<PaginaChatbot> {
 
   @override
   void dispose() {
+    if (_grabandoAudio) {
+      unawaited(_audioRecorder.cancel());
+    }
+    _audioRecorder.dispose();
     _controller.dispose();
     super.dispose();
   }
@@ -5244,6 +6761,57 @@ class _PaginaChatbotState extends State<PaginaChatbot> {
         bytes: bytes,
       );
     });
+  }
+
+  Future<void> alternarAudioChat() async {
+    if (_grabandoAudio) {
+      final path = await _audioRecorder.stop();
+      if (!mounted) return;
+      setState(() => _grabandoAudio = false);
+      if (path == null) return;
+
+      final archivo = File(path);
+      final bytes = await archivo.readAsBytes();
+      await archivo.delete().catchError((_) => archivo);
+      if (bytes.isEmpty || !mounted) return;
+
+      setState(() {
+        _adjunto = ArchivoAdjuntoIA(
+          nombre: 'Nota de voz para el asesor.m4a',
+          mimeType: 'audio/mp4',
+          bytes: bytes,
+        );
+      });
+      return;
+    }
+
+    if (!await _audioRecorder.hasPermission()) {
+      if (!mounted) return;
+      showDialog(
+        context: context,
+        builder: (context) => const AlertDialog(
+          title: Text("Permiso de microfono"),
+          content: Text(
+            "Activa el permiso del microfono para grabar la nota de voz.",
+          ),
+        ),
+      );
+      return;
+    }
+
+    final carpetaTemporal = await getTemporaryDirectory();
+    final path =
+        '${carpetaTemporal.path}/chat_${DateTime.now().microsecondsSinceEpoch}.m4a';
+    await _audioRecorder.start(
+      const RecordConfig(
+        encoder: AudioEncoder.aacLc,
+        numChannels: 1,
+        bitRate: 64000,
+      ),
+      path: path,
+    );
+    if (!mounted) return;
+    setState(() => _grabandoAudio = true);
   }
 
   void quitarAdjuntoChat() {
@@ -5816,9 +7384,11 @@ extension _PaginaChatbotUi on _PaginaChatbotState {
               child: Row(
                 children: [
                   Icon(
-                    _adjunto!.esPdf
-                        ? Icons.picture_as_pdf_rounded
-                        : Icons.image_outlined,
+                    _adjunto!.esAudio
+                        ? Icons.mic_none_rounded
+                        : _adjunto!.esPdf
+                            ? Icons.picture_as_pdf_rounded
+                            : Icons.image_outlined,
                     color: const Color(0xFF4059EA),
                   ),
                   const SizedBox(width: 10),
@@ -5866,6 +7436,17 @@ extension _PaginaChatbotUi on _PaginaChatbotState {
                   onPressed: enviando ? null : seleccionarArchivoChat,
                   icon: const Icon(Icons.attach_file_rounded),
                   color: const Color(0xFF535B86),
+                ),
+                IconButton(
+                  tooltip: _grabandoAudio ? "Detener audio" : "Grabar audio",
+                  visualDensity: VisualDensity.compact,
+                  onPressed: enviando ? null : alternarAudioChat,
+                  icon: Icon(_grabandoAudio
+                      ? Icons.stop_circle_outlined
+                      : Icons.mic_none_rounded),
+                  color: _grabandoAudio
+                      ? const Color(0xFFD33B3B)
+                      : const Color(0xFF535B86),
                 ),
                 Expanded(
                   child: TextField(
@@ -5938,7 +7519,7 @@ extension _PaginaChatbotUi on _PaginaChatbotState {
               SizedBox(width: 8),
               Flexible(
                 child: Text(
-                  "Este documento o foto no se guarda dentro de la app.",
+                  "Este documento, foto o audio no se guarda dentro de la app.",
                   textAlign: TextAlign.left,
                   style: TextStyle(
                     color: Color(0xFF175B50),

@@ -16,6 +16,8 @@
 	<string>6.0</string>
 	<key>CFBundleName</key>
 	<string>DoctorSuplementos</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>La app usa el microfono para analizar notas de voz y generar respuestas o diagnosticos.</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>

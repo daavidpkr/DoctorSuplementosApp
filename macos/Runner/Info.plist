@@ -26,6 +26,8 @@
 	<string>$(PRODUCT_COPYRIGHT)</string>
 	<key>NSMainNibFile</key>
 	<string>MainMenu</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>La app usa el microfono para analizar notas de voz y generar respuestas o diagnosticos.</string>
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
 </dict>
