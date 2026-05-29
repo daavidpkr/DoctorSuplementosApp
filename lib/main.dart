@@ -2,12 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:google_generative_ai/google_generative_ai.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_remote_config/firebase_remote_config.dart';
 import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:record/record.dart';
 import 'dart:async';
 import 'dart:convert';
@@ -463,7 +465,13 @@ const FirebaseOptions _firebaseOptionsEscritorio = FirebaseOptions(
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await inicializarFirebaseSeguro();
-  runApp(const DoctorSuplementos());
+  final versiones = await cargarControlVersionApp();
+  runApp(
+    DoctorSuplementos(
+      versionActual: versiones.versionActual,
+      versionMinima: versiones.versionMinima,
+    ),
+  );
 }
 
 Future<void> inicializarFirebaseSeguro() async {
@@ -482,11 +490,96 @@ Future<void> inicializarFirebaseSeguro() async {
   }
 }
 
+class ControlVersionApp {
+  final String versionActual;
+  final String versionMinima;
+
+  const ControlVersionApp({
+    required this.versionActual,
+    required this.versionMinima,
+  });
+}
+
+Future<ControlVersionApp> cargarControlVersionApp() async {
+  var versionActual = '0.0.0';
+  var versionMinima = '0.0.0';
+
+  try {
+    final packageInfo = await PackageInfo.fromPlatform();
+    versionActual = packageInfo.version;
+  } catch (e) {
+    debugPrint('No se pudo leer la version instalada: $e');
+  }
+
+  try {
+    final remoteConfig = FirebaseRemoteConfig.instance;
+    await remoteConfig.setConfigSettings(
+      RemoteConfigSettings(
+        fetchTimeout: const Duration(minutes: 1),
+        minimumFetchInterval: Duration.zero,
+      ),
+    );
+    await remoteConfig.setDefaults(const {
+      'version_minima_desktop': '0.0.0',
+    });
+    await remoteConfig.fetchAndActivate();
+
+    final versionRemota = remoteConfig.getString('version_minima_desktop');
+    if (versionRemota.trim().isNotEmpty) {
+      versionMinima = versionRemota.trim();
+    }
+  } catch (e) {
+    debugPrint('No se pudo consultar Remote Config: $e');
+  }
+
+  return ControlVersionApp(
+    versionActual: versionActual,
+    versionMinima: versionMinima,
+  );
+}
+
+bool requiereActualizacion(String actual, String minima) {
+  if (minima.trim().isEmpty) return false;
+
+  final actualBits = _versionBits(actual);
+  final minimaBits = _versionBits(minima);
+  final totalPartes = actualBits.length > minimaBits.length
+      ? actualBits.length
+      : minimaBits.length;
+
+  for (var i = 0; i < totalPartes; i++) {
+    final actualParte = i < actualBits.length ? actualBits[i] : 0;
+    final minimaParte = i < minimaBits.length ? minimaBits[i] : 0;
+
+    if (actualParte < minimaParte) return true;
+    if (actualParte > minimaParte) return false;
+  }
+
+  return false;
+}
+
+List<int> _versionBits(String version) {
+  return version
+      .split('.')
+      .map((parte) =>
+          int.tryParse(RegExp(r'\d+').stringMatch(parte) ?? '0') ?? 0)
+      .toList();
+}
+
 class DoctorSuplementos extends StatelessWidget {
-  const DoctorSuplementos({super.key});
+  final String versionActual;
+  final String versionMinima;
+
+  const DoctorSuplementos({
+    super.key,
+    this.versionActual = '0.0.0',
+    this.versionMinima = '0.0.0',
+  });
 
   @override
   Widget build(BuildContext context) {
+    final bloquearApp = requiereActualizacion(versionActual, versionMinima);
+
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'Doctor de Suplementos',
@@ -506,7 +599,148 @@ class DoctorSuplementos extends StatelessWidget {
         scaffoldBackgroundColor: const Color(0xFFF5F5EE),
         primaryColor: const Color(0xFF1A237E),
       ),
-      home: const PantallaPrincipal(),
+      home: bloquearApp
+          ? PantallaActualizacionObligatoria(
+              versionActual: versionActual,
+              versionMinima: versionMinima,
+            )
+          : const PantallaPrincipal(),
+    );
+  }
+}
+
+class PantallaActualizacionObligatoria extends StatelessWidget {
+  final String versionActual;
+  final String versionMinima;
+
+  const PantallaActualizacionObligatoria({
+    super.key,
+    required this.versionActual,
+    required this.versionMinima,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    const azul = Color(0xFF111B7D);
+    const azulIntenso = Color(0xFF2839C7);
+    const crema = Color(0xFFF5F5EE);
+
+    return Scaffold(
+      backgroundColor: azul,
+      body: SafeArea(
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(28),
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                Color(0xFF111B7D),
+                Color(0xFF1A237E),
+                Color(0xFF071044),
+              ],
+            ),
+          ),
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 560),
+              child: Container(
+                padding: const EdgeInsets.fromLTRB(28, 34, 28, 30),
+                decoration: BoxDecoration(
+                  color: crema,
+                  borderRadius: BorderRadius.circular(28),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.22),
+                      blurRadius: 28,
+                      offset: const Offset(0, 16),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 96,
+                      height: 96,
+                      decoration: const BoxDecoration(
+                        color: azulIntenso,
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.system_update_alt_rounded,
+                        size: 48,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    const Text(
+                      'Actualizacion obligatoria',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: azul,
+                        fontSize: 30,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    Text(
+                      'Tu version actual ($versionActual) ya no es compatible. '
+                      'Descarga la version $versionMinima para mantener activos '
+                      'los calculos de precios, diagnosticos y sincronizacion.',
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        color: Color(0xFF4D5578),
+                        fontSize: 17,
+                        height: 1.35,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 28),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 56,
+                      child: ElevatedButton.icon(
+                        onPressed: null,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: azulIntenso,
+                          foregroundColor: Colors.white,
+                          disabledBackgroundColor:
+                              azulIntenso.withValues(alpha: 0.42),
+                          disabledForegroundColor:
+                              Colors.white.withValues(alpha: 0.86),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(18),
+                          ),
+                        ),
+                        icon: const Icon(Icons.download_rounded),
+                        label: const Text(
+                          'Descargar nueva version',
+                          style: TextStyle(
+                            fontSize: 17,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    const Text(
+                      'Solicita el instalador actualizado al administrador.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: Color(0xFF747A9E),
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
@@ -5488,6 +5722,8 @@ class _PaginaHistorialState extends State<PaginaHistorial> {
                         child: TextField(
                           controller: _searchController,
                           onChanged: _filtrarHistorial,
+                          textAlign: TextAlign.center,
+                          textAlignVertical: TextAlignVertical.center,
                           style: const TextStyle(
                             color: Color(0xFF0D1430),
                             fontSize: 20,
@@ -5566,8 +5802,8 @@ class _PaginaHistorialState extends State<PaginaHistorial> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         SizedBox(
-                          width: 112,
-                          height: 112,
+                          width: 88,
+                          height: 88,
                           child: FloatingActionButton(
                             heroTag: 'nuevo-diagnostico-historial',
                             backgroundColor: azul,
@@ -5575,7 +5811,7 @@ class _PaginaHistorialState extends State<PaginaHistorial> {
                             elevation: 9,
                             shape: const CircleBorder(),
                             onPressed: _nuevoDiagnostico,
-                            child: const Icon(Icons.add, size: 58),
+                            child: const Icon(Icons.add, size: 40),
                           ),
                         ),
                         const SizedBox(height: 12),
@@ -6175,6 +6411,8 @@ class _PaginaHistorialChatbotState extends State<PaginaHistorialChatbot> {
                               child: TextField(
                                 controller: _busquedaController,
                                 onChanged: _buscar,
+                                textAlign: TextAlign.center,
+                                textAlignVertical: TextAlignVertical.center,
                                 style: const TextStyle(
                                   color: Color(0xFF0D1430),
                                   fontSize: 20,
@@ -6254,8 +6492,8 @@ class _PaginaHistorialChatbotState extends State<PaginaHistorialChatbot> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         SizedBox(
-                          width: 112,
-                          height: 112,
+                          width: 88,
+                          height: 88,
                           child: FloatingActionButton(
                             heroTag: 'nuevo-chat-historial',
                             backgroundColor: azul,
@@ -6263,7 +6501,7 @@ class _PaginaHistorialChatbotState extends State<PaginaHistorialChatbot> {
                             elevation: 9,
                             shape: const CircleBorder(),
                             onPressed: _nuevoChat,
-                            child: const Icon(Icons.add, size: 58),
+                            child: const Icon(Icons.add, size: 40),
                           ),
                         ),
                         const SizedBox(height: 12),
