@@ -18,6 +18,18 @@ class ProductoResultadoFicha {
   });
 }
 
+class PrecioProductoResultadoFicha {
+  final double afiliado;
+  final double publico;
+  final int? lp;
+
+  const PrecioProductoResultadoFicha({
+    required this.afiliado,
+    required this.publico,
+    required this.lp,
+  });
+}
+
 class ContenidoResultadoFicha {
   final String analisis;
   final String objetivo;
@@ -217,6 +229,7 @@ class PantallaResultadoFicha extends StatefulWidget {
   final String resultado;
   final DateTime fecha;
   final Map<String, String> imagenesProducto;
+  final Map<String, PrecioProductoResultadoFicha> preciosProducto;
 
   const PantallaResultadoFicha({
     super.key,
@@ -228,6 +241,7 @@ class PantallaResultadoFicha extends StatefulWidget {
     required this.resultado,
     required this.fecha,
     required this.imagenesProducto,
+    this.preciosProducto = const {},
   });
 
   @override
@@ -259,79 +273,113 @@ class _PantallaResultadoFichaState extends State<PantallaResultadoFicha> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF7F8FC),
-      body: Column(
+      backgroundColor: const Color(0xFFF3F4F8),
+      body: Stack(
         children: [
-          _encabezado(),
-          Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(14, 16, 14, 24),
-              child: Center(
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 760),
+          Container(
+            height: 300,
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [Color(0xFF14298C), Color(0xFF071457)],
+              ),
+            ),
+          ),
+          SafeArea(
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 820),
+                child: Container(
+                  margin: const EdgeInsets.fromLTRB(12, 14, 12, 10),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(30),
+                    boxShadow: [
+                      BoxShadow(
+                        color: azul.withValues(alpha: 0.16),
+                        blurRadius: 30,
+                        offset: const Offset(0, 12),
+                      ),
+                    ],
+                  ),
+                  clipBehavior: Clip.antiAlias,
                   child: Column(
                     children: [
-                      _tarjetaDatos(),
-                      const SizedBox(height: 12),
-                      _tarjetaContenido(),
+                      _encabezado(),
+                      Expanded(
+                        child: SingleChildScrollView(
+                          padding: const EdgeInsets.fromLTRB(18, 6, 18, 20),
+                          child: Column(
+                            children: [
+                              _tarjetaDatos(),
+                              const SizedBox(height: 14),
+                              _tarjetaContenido(),
+                            ],
+                          ),
+                        ),
+                      ),
+                      _barraAcciones(),
                     ],
                   ),
                 ),
               ),
             ),
           ),
-          _barraAcciones(),
         ],
       ),
     );
   }
 
   Widget _encabezado() {
-    return Container(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          colors: [Color(0xFF162A89), Color(0xFF071457)],
-        ),
-        borderRadius: BorderRadius.vertical(bottom: Radius.circular(28)),
-      ),
-      child: SafeArea(
-        bottom: false,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(8, 8, 8, 20),
-          child: Row(
-            children: [
-              IconButton(
-                onPressed: () => Navigator.pop(context),
-                icon: const Icon(Icons.arrow_back_rounded),
-                color: Colors.white,
-                iconSize: 30,
-              ),
-              Expanded(
-                child: Text(
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(22, 20, 12, 12),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
                   widget.titulo,
-                  textAlign: TextAlign.center,
                   style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 23,
-                    fontWeight: FontWeight.w800,
+                    color: azul,
+                    fontSize: 25,
+                    fontWeight: FontWeight.w900,
                   ),
                 ),
-              ),
-              PopupMenuButton<String>(
-                color: Colors.white,
-                iconColor: Colors.white,
-                onSelected: (valor) {
-                  if (valor == 'copiar') _copiar();
-                  if (valor == 'compartir') Share.share(widget.resultado);
-                },
-                itemBuilder: (_) => const [
-                  PopupMenuItem(value: 'copiar', child: Text('Copiar')),
-                  PopupMenuItem(value: 'compartir', child: Text('Compartir')),
-                ],
-              ),
+                const SizedBox(height: 3),
+                Text(
+                  widget.tipoFicha,
+                  style: const TextStyle(
+                    color: Color(0xFF65709A),
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          PopupMenuButton<String>(
+            color: Colors.white,
+            iconColor: azul,
+            onSelected: (valor) {
+              if (valor == 'copiar') _copiar();
+              if (valor == 'compartir') Share.share(widget.resultado);
+            },
+            itemBuilder: (_) => const [
+              PopupMenuItem(value: 'copiar', child: Text('Copiar')),
+              PopupMenuItem(value: 'compartir', child: Text('Compartir')),
             ],
           ),
-        ),
+          IconButton(
+            tooltip: 'Cerrar',
+            onPressed: () => Navigator.pop(context),
+            icon: const Icon(Icons.close_rounded),
+            color: const Color(0xFF20284F),
+            iconSize: 30,
+          ),
+        ],
       ),
     );
   }
@@ -612,11 +660,12 @@ class _PantallaResultadoFichaState extends State<PantallaResultadoFicha> {
   }
 
   Widget _producto(ProductoResultadoFicha producto, int indice) {
+    final precio = widget.preciosProducto[producto.nombre];
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(22),
         border: Border.all(color: const Color(0xFFE3E5F0), width: 1.3),
         boxShadow: [
           BoxShadow(
@@ -628,18 +677,24 @@ class _PantallaResultadoFichaState extends State<PantallaResultadoFicha> {
       ),
       child: LayoutBuilder(
         builder: (context, constraints) {
-          final compacta = constraints.maxWidth < 500;
-          final imagen = SizedBox(
-            width: compacta ? double.infinity : 170,
-            height: compacta ? 180 : 205,
+          final compacta = constraints.maxWidth < 560;
+          final altoImagen = compacta ? 170.0 : 215.0;
+          final imagen = Container(
+            width: compacta ? double.infinity : 230,
+            height: altoImagen,
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF8F9FD),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: const Color(0xFFE1E4EF)),
+            ),
             child: Stack(
               children: [
-                Positioned(
-                  left: 0,
-                  top: 0,
+                Align(
+                  alignment: Alignment.topLeft,
                   child: CircleAvatar(
-                    radius: 20,
-                    backgroundColor: violeta,
+                    radius: 18,
+                    backgroundColor: azul,
                     child: Text(
                       '$indice',
                       style: const TextStyle(
@@ -651,7 +706,7 @@ class _PantallaResultadoFichaState extends State<PantallaResultadoFicha> {
                 ),
                 Positioned.fill(
                   child: Padding(
-                    padding: const EdgeInsets.fromLTRB(30, 12, 8, 4),
+                    padding: const EdgeInsets.fromLTRB(25, 8, 8, 4),
                     child: producto.imagen == null
                         ? const Icon(
                             Icons.medication_liquid_outlined,
@@ -668,53 +723,134 @@ class _PantallaResultadoFichaState extends State<PantallaResultadoFicha> {
               ],
             ),
           );
-          final detalle = Padding(
-            padding: EdgeInsets.only(
-              left: compacta ? 0 : 14,
-              top: compacta ? 8 : 4,
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  producto.nombre,
-                  style: const TextStyle(
-                    color: azul,
-                    fontSize: 18,
-                    fontWeight: FontWeight.w900,
-                  ),
+          final resumenComercial = precio == null
+              ? const SizedBox.shrink()
+              : _resumenComercial(precio);
+          final cabecera = compacta
+              ? Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    imagen,
+                    if (precio != null) ...[
+                      const SizedBox(height: 10),
+                      resumenComercial,
+                    ],
+                  ],
+                )
+              : Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    imagen,
+                    if (precio != null) ...[
+                      const SizedBox(width: 12),
+                      Expanded(child: resumenComercial),
+                    ],
+                  ],
+                );
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              cabecera,
+              const SizedBox(height: 16),
+              Text(
+                producto.nombre,
+                style: const TextStyle(
+                  color: azul,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w900,
                 ),
-                const SizedBox(height: 10),
-                for (final dosis in producto.dosis)
-                  _lineaProducto(
-                    dosis,
-                    dosis.toLowerCase().contains('noche')
-                        ? Icons.dark_mode_outlined
-                        : Icons.wb_sunny_outlined,
-                    dosis.toLowerCase().contains('noche')
-                        ? violeta
-                        : const Color(0xFFFFA000),
-                  ),
-                if (producto.beneficio.isNotEmpty)
-                  _lineaProducto(
-                    producto.beneficio,
-                    Icons.check_circle_outline_rounded,
-                    violeta,
-                  ),
-              ],
-            ),
-          );
-          if (compacta) {
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [imagen, detalle],
-            );
-          }
-          return Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [imagen, Expanded(child: detalle)],
+              ),
+              const SizedBox(height: 10),
+              for (final dosis in producto.dosis)
+                _lineaProducto(
+                  dosis,
+                  dosis.toLowerCase().contains('noche')
+                      ? Icons.dark_mode_outlined
+                      : Icons.wb_sunny_outlined,
+                  dosis.toLowerCase().contains('noche')
+                      ? violeta
+                      : const Color(0xFFFFA000),
+                ),
+              if (producto.beneficio.isNotEmpty)
+                _lineaProducto(
+                  producto.beneficio,
+                  Icons.check_circle_outline_rounded,
+                  violeta,
+                ),
+            ],
           );
         },
+      ),
+    );
+  }
+
+  Widget _resumenComercial(PrecioProductoResultadoFicha precio) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFEFEFF),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE5E7F2)),
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: [
+          _datoComercial(
+            Icons.person_outline_rounded,
+            'Afiliado',
+            '\$${precio.afiliado.toStringAsFixed(2)}',
+          ),
+          const Divider(height: 1, color: Color(0xFFE8EAF2)),
+          _datoComercial(
+            Icons.groups_2_outlined,
+            'Público',
+            '\$${precio.publico.toStringAsFixed(2)}',
+          ),
+          const Divider(height: 1, color: Color(0xFFE8EAF2)),
+          _datoComercial(
+            Icons.star_outline_rounded,
+            'LP',
+            precio.lp?.toString() ?? 'Sin dato',
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _datoComercial(IconData icono, String etiqueta, String valor) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 9),
+      child: Row(
+        children: [
+          Container(
+            width: 43,
+            height: 43,
+            decoration: BoxDecoration(
+              color: const Color(0xFFF0EFFF),
+              borderRadius: BorderRadius.circular(13),
+            ),
+            child: Icon(icono, color: violeta, size: 25),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              etiqueta,
+              style: const TextStyle(
+                color: texto,
+                fontSize: 14.5,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ),
+          Text(
+            valor,
+            style: const TextStyle(
+              color: Color(0xFF1427A2),
+              fontSize: 18,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -843,78 +979,63 @@ class _PantallaResultadoFichaState extends State<PantallaResultadoFicha> {
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: azul.withValues(alpha: 0.07),
-            blurRadius: 22,
-            offset: const Offset(0, 8),
-          ),
-        ],
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: const Color(0xFFE8EAF2)),
       ),
       child: child,
     );
   }
 
   Widget _barraAcciones() {
-    return SafeArea(
-      top: false,
-      child: Container(
-        padding: const EdgeInsets.fromLTRB(10, 10, 10, 8),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          boxShadow: [
-            BoxShadow(
-              color: azul.withValues(alpha: 0.09),
-              blurRadius: 16,
-              offset: const Offset(0, -4),
-            ),
-          ],
-        ),
-        child: Row(
-          children: [
-            _accion(
-              reproduciendo ? Icons.stop_circle_outlined : Icons.volume_up,
-              reproduciendo ? 'Detener' : 'Escuchar',
-              () async {
-                if (reproduciendo) {
-                  await ServicioTextoVoz.detener();
-                  if (mounted) setState(() => reproduciendo = false);
-                  return;
-                }
-                setState(() => reproduciendo = true);
-                await ServicioTextoVoz.reproducir(widget.resultado);
+    return Container(
+      padding: const EdgeInsets.fromLTRB(10, 10, 10, 12),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        border: Border(top: BorderSide(color: Color(0xFFE8EAF2))),
+      ),
+      child: Row(
+        children: [
+          _accion(
+            reproduciendo ? Icons.stop_circle_outlined : Icons.volume_up,
+            reproduciendo ? 'Detener' : 'Escuchar',
+            () async {
+              if (reproduciendo) {
+                await ServicioTextoVoz.detener();
                 if (mounted) setState(() => reproduciendo = false);
-              },
-            ),
-            _accion(Icons.copy_rounded, 'Copiar', _copiar),
-            _accion(
-              Icons.share_rounded,
-              'Compartir',
-              () => Share.share(widget.resultado),
-            ),
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.only(left: 5),
-                child: FilledButton(
-                  onPressed: () => Navigator.pop(context),
-                  style: FilledButton.styleFrom(
-                    backgroundColor: const Color(0xFF2825B8),
-                    foregroundColor: Colors.white,
-                    minimumSize: const Size(0, 50),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
-                    ),
+                return;
+              }
+              setState(() => reproduciendo = true);
+              await ServicioTextoVoz.reproducir(widget.resultado);
+              if (mounted) setState(() => reproduciendo = false);
+            },
+          ),
+          _accion(Icons.copy_rounded, 'Copiar', _copiar),
+          _accion(
+            Icons.share_rounded,
+            'Compartir',
+            () => Share.share(widget.resultado),
+          ),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.only(left: 5),
+              child: FilledButton(
+                onPressed: () => Navigator.pop(context),
+                style: FilledButton.styleFrom(
+                  backgroundColor: const Color(0xFF2825B8),
+                  foregroundColor: Colors.white,
+                  minimumSize: const Size(0, 50),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
                   ),
-                  child: const Text(
-                    'Cerrar',
-                    style: TextStyle(fontWeight: FontWeight.w900),
-                  ),
+                ),
+                child: const Text(
+                  'Cerrar',
+                  style: TextStyle(fontWeight: FontWeight.w900),
                 ),
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

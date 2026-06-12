@@ -189,6 +189,15 @@ const List<ProductoPrecio> productosConPrecio4Life = [
   ProductoPrecio(nombre: 'TF Boost', afiliado: 27.72, publico: 36.96, lp: 15),
 ];
 
+final Map<String, PrecioProductoResultadoFicha> preciosResultado4Life = {
+  for (final producto in productosConPrecio4Life)
+    producto.nombre: PrecioProductoResultadoFicha(
+      afiliado: producto.afiliado,
+      publico: producto.publico,
+      lp: producto.lp,
+    ),
+};
+
 String normalizarTexto(String texto) {
   return texto
       .toLowerCase()
@@ -590,7 +599,7 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
                       context,
                       titulo: "Calculadora de precios",
                       descripcion:
-                          "Calcula precios, LP: Life Points (Puntos de Vida) y totales para uno o varios productos.",
+                          "Calcula precios, LP y totales para uno o varios productos.",
                       icono: Icons.calculate_rounded,
                       colores: const [Color(0xFF008C7E), Color(0xFF006B61)],
                       destino: const PaginaCalculadoraPrecios(),
@@ -3665,6 +3674,7 @@ class _FormularioPacienteState extends State<FormularioPaciente> {
           resultado: mensaje,
           fecha: DateTime.now(),
           imagenesProducto: imagenesProducto4Life,
+          preciosProducto: preciosResultado4Life,
         ),
       ),
     );
@@ -4725,6 +4735,7 @@ class _FormularioCambioFisicoState extends State<FormularioCambioFisico> {
           resultado: mensaje,
           fecha: DateTime.now(),
           imagenesProducto: imagenesProducto4Life,
+          preciosProducto: preciosResultado4Life,
         ),
       ),
     );
@@ -5554,7 +5565,7 @@ class _ConsultaProductoPaginaState extends State<ConsultaProductoPagina> {
                     ),
                     SizedBox(height: 16),
                     Text(
-                      "Encuentra informacion detallada, precios y LP: Life Points (Puntos de Vida).",
+                      "Encuentra informacion detallada, precios y LP.",
                       style: TextStyle(
                         color: Color(0xFF293573),
                         fontSize: 18,
@@ -6009,35 +6020,64 @@ class _ConsultaProductoPaginaState extends State<ConsultaProductoPagina> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      if (imagenProducto != null) ...[
-                        Container(
-                          height: 220,
-                          padding: const EdgeInsets.all(10),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFF8F9FF),
-                            borderRadius: BorderRadius.circular(14),
-                            border: Border.all(color: const Color(0xFFE1E4F0)),
-                          ),
-                          child: Image.asset(
-                            imagenProducto,
-                            fit: BoxFit.contain,
-                            filterQuality: FilterQuality.high,
-                          ),
-                        ),
-                        const SizedBox(height: 14),
-                      ],
-                      if (precioProducto != null) ...[
-                        _precioResumenProducto(precioProducto),
-                        const SizedBox(height: 14),
-                      ],
-                      Text(
-                        resultado,
-                        style: const TextStyle(
-                          color: Color(0xFF27315F),
-                          fontSize: 15.5,
-                          height: 1.35,
-                        ),
+                      LayoutBuilder(
+                        builder: (context, constraints) {
+                          final compacta = constraints.maxWidth < 430;
+                          final imagen = imagenProducto == null
+                              ? const SizedBox.shrink()
+                              : Container(
+                                  height: 220,
+                                  padding: const EdgeInsets.all(10),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFF8F9FF),
+                                    borderRadius: BorderRadius.circular(16),
+                                    border: Border.all(
+                                      color: const Color(0xFFE1E4F0),
+                                    ),
+                                  ),
+                                  child: Image.asset(
+                                    imagenProducto,
+                                    fit: BoxFit.contain,
+                                    filterQuality: FilterQuality.high,
+                                  ),
+                                );
+                          if (compacta) {
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                if (imagenProducto != null) imagen,
+                                if (imagenProducto != null &&
+                                    precioProducto != null)
+                                  const SizedBox(height: 12),
+                                if (precioProducto != null)
+                                  _precioResumenProducto(precioProducto),
+                              ],
+                            );
+                          }
+                          return SizedBox(
+                            height: 230,
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                if (imagenProducto != null)
+                                  Expanded(child: imagen),
+                                if (imagenProducto != null &&
+                                    precioProducto != null)
+                                  const SizedBox(width: 12),
+                                if (precioProducto != null)
+                                  Expanded(
+                                    child:
+                                        _precioResumenProducto(precioProducto),
+                                  ),
+                              ],
+                            ),
+                          );
+                        },
                       ),
+                      const SizedBox(height: 16),
+                      for (final seccion
+                          in _seccionesResultadoProducto(resultado))
+                        _seccionResultadoProducto(seccion.key, seccion.value),
                     ],
                   ),
                 ),
@@ -6101,49 +6141,174 @@ class _ConsultaProductoPaginaState extends State<ConsultaProductoPagina> {
 
   Widget _precioResumenProducto(ProductoPrecio producto) {
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
       decoration: BoxDecoration(
-        color: const Color(0xFFEFF2FF),
-        borderRadius: BorderRadius.circular(14),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE1E4F0)),
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
-          _datoPrecio("Afiliado", '\$${producto.afiliado.toStringAsFixed(2)}'),
-          const SizedBox(height: 6),
-          _datoPrecio("Publico", '\$${producto.publico.toStringAsFixed(2)}'),
-          const SizedBox(height: 6),
           _datoPrecio(
-            "LP: Life Points (Puntos de Vida)",
+            "Afiliado",
+            '\$${producto.afiliado.toStringAsFixed(2)}',
+            Icons.person_outline_rounded,
+          ),
+          const Divider(height: 1),
+          _datoPrecio(
+            "Público",
+            '\$${producto.publico.toStringAsFixed(2)}',
+            Icons.groups_2_outlined,
+          ),
+          const Divider(height: 1),
+          _datoPrecio(
+            "LP",
             producto.lp?.toString() ?? 'Sin dato',
+            Icons.star_outline_rounded,
           ),
         ],
       ),
     );
   }
 
-  Widget _datoPrecio(String etiqueta, String valor) {
-    return Row(
-      children: [
-        Expanded(
-          child: Text(
-            etiqueta,
-            style: const TextStyle(
-              color: Color(0xFF46527E),
-              fontSize: 14,
-              fontWeight: FontWeight.w700,
+  Widget _datoPrecio(String etiqueta, String valor, IconData icono) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        children: [
+          Container(
+            width: 42,
+            height: 42,
+            decoration: BoxDecoration(
+              color: const Color(0xFFF0EFFF),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(icono, color: const Color(0xFF3539C7)),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              etiqueta,
+              style: const TextStyle(
+                color: Color(0xFF27315F),
+                fontSize: 14,
+                fontWeight: FontWeight.w800,
+              ),
             ),
           ),
-        ),
-        Text(
-          valor,
-          style: const TextStyle(
-            color: Color(0xFF12248B),
-            fontSize: 16,
-            fontWeight: FontWeight.w900,
+          Text(
+            valor,
+            style: const TextStyle(
+              color: Color(0xFF1227A7),
+              fontSize: 17,
+              fontWeight: FontWeight.w900,
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
+    );
+  }
+
+  List<MapEntry<String, String>> _seccionesResultadoProducto(String resultado) {
+    const titulos = [
+      'Producto identificado',
+      'Descripcion',
+      'Ingredientes o componentes principales',
+      'Indicaciones de uso',
+      'Contraindicaciones o precauciones',
+      'Dosis sugerida',
+      'Nota',
+    ];
+    final secciones = <String, List<String>>{};
+    String? actual;
+    for (final lineaOriginal in resultado.replaceAll('\r', '').split('\n')) {
+      final linea = lineaOriginal
+          .replaceAll(RegExp(r'[*#_`]'), '')
+          .replaceAll(RegExp(r'\s+'), ' ')
+          .trim();
+      if (linea.isEmpty) continue;
+      final titulo = titulos.cast<String?>().firstWhere(
+            (item) =>
+                item != null &&
+                normalizarTexto(linea).startsWith(normalizarTexto(item)),
+            orElse: () => null,
+          );
+      if (titulo != null) {
+        actual = titulo;
+        secciones.putIfAbsent(titulo, () => []);
+        final contenido = linea.replaceFirst(RegExp(r'^[^:]+:\s*'), '');
+        if (contenido != linea && contenido.isNotEmpty) {
+          secciones[titulo]!.add(contenido);
+        }
+      } else {
+        actual ??= 'Información del producto';
+        secciones.putIfAbsent(actual, () => []).add(linea);
+      }
+    }
+    return secciones.entries
+        .map((entry) => MapEntry(entry.key, entry.value.join('\n')))
+        .where((entry) => entry.value.trim().isNotEmpty)
+        .toList();
+  }
+
+  Widget _seccionResultadoProducto(String titulo, String contenido) {
+    final iconos = <String, IconData>{
+      'Producto identificado': Icons.description_outlined,
+      'Descripcion': Icons.assignment_outlined,
+      'Ingredientes o componentes principales': Icons.science_outlined,
+      'Indicaciones de uso': Icons.calendar_month_outlined,
+      'Contraindicaciones o precauciones': Icons.health_and_safety_outlined,
+      'Dosis sugerida': Icons.medication_outlined,
+      'Nota': Icons.info_outline_rounded,
+    };
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 15),
+      decoration: const BoxDecoration(
+        border: Border(bottom: BorderSide(color: Color(0xFFE5E7F0))),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 46,
+            height: 46,
+            decoration: BoxDecoration(
+              color: const Color(0xFFF0EFFF),
+              borderRadius: BorderRadius.circular(13),
+            ),
+            child: Icon(
+              iconos[titulo] ?? Icons.auto_awesome_outlined,
+              color: const Color(0xFF2639BD),
+            ),
+          ),
+          const SizedBox(width: 13),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  titulo,
+                  style: const TextStyle(
+                    color: Color(0xFF12248B),
+                    fontSize: 16,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  contenido,
+                  style: const TextStyle(
+                    color: Color(0xFF27315F),
+                    fontSize: 14.5,
+                    height: 1.4,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -6323,8 +6488,7 @@ class _PaginaCalculadoraPreciosState extends State<PaginaCalculadoraPrecios> {
               const SizedBox(height: 14),
               _resumenTotal("Afiliado", _precio(_totalAfiliado)),
               _resumenTotal("Publico", _precio(_totalPublico)),
-              _resumenTotal(
-                  "LP: Life Points (Puntos de Vida)", _totalLp.toString()),
+              _resumenTotal("LP", _totalLp.toString()),
               const SizedBox(height: 16),
               OutlinedButton.icon(
                 onPressed: () =>
@@ -6383,12 +6547,11 @@ class _PaginaCalculadoraPreciosState extends State<PaginaCalculadoraPrecios> {
       buffer
           .writeln('Afiliado: ${_precio(producto.afiliado * linea.cantidad)}');
       buffer.writeln('Publico: ${_precio(producto.publico * linea.cantidad)}');
-      buffer.writeln(
-          'LP: Life Points (Puntos de Vida): ${(producto.lp ?? 0) * linea.cantidad}\n');
+      buffer.writeln('LP: ${(producto.lp ?? 0) * linea.cantidad}\n');
     }
     buffer.writeln('Total afiliado: ${_precio(_totalAfiliado)}');
     buffer.writeln('Total publico: ${_precio(_totalPublico)}');
-    buffer.writeln('Total LP: Life Points (Puntos de Vida): $_totalLp');
+    buffer.writeln('Total LP: $_totalLp');
     return buffer.toString();
   }
 
@@ -6610,7 +6773,7 @@ class _PaginaCalculadoraPreciosState extends State<PaginaCalculadoraPrecios> {
               ),
               SizedBox(height: 8),
               Text(
-                "Consulta precios y LP: Life Points (Puntos de Vida)",
+                "Consulta precios y LP",
                 style: TextStyle(
                   color: Color(0xFFDCE2FF),
                   fontSize: 20,
@@ -6670,7 +6833,7 @@ class _PaginaCalculadoraPreciosState extends State<PaginaCalculadoraPrecios> {
                     ),
                     SizedBox(height: 14),
                     Text(
-                      "Busca y anade uno o varios productos para consultar precios y LP: Life Points (Puntos de Vida).",
+                      "Busca y anade uno o varios productos para consultar precios y LP.",
                       style: TextStyle(
                         color: Color(0xFF47527E),
                         fontSize: 18,
@@ -6959,7 +7122,9 @@ class _PaginaCalculadoraPreciosState extends State<PaginaCalculadoraPrecios> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        "${_precio(linea.producto.afiliado)} afiliado  |  LP: Life Points (Puntos de Vida) ${linea.producto.lp ?? 0}",
+                        "Afiliado ${_precio(linea.producto.afiliado)}  |  "
+                        "Público ${_precio(linea.producto.publico)}  |  "
+                        "LP ${linea.producto.lp ?? 0}",
                         style: const TextStyle(
                           color: Color(0xFF687092),
                           fontSize: 13,
@@ -7060,7 +7225,7 @@ class _PaginaCalculadoraPreciosState extends State<PaginaCalculadoraPrecios> {
                   ),
                   SizedBox(height: 7),
                   Text(
-                    "Consulta precios y LP: Life Points (Puntos de Vida)",
+                    "Consulta precios y LP",
                     style: TextStyle(
                       color: Color(0xFFDDE3FF),
                       fontSize: 17,
@@ -7190,7 +7355,7 @@ class _PaginaCalculadoraPreciosState extends State<PaginaCalculadoraPrecios> {
                 ),
                 SizedBox(height: 10),
                 Text(
-                  "Selecciona uno o varios productos y presiona calcular para obtener los precios y LP: Life Points (Puntos de Vida).",
+                  "Selecciona uno o varios productos y presiona calcular para obtener los precios y LP.",
                   style: TextStyle(
                     color: Color(0xFF46527E),
                     fontSize: 17,
@@ -7458,75 +7623,38 @@ class _PaginaHistorialState extends State<PaginaHistorial> {
     ).then((_) => nuevaPreguntaController.dispose());
   }
 
-  void _verReporteAnterior(Map<String, dynamic> pacienteViejo) {
+  Future<void> _verReporteAnterior(
+    Map<String, dynamic> pacienteViejo,
+  ) async {
     final nombre = _nombrePaciente(pacienteViejo);
-    final fecha = pacienteViejo['fecha']?.toString() ?? "Sin fecha";
     final resultado =
         pacienteViejo['resultado']?.toString() ?? "Sin resultado guardado";
-    final datos = pacienteViejo['datos'];
-    final sintomas = datos is Map ? datos['sintomas']?.toString() ?? "" : "";
-    final objetivo =
-        datos is Map ? datos['objetivoFisico']?.toString() ?? "" : "";
     final esCambio = _esCambioFisico(pacienteViejo);
+    final fecha = DateTime.tryParse(
+          pacienteViejo['fecha']?.toString() ?? '',
+        ) ??
+        DateTime.now();
+    final perfilAsesor = await PerfilService.cargar();
+    if (!mounted) return;
 
-    showDialog(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text("${esCambio ? 'Cambio fisico' : 'Reporte'} de $nombre"),
-        content: SizedBox(
-          width: double.maxFinite,
-          child: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text("Fecha: $fecha"),
-                if (!esCambio && sintomas.isNotEmpty) ...[
-                  const SizedBox(height: 12),
-                  const Text(
-                    "Sintomas registrados:",
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  Text(sintomas),
-                ],
-                if (esCambio && objetivo.isNotEmpty) ...[
-                  const SizedBox(height: 12),
-                  const Text(
-                    "Objetivo fisico:",
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  Text(objetivo),
-                ],
-                const SizedBox(height: 12),
-                Text(
-                  esCambio
-                      ? "Guia de cambio fisico:"
-                      : "Reporte o diagnostico:",
-                  style: const TextStyle(fontWeight: FontWeight.bold),
-                ),
-                Text(resultado),
-              ],
-            ),
-          ),
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => PantallaResultadoFicha(
+          titulo: esCambio
+              ? 'Resultado de Cambio Físico'
+              : 'Resultado del Diagnóstico',
+          tipoFicha: esCambio ? 'Cambio físico' : 'Diagnóstico',
+          paciente: nombre,
+          nombreAsesor: perfilAsesor.nombre,
+          especialidad: esCambio
+              ? 'Asesor de bienestar y composición corporal'
+              : 'Especialista en inmunología y bioenergética',
+          resultado: resultado,
+          fecha: fecha,
+          imagenesProducto: imagenesProducto4Life,
+          preciosProducto: preciosResultado4Life,
         ),
-        actions: [
-          IconButton(
-              icon: const Icon(Icons.copy),
-              onPressed: () =>
-                  Clipboard.setData(ClipboardData(text: resultado))),
-          IconButton(
-              icon: const Icon(Icons.share),
-              onPressed: () => Share.share(resultado)),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(dialogContext);
-              _reDiagnosticar(pacienteViejo);
-            },
-            child: const Text("Consultar ajuste"),
-          ),
-          TextButton(
-              onPressed: () => Navigator.pop(dialogContext),
-              child: const Text("Cerrar")),
-        ],
       ),
     );
   }
