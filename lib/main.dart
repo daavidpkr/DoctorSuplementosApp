@@ -2,16 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:google_generative_ai/google_generative_ai.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_remote_config/firebase_remote_config.dart';
 import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:package_info_plus/package_info_plus.dart';
-import 'dart:url_launcher.dart';
 import 'package:record/record.dart';
+import 'services/servicio_texto_voz.dart';
+import 'services/servicio_version.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
@@ -483,13 +482,7 @@ const FirebaseOptions _firebaseOptionsEscritorio = FirebaseOptions(
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await inicializarFirebaseSeguro();
-  final versiones = await cargarControlVersionApp();
-  runApp(
-    DoctorSuplementos(
-      versionActual: versiones.versionActual,
-      versionMinima: versiones.versionMinima,
-    ),
-  );
+  runApp(const DoctorSuplementos());
 }
 
 Future<void> inicializarFirebaseSeguro() async {
@@ -508,96 +501,11 @@ Future<void> inicializarFirebaseSeguro() async {
   }
 }
 
-class ControlVersionApp {
-  final String versionActual;
-  final String versionMinima;
-
-  const ControlVersionApp({
-    required this.versionActual,
-    required this.versionMinima,
-  });
-}
-
-Future<ControlVersionApp> cargarControlVersionApp() async {
-  var versionActual = '0.0.0';
-  var versionMinima = '0.0.0';
-
-  try {
-    final packageInfo = await PackageInfo.fromPlatform();
-    versionActual = packageInfo.version;
-  } catch (e) {
-    debugPrint('No se pudo leer la version instalada: $e');
-  }
-
-  try {
-    final remoteConfig = FirebaseRemoteConfig.instance;
-    await remoteConfig.setConfigSettings(
-      RemoteConfigSettings(
-        fetchTimeout: const Duration(minutes: 1),
-        minimumFetchInterval: Duration.zero,
-      ),
-    );
-    await remoteConfig.setDefaults(const {
-      'version_minima_desktop': '0.0.0',
-    });
-    await remoteConfig.fetchAndActivate();
-
-    final versionRemota = remoteConfig.getString('version_minima_desktop');
-    if (versionRemota.trim().isNotEmpty) {
-      versionMinima = versionRemota.trim();
-    }
-  } catch (e) {
-    debugPrint('No se pudo consultar Remote Config: $e');
-  }
-
-  return ControlVersionApp(
-    versionActual: versionActual,
-    versionMinima: versionMinima,
-  );
-}
-
-bool requiereActualizacion(String actual, String minima) {
-  if (minima.trim().isEmpty) return false;
-
-  final actualBits = _versionBits(actual);
-  final minimaBits = _versionBits(minima);
-  final totalPartes = actualBits.length > minimaBits.length
-      ? actualBits.length
-      : minimaBits.length;
-
-  for (var i = 0; i < totalPartes; i++) {
-    final actualParte = i < actualBits.length ? actualBits[i] : 0;
-    final minimaParte = i < minimaBits.length ? minimaBits[i] : 0;
-
-    if (actualParte < minimaParte) return true;
-    if (actualParte > minimaParte) return false;
-  }
-
-  return false;
-}
-
-List<int> _versionBits(String version) {
-  return version
-      .split('.')
-      .map((parte) =>
-          int.tryParse(RegExp(r'\d+').stringMatch(parte) ?? '0') ?? 0)
-      .toList();
-}
-
 class DoctorSuplementos extends StatelessWidget {
-  final String versionActual;
-  final String versionMinima;
-
-  const DoctorSuplementos({
-    super.key,
-    this.versionActual = '0.0.0',
-    this.versionMinima = '0.0.0',
-  });
+  const DoctorSuplementos({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final bloquearApp = requiereActualizacion(versionActual, versionMinima);
-
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'Doctor de Suplementos',
@@ -617,148 +525,7 @@ class DoctorSuplementos extends StatelessWidget {
         scaffoldBackgroundColor: const Color(0xFFF5F5EE),
         primaryColor: const Color(0xFF1A237E),
       ),
-      home: bloquearApp
-          ? PantallaActualizacionObligatoria(
-              versionActual: versionActual,
-              versionMinima: versionMinima,
-            )
-          : const PantallaPrincipal(),
-    );
-  }
-}
-
-class PantallaActualizacionObligatoria extends StatelessWidget {
-  final String versionActual;
-  final String versionMinima;
-
-  const PantallaActualizacionObligatoria({
-    super.key,
-    required this.versionActual,
-    required this.versionMinima,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    const azul = Color(0xFF111B7D);
-    const azulIntenso = Color(0xFF2839C7);
-    const crema = Color(0xFFF5F5EE);
-
-    return Scaffold(
-      backgroundColor: azul,
-      body: SafeArea(
-        child: Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(28),
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                Color(0xFF111B7D),
-                Color(0xFF1A237E),
-                Color(0xFF071044),
-              ],
-            ),
-          ),
-          child: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 560),
-              child: Container(
-                padding: const EdgeInsets.fromLTRB(28, 34, 28, 30),
-                decoration: BoxDecoration(
-                  color: crema,
-                  borderRadius: BorderRadius.circular(28),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.22),
-                      blurRadius: 28,
-                      offset: const Offset(0, 16),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      width: 96,
-                      height: 96,
-                      decoration: const BoxDecoration(
-                        color: azulIntenso,
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.system_update_alt_rounded,
-                        size: 48,
-                        color: Colors.white,
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                    const Text(
-                      'Actualizacion obligatoria',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: azul,
-                        fontSize: 30,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                    const SizedBox(height: 14),
-                    Text(
-                      'Tu version actual ($versionActual) ya no es compatible. '
-                      'Descarga la version $versionMinima para mantener activos '
-                      'los calculos de precios, diagnosticos y sincronizacion.',
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        color: Color(0xFF4D5578),
-                        fontSize: 17,
-                        height: 1.35,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 28),
-                    SizedBox(
-                      width: double.infinity,
-                      height: 56,
-                      child: ElevatedButton.icon(
-                        onPressed: null,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: azulIntenso,
-                          foregroundColor: Colors.white,
-                          disabledBackgroundColor:
-                              azulIntenso.withValues(alpha: 0.42),
-                          disabledForegroundColor:
-                              Colors.white.withValues(alpha: 0.86),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(18),
-                          ),
-                        ),
-                        icon: const Icon(Icons.download_rounded),
-                        label: const Text(
-                          'Descargar nueva version',
-                          style: TextStyle(
-                            fontSize: 17,
-                            fontWeight: FontWeight.w900,
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    const Text(
-                      'Solicita el instalador actualizado al administrador.',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: Color(0xFF747A9E),
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
+      home: const PantallaPrincipal(),
     );
   }
 }
@@ -778,6 +545,9 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
   void initState() {
     super.initState();
     _perfilFuture = PerfilService.cargar();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ServicioVersion.validarVersion(context);
+    });
   }
 
   void _recargarPerfil() {
@@ -850,6 +620,18 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
                       icono: Icons.history_rounded,
                       colores: const [Color(0xFF8051D4), Color(0xFF6047B7)],
                       destino: const PaginaHistorial(),
+                    ),
+                    _tarjetaMenu(
+                      context,
+                      titulo: "Chat Live 4Life",
+                      descripcion:
+                          "Pregunta en tiempo real y recibe respuestas personalizadas de la IA.",
+                      icono: Icons.forum_rounded,
+                      colores: const [Color(0xFF6A4DE8), Color(0xFF3C2AAE)],
+                      destino: const PaginaChatbot(
+                        titulo: "Chat Live 4Life",
+                        modoLlamada: true,
+                      ),
                     ),
                     _tarjetaMenu(
                       context,
@@ -1405,6 +1187,8 @@ class _PaginaPerfilState extends State<PaginaPerfil> {
                         _botonGuardarPerfil(),
                         const SizedBox(height: 28),
                         _tarjetaSeguridadPerfil(),
+                        const SizedBox(height: 18),
+                        _copyrightPerfil(),
                       ],
                     ),
                   ),
@@ -1741,6 +1525,28 @@ class _PaginaPerfilState extends State<PaginaPerfil> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _copyrightPerfil() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFE1E4F0)),
+      ),
+      child: const Text(
+        "Copyright © 2026 Josué David Girón Castro. All Rights Reserved.",
+        textAlign: TextAlign.center,
+        style: TextStyle(
+          color: Color(0xFF5B628C),
+          fontSize: 12,
+          height: 1.3,
+          fontWeight: FontWeight.w600,
+        ),
       ),
     );
   }
@@ -3853,6 +3659,16 @@ class _FormularioPacienteState extends State<FormularioPaciente> {
         content: SingleChildScrollView(child: Text(mensaje)),
         actions: [
           IconButton(
+            tooltip: "Escuchar respuesta",
+            icon: const Icon(Icons.volume_up_rounded),
+            onPressed: () => ServicioTextoVoz.reproducir(mensaje),
+          ),
+          IconButton(
+            tooltip: "Detener audio",
+            icon: const Icon(Icons.stop_circle_outlined),
+            onPressed: ServicioTextoVoz.detener,
+          ),
+          IconButton(
               icon: const Icon(Icons.copy),
               onPressed: () {
                 Clipboard.setData(ClipboardData(text: mensaje));
@@ -4919,6 +4735,16 @@ class _FormularioCambioFisicoState extends State<FormularioCambioFisico> {
         title: const Text("Resultado de Cambio Fisico"),
         content: SingleChildScrollView(child: Text(mensaje)),
         actions: [
+          IconButton(
+            tooltip: "Escuchar respuesta",
+            icon: const Icon(Icons.volume_up_rounded),
+            onPressed: () => ServicioTextoVoz.reproducir(mensaje),
+          ),
+          IconButton(
+            tooltip: "Detener audio",
+            icon: const Icon(Icons.stop_circle_outlined),
+            onPressed: ServicioTextoVoz.detener,
+          ),
           IconButton(
             icon: const Icon(Icons.copy),
             onPressed: () {
@@ -6257,6 +6083,18 @@ class _ConsultaProductoPaginaState extends State<ConsultaProductoPagina> {
               Row(
                 children: [
                   IconButton(
+                    tooltip: "Escuchar respuesta",
+                    icon: const Icon(Icons.volume_up_rounded),
+                    color: const Color(0xFF12248B),
+                    onPressed: () => ServicioTextoVoz.reproducir(resultado),
+                  ),
+                  IconButton(
+                    tooltip: "Detener audio",
+                    icon: const Icon(Icons.stop_circle_outlined),
+                    color: const Color(0xFF12248B),
+                    onPressed: ServicioTextoVoz.detener,
+                  ),
+                  IconButton(
                     tooltip: "Copiar",
                     icon: const Icon(Icons.copy_rounded),
                     color: const Color(0xFF12248B),
@@ -6525,6 +6363,21 @@ class _PaginaCalculadoraPreciosState extends State<PaginaCalculadoraPrecios> {
               _resumenTotal(
                   "LP: Life Points (Puntos de Vida)", _totalLp.toString()),
               const SizedBox(height: 16),
+              OutlinedButton.icon(
+                onPressed: () =>
+                    ServicioTextoVoz.reproducir(_resumenCompartir()),
+                icon: const Icon(Icons.volume_up_rounded),
+                label: const Text("Escuchar resultado"),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: const Color(0xFF17218D),
+                  minimumSize: const Size(double.infinity, 52),
+                  side: const BorderSide(color: Color(0xFF17218D)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 10),
               ElevatedButton.icon(
                 onPressed: () => Share.share(_resumenCompartir()),
                 icon: const Icon(Icons.share_rounded),
@@ -9076,12 +8929,16 @@ class _ItemNavegacionHistorial extends StatelessWidget {
 }
 
 class PaginaChatbot extends StatefulWidget {
+  final String titulo;
+  final bool modoLlamada;
   final String? consultaInicial;
   final String? conversacionId;
   final List<Map<String, String>>? mensajesIniciales;
 
   const PaginaChatbot({
     super.key,
+    this.titulo = "Asesor IA 4Life",
+    this.modoLlamada = false,
     this.consultaInicial,
     this.conversacionId,
     this.mensajesIniciales,
@@ -9098,6 +8955,7 @@ class _PaginaChatbotState extends State<PaginaChatbot> {
   ArchivoAdjuntoIA? _adjunto;
   bool enviando = false;
   bool _grabandoAudio = false;
+  String _estadoLlamada = "Conectando...";
   late String _conversacionId;
 
   @override
@@ -9109,6 +8967,21 @@ class _PaginaChatbotState extends State<PaginaChatbot> {
       mensajes.addAll(widget.mensajesIniciales!);
     }
     _controller.text = widget.consultaInicial ?? "";
+    if (widget.modoLlamada) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _iniciarLlamada();
+      });
+    }
+  }
+
+  Future<void> _iniciarLlamada() async {
+    const saludo =
+        "Buen dia. Soy DoctorSuplementos. En que te puedo ayudar el dia de hoy?";
+    if (!mounted) return;
+    setState(() => _estadoLlamada = "DoctorSuplementos esta hablando...");
+    await ServicioTextoVoz.reproducir(saludo);
+    if (!mounted) return;
+    setState(() => _estadoLlamada = "Toca el microfono para hablar");
   }
 
   Future<void> enviarMensaje() async {
@@ -9140,6 +9013,9 @@ class _PaginaChatbotState extends State<PaginaChatbot> {
     final instruccionProducto = productoCoincidente == null
         ? ""
         : "Si la consulta menciona un producto mal escrito, responde directamente sobre $productoCoincidente. No digas que fue una coincidencia ni que estaba mal escrito.";
+    final instruccionVoz = widget.modoLlamada
+        ? "Esta es una llamada de voz. Responde de forma natural, breve y directa, sin listas extensas ni formatos visuales. No saludes de nuevo en cada respuesta."
+        : "";
 
     final promptLimpioParaChatbot = """
     Eres un asesor IA para socios de 4Life.
@@ -9153,6 +9029,7 @@ class _PaginaChatbotState extends State<PaginaChatbot> {
     productos del catalogo autorizado y ofrece alternativas dentro de esa lista.
     No inventes nombres, presentaciones ni productos adicionales.
     $instruccionProducto
+    $instruccionVoz
     Mantén un tono claro, práctico y responsable. Si la pregunta parece médica, recomienda consultar a un profesional de salud.
 
     Conversación actual:
@@ -9182,8 +9059,17 @@ class _PaginaChatbotState extends State<PaginaChatbot> {
       setState(() {
         mensajes.add({"rol": "ia", "texto": respuestaIA});
         _adjunto = null;
+        if (widget.modoLlamada) {
+          _estadoLlamada = "DoctorSuplementos esta respondiendo...";
+        }
       });
       await ChatHistoryService.guardarConversacion(_conversacionId, mensajes);
+      if (widget.modoLlamada) {
+        await ServicioTextoVoz.reproducir(respuestaIA);
+        if (mounted) {
+          setState(() => _estadoLlamada = "Toca el microfono para hablar");
+        }
+      }
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -9191,6 +9077,9 @@ class _PaginaChatbotState extends State<PaginaChatbot> {
           "rol": "ia",
           "texto": "No se pudo conectar con la IA. Intenta nuevamente."
         });
+        if (widget.modoLlamada) {
+          _estadoLlamada = "No pude responder. Intenta nuevamente";
+        }
       });
       await ChatHistoryService.guardarConversacion(_conversacionId, mensajes);
     } finally {
@@ -9204,6 +9093,9 @@ class _PaginaChatbotState extends State<PaginaChatbot> {
   void dispose() {
     if (_grabandoAudio) {
       unawaited(_audioRecorder.cancel());
+    }
+    if (widget.modoLlamada) {
+      unawaited(ServicioTextoVoz.detener());
     }
     _audioRecorder.dispose();
     _controller.dispose();
@@ -9307,20 +9199,85 @@ class _PaginaChatbotState extends State<PaginaChatbot> {
     setState(() => _grabandoAudio = true);
   }
 
+  Future<void> alternarLlamadaVoz() async {
+    if (enviando) return;
+
+    if (_grabandoAudio) {
+      final path = await _audioRecorder.stop();
+      if (!mounted) return;
+      setState(() {
+        _grabandoAudio = false;
+        _estadoLlamada = "Procesando tu pregunta...";
+      });
+      if (path == null) {
+        setState(() => _estadoLlamada = "Toca el microfono para hablar");
+        return;
+      }
+
+      final archivo = File(path);
+      final bytes = await archivo.readAsBytes();
+      await archivo.delete().catchError((_) => archivo);
+      if (bytes.isEmpty || !mounted) return;
+
+      setState(() {
+        _adjunto = ArchivoAdjuntoIA(
+          nombre: 'Pregunta de voz.m4a',
+          mimeType: 'audio/mp4',
+          bytes: bytes,
+        );
+      });
+      await enviarMensaje();
+      return;
+    }
+
+    await ServicioTextoVoz.detener();
+    if (!await _audioRecorder.hasPermission()) {
+      if (!mounted) return;
+      setState(() => _estadoLlamada = "Se necesita acceso al microfono");
+      showDialog(
+        context: context,
+        builder: (context) => const AlertDialog(
+          title: Text("Permiso de microfono"),
+          content: Text(
+            "Activa el permiso del microfono para conversar con DoctorSuplementos.",
+          ),
+        ),
+      );
+      return;
+    }
+
+    final carpetaTemporal = await getTemporaryDirectory();
+    final path =
+        '${carpetaTemporal.path}/chat_live_${DateTime.now().microsecondsSinceEpoch}.m4a';
+    await _audioRecorder.start(
+      const RecordConfig(
+        encoder: AudioEncoder.aacLc,
+        numChannels: 1,
+        bitRate: 64000,
+      ),
+      path: path,
+    );
+    if (!mounted) return;
+    setState(() {
+      _grabandoAudio = true;
+      _estadoLlamada = "Te estoy escuchando...";
+    });
+  }
+
   void quitarAdjuntoChat() {
     setState(() => _adjunto = null);
   }
 
   @override
   Widget build(BuildContext context) {
-    return _buildChatbotNuevo();
+    return widget.modoLlamada ? _buildChatLiveVoz() : _buildChatbotNuevo();
   }
 
   // ignore: unused_element
   Widget _buildChatbotAnterior(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Asesor IA 4Life"),
+        title: Text(widget.titulo),
         backgroundColor: const Color(0xFF1A237E),
         foregroundColor: Colors.white,
         actions: [
@@ -9420,6 +9377,190 @@ class _PaginaChatbotState extends State<PaginaChatbot> {
 }
 
 extension _PaginaChatbotUi on _PaginaChatbotState {
+  Widget _buildChatLiveVoz() {
+    final escuchando = _grabandoAudio;
+    final ocupado = enviando;
+
+    return PopScope(
+      onPopInvokedWithResult: (_, __) {
+        unawaited(ServicioTextoVoz.detener());
+      },
+      child: Scaffold(
+        backgroundColor: const Color(0xFF07125E),
+        body: Container(
+          width: double.infinity,
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                Color(0xFF172B98),
+                Color(0xFF101B79),
+                Color(0xFF071044),
+              ],
+            ),
+          ),
+          child: SafeArea(
+            child: Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 10, 20, 0),
+                  child: Row(
+                    children: [
+                      IconButton(
+                        tooltip: "Finalizar llamada",
+                        onPressed: () {
+                          ServicioTextoVoz.detener();
+                          Navigator.pop(context);
+                        },
+                        icon: const Icon(
+                          Icons.arrow_back_rounded,
+                          color: Colors.white,
+                        ),
+                        iconSize: 32,
+                      ),
+                      const Expanded(
+                        child: Text(
+                          "Chat Live 4Life",
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 25,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 48),
+                    ],
+                  ),
+                ),
+                const Spacer(),
+                Container(
+                  width: 174,
+                  height: 174,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.white.withValues(alpha: 0.10),
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.24),
+                      width: 2,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF6578FF).withValues(alpha: 0.28),
+                        blurRadius: escuchando ? 52 : 28,
+                        spreadRadius: escuchando ? 18 : 8,
+                      ),
+                    ],
+                  ),
+                  child: Center(
+                    child: Container(
+                      width: 132,
+                      height: 132,
+                      decoration: const BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.health_and_safety_rounded,
+                        color: Color(0xFF172394),
+                        size: 72,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 34),
+                const Text(
+                  "DoctorSuplementos",
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 30,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 14),
+                AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 250),
+                  child: Text(
+                    _estadoLlamada,
+                    key: ValueKey(_estadoLlamada),
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: Color(0xFFD9DFFF),
+                      fontSize: 17,
+                      height: 1.3,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                if (ocupado) ...[
+                  const SizedBox(height: 22),
+                  const SizedBox(
+                    width: 34,
+                    height: 34,
+                    child: CircularProgressIndicator(
+                      color: Colors.white,
+                      strokeWidth: 3,
+                    ),
+                  ),
+                ],
+                const Spacer(),
+                Semantics(
+                  button: true,
+                  label: escuchando
+                      ? "Detener y enviar pregunta"
+                      : "Hablar con DoctorSuplementos",
+                  child: InkWell(
+                    customBorder: const CircleBorder(),
+                    onTap: ocupado ? null : alternarLlamadaVoz,
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 220),
+                      width: 112,
+                      height: 112,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: escuchando
+                            ? const Color(0xFFE94352)
+                            : ocupado
+                                ? const Color(0xFF6670A8)
+                                : Colors.white,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.22),
+                            blurRadius: 24,
+                            offset: const Offset(0, 12),
+                          ),
+                        ],
+                      ),
+                      child: Icon(
+                        escuchando ? Icons.stop_rounded : Icons.mic_rounded,
+                        color:
+                            escuchando ? Colors.white : const Color(0xFF172394),
+                        size: 56,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Text(
+                  escuchando
+                      ? "Toca para enviar tu pregunta"
+                      : "Toca para hablar",
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 42),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildChatbotNuevo() {
     return Scaffold(
       backgroundColor: const Color(0xFFF8F8FB),
@@ -9472,13 +9613,13 @@ extension _PaginaChatbotUi on _PaginaChatbotState {
             constraints: const BoxConstraints.tightFor(width: 44, height: 44),
           ),
           const SizedBox(width: 12),
-          const Expanded(
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  "Asesor IA 4Life",
-                  style: TextStyle(
+                  widget.titulo,
+                  style: const TextStyle(
                     color: Colors.white,
                     fontSize: 30,
                     height: 1.1,
@@ -9818,6 +9959,20 @@ extension _PaginaChatbotUi on _PaginaChatbotState {
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
+                  IconButton(
+                    tooltip: "Escuchar respuesta",
+                    visualDensity: VisualDensity.compact,
+                    icon: const Icon(Icons.volume_up_rounded, size: 21),
+                    color: const Color(0xFF4059EA),
+                    onPressed: () => ServicioTextoVoz.reproducir(texto),
+                  ),
+                  IconButton(
+                    tooltip: "Detener audio",
+                    visualDensity: VisualDensity.compact,
+                    icon: const Icon(Icons.stop_circle_outlined, size: 21),
+                    color: const Color(0xFF4059EA),
+                    onPressed: ServicioTextoVoz.detener,
+                  ),
                   IconButton(
                     tooltip: "Copiar",
                     visualDensity: VisualDensity.compact,
