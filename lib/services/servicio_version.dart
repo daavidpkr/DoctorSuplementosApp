@@ -8,7 +8,7 @@ import '../ui/pantalla_actualizacion_obligatoria.dart';
 class ServicioVersion {
   static const String _versionPorDefecto = '0.0.0';
   static const String _urlPorDefecto =
-      'https://doctorsuplementos-4bbb1.web.app';
+      'https://www.mediafire.com/folder/vamhbgj6fo7bi/DOCTORSUPLEMENTOS_FILES';
 
   static Future<void> validarVersion(BuildContext context) async {
     try {

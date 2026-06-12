@@ -8918,6 +8918,8 @@ class _PaginaChatbotState extends State<PaginaChatbot> {
   ArchivoAdjuntoIA? _adjunto;
   bool enviando = false;
   bool _grabandoAudio = false;
+  bool _iniciandoGrabacionVoz = false;
+  bool _presionandoMicrofono = false;
   String _estadoLlamada = "Conectando...";
   late String _conversacionId;
 
@@ -8938,13 +8940,10 @@ class _PaginaChatbotState extends State<PaginaChatbot> {
   }
 
   Future<void> _iniciarLlamada() async {
-    const saludo =
-        "Buen dia. Soy DoctorSuplementos. En que te puedo ayudar el dia de hoy?";
     if (!mounted) return;
-    setState(() => _estadoLlamada = "DoctorSuplementos esta hablando...");
-    await ServicioTextoVoz.reproducir(saludo);
-    if (!mounted) return;
-    setState(() => _estadoLlamada = "Toca el microfono para hablar");
+    setState(
+      () => _estadoLlamada = "Mantén pulsado el micrófono para hablar",
+    );
   }
 
   Future<void> enviarMensaje() async {
@@ -9030,7 +9029,9 @@ class _PaginaChatbotState extends State<PaginaChatbot> {
       if (widget.modoLlamada) {
         await ServicioTextoVoz.reproducir(respuestaIA);
         if (mounted) {
-          setState(() => _estadoLlamada = "Toca el microfono para hablar");
+          setState(
+            () => _estadoLlamada = "Mantén pulsado el micrófono para hablar",
+          );
         }
       }
     } catch (e) {
@@ -9162,69 +9163,88 @@ class _PaginaChatbotState extends State<PaginaChatbot> {
     setState(() => _grabandoAudio = true);
   }
 
-  Future<void> alternarLlamadaVoz() async {
-    if (enviando) return;
-
-    if (_grabandoAudio) {
-      final path = await _audioRecorder.stop();
-      if (!mounted) return;
-      setState(() {
-        _grabandoAudio = false;
-        _estadoLlamada = "Procesando tu pregunta...";
-      });
-      if (path == null) {
-        setState(() => _estadoLlamada = "Toca el microfono para hablar");
+  Future<void> iniciarLlamadaVoz() async {
+    if (enviando || _grabandoAudio || _iniciandoGrabacionVoz) return;
+    _iniciandoGrabacionVoz = true;
+    await ServicioTextoVoz.detener();
+    try {
+      if (!await _audioRecorder.hasPermission()) {
+        if (!mounted) return;
+        _presionandoMicrofono = false;
+        setState(() => _estadoLlamada = "Se necesita acceso al micrófono");
+        showDialog(
+          context: context,
+          builder: (context) => const AlertDialog(
+            title: Text("Permiso de micrófono"),
+            content: Text(
+              "Activa el permiso del micrófono para conversar con DoctorSuplementos.",
+            ),
+          ),
+        );
         return;
       }
 
-      final archivo = File(path);
-      final bytes = await archivo.readAsBytes();
-      await archivo.delete().catchError((_) => archivo);
-      if (bytes.isEmpty || !mounted) return;
-
+      final carpetaTemporal = await getTemporaryDirectory();
+      final path =
+          '${carpetaTemporal.path}/chat_live_${DateTime.now().microsecondsSinceEpoch}.m4a';
+      await _audioRecorder.start(
+        const RecordConfig(
+          encoder: AudioEncoder.aacLc,
+          numChannels: 1,
+          bitRate: 64000,
+        ),
+        path: path,
+      );
+      if (!mounted) return;
       setState(() {
-        _adjunto = ArchivoAdjuntoIA(
-          nombre: 'Pregunta de voz.m4a',
-          mimeType: 'audio/mp4',
-          bytes: bytes,
-        );
+        _grabandoAudio = true;
+        _estadoLlamada = "Te estoy escuchando...";
       });
-      await enviarMensaje();
-      return;
+    } finally {
+      _iniciandoGrabacionVoz = false;
     }
 
-    await ServicioTextoVoz.detener();
-    if (!await _audioRecorder.hasPermission()) {
-      if (!mounted) return;
-      setState(() => _estadoLlamada = "Se necesita acceso al microfono");
-      showDialog(
-        context: context,
-        builder: (context) => const AlertDialog(
-          title: Text("Permiso de microfono"),
-          content: Text(
-            "Activa el permiso del microfono para conversar con DoctorSuplementos.",
-          ),
-        ),
+    if (!_presionandoMicrofono && _grabandoAudio) {
+      await finalizarLlamadaVoz();
+    }
+  }
+
+  Future<void> finalizarLlamadaVoz() async {
+    if (enviando || !_grabandoAudio) return;
+
+    final path = await _audioRecorder.stop();
+    if (!mounted) return;
+    setState(() {
+      _grabandoAudio = false;
+      _estadoLlamada = "Procesando tu pregunta...";
+    });
+    if (path == null) {
+      setState(
+        () => _estadoLlamada = "Mantén pulsado el micrófono para hablar",
       );
       return;
     }
 
-    final carpetaTemporal = await getTemporaryDirectory();
-    final path =
-        '${carpetaTemporal.path}/chat_live_${DateTime.now().microsecondsSinceEpoch}.m4a';
-    await _audioRecorder.start(
-      const RecordConfig(
-        encoder: AudioEncoder.aacLc,
-        numChannels: 1,
-        bitRate: 64000,
-      ),
-      path: path,
-    );
-    if (!mounted) return;
+    final archivo = File(path);
+    final bytes = await archivo.readAsBytes();
+    await archivo.delete().catchError((_) => archivo);
+    if (bytes.isEmpty || !mounted) {
+      if (mounted) {
+        setState(
+          () => _estadoLlamada = "Mantén pulsado el micrófono para hablar",
+        );
+      }
+      return;
+    }
+
     setState(() {
-      _grabandoAudio = true;
-      _estadoLlamada = "Te estoy escuchando...";
+      _adjunto = ArchivoAdjuntoIA(
+        nombre: 'Pregunta de voz.m4a',
+        mimeType: 'audio/mp4',
+        bytes: bytes,
+      );
     });
+    await enviarMensaje();
   }
 
   void quitarAdjuntoChat() {
@@ -9470,12 +9490,30 @@ extension _PaginaChatbotUi on _PaginaChatbotState {
                 const Spacer(),
                 Semantics(
                   button: true,
-                  label: escuchando
-                      ? "Detener y enviar pregunta"
-                      : "Hablar con DoctorSuplementos",
-                  child: InkWell(
-                    customBorder: const CircleBorder(),
-                    onTap: ocupado ? null : alternarLlamadaVoz,
+                  label: "Mantén pulsado para hablar y suelta para enviar",
+                  child: GestureDetector(
+                    onLongPressStart: ocupado
+                        ? null
+                        : (_) {
+                            _presionandoMicrofono = true;
+                            unawaited(iniciarLlamadaVoz());
+                          },
+                    onLongPressEnd: ocupado
+                        ? null
+                        : (_) {
+                            _presionandoMicrofono = false;
+                            if (_grabandoAudio) {
+                              unawaited(finalizarLlamadaVoz());
+                            }
+                          },
+                    onLongPressCancel: ocupado
+                        ? null
+                        : () {
+                            _presionandoMicrofono = false;
+                            if (_grabandoAudio) {
+                              unawaited(finalizarLlamadaVoz());
+                            }
+                          },
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 220),
                       width: 112,
@@ -9496,7 +9534,7 @@ extension _PaginaChatbotUi on _PaginaChatbotState {
                         ],
                       ),
                       child: Icon(
-                        escuchando ? Icons.stop_rounded : Icons.mic_rounded,
+                        Icons.mic_rounded,
                         color:
                             escuchando ? Colors.white : const Color(0xFF172394),
                         size: 56,

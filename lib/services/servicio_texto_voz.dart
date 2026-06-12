@@ -63,24 +63,52 @@ class ServicioTextoVoz {
   }
 
   static Future<void> reproducir(String texto) async {
-    final contenido = texto.trim();
+    final contenido = prepararTexto(texto);
     if (contenido.isEmpty) return;
 
     await _configurar();
     await _tts.stop();
-    await _tts.speak(_limpiarFormato(contenido));
+    await _tts.speak(contenido);
   }
 
   static Future<void> detener() => _tts.stop();
 
-  static String _limpiarFormato(String texto) {
-    return texto
+  static String prepararTexto(String texto) {
+    var contenido = texto.trim();
+    if (contenido.isEmpty) return '';
+
+    final inicioAnalisis = RegExp(
+      r'(?:^|\n)\s*[*#_`]*\s*(?:saludo\s+y\s+)?an[aá]lisis\s+(?:del|de)\s+caso\s*[*#_`]*\s*:?\s*',
+      caseSensitive: false,
+      multiLine: true,
+    ).firstMatch(contenido);
+    if (inicioAnalisis != null) {
+      contenido =
+          'Análisis del caso. ${contenido.substring(inicioAnalisis.end)}';
+    }
+
+    return contenido
+        .replaceAllMapped(
+          RegExp(r'\[([^\]]+)\]\([^)]+\)'),
+          (coincidencia) => coincidencia.group(1) ?? '',
+        )
         .replaceAll(RegExp(r'[*#_`]'), '')
-        .replaceAll(RegExp(r'^\s*[-•]\s*', multiLine: true), '. ')
-        .replaceAll(RegExp(r'\n{2,}'), '. ')
-        .replaceAll('\n', ', ')
+        .replaceAll(RegExp(r'^\s*[•●▪◦]+\s*', multiLine: true), '')
+        .replaceAll(RegExp(r'[-‐‑‒–—―]+'), ' ')
+        .replaceAll(
+          RegExp(r"[^A-Za-zÁÉÍÓÚÜÑáéíóúüñ0-9\s.,;:¿?¡!()%'\/]"),
+          '',
+        )
+        .replaceAll(RegExp(r'\n+'), '. ')
         .replaceAll(RegExp(r'\s+'), ' ')
-        .replaceAll(RegExp(r'([.!?])\s*\.'), r'$1')
+        .replaceAllMapped(
+          RegExp(r'\s+([.,;:?!])'),
+          (coincidencia) => coincidencia.group(1) ?? '',
+        )
+        .replaceAllMapped(
+          RegExp(r'([.!?])\s*\.'),
+          (coincidencia) => coincidencia.group(1) ?? '',
+        )
         .trim();
   }
 }
