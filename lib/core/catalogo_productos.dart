@@ -326,14 +326,3 @@ ConsultaProductoCantidad extraerConsultaConCantidad(String texto) {
     cantidad: cantidad.clamp(1, 999).toInt(),
   );
 }
-
-Future<XFile> imagenProductoComoPng(String assetPath, String nombre) async {
-  final data = await rootBundle.load(assetPath);
-  final bytes = data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
-  final archivo = normalizarTexto(nombre).replaceAll(' ', '_');
-  return XFile.fromData(
-    bytes,
-    name: '$archivo.png',
-    mimeType: 'image/png',
-  );
-}

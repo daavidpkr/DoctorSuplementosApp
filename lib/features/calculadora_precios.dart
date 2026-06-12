@@ -193,7 +193,7 @@ class _PaginaCalculadoraPreciosState extends State<PaginaCalculadoraPrecios> {
               ),
               const SizedBox(height: 10),
               ElevatedButton.icon(
-                onPressed: () => Share.share(_resumenCompartir()),
+                onPressed: _compartirResultado,
                 icon: const Icon(Icons.share_rounded),
                 label: const Text("Compartir resultado"),
                 style: ElevatedButton.styleFrom(
@@ -240,6 +240,41 @@ class _PaginaCalculadoraPreciosState extends State<PaginaCalculadoraPrecios> {
     buffer.writeln('Total publico: ${_precio(_totalPublico)}');
     buffer.writeln('Total LP: $_totalLp');
     return buffer.toString();
+  }
+
+  Future<void> _compartirResultado() {
+    return ServicioCompartir.mostrarOpciones(
+      context,
+      DocumentoCompartible(
+        titulo: 'COTIZACIÓN DE PRODUCTOS 4LIFE',
+        nombreArchivo: 'cotizacion_productos_4life',
+        texto: _resumenCompartir(),
+        fecha: DateTime.now(),
+        secciones: [
+          SeccionDocumento(
+            titulo: 'Resumen de la cotización',
+            contenido: 'Total afiliado: ${_precio(_totalAfiliado)}\n'
+                'Total público: ${_precio(_totalPublico)}\n'
+                'Total LP: $_totalLp',
+          ),
+        ],
+        productos: _productos
+            .map(
+              (linea) => ProductoDocumento(
+                nombre: '${linea.cantidad} x ${linea.producto.nombre}',
+                imagenAsset: imagenesProducto4Life[linea.producto.nombre],
+                indicaciones: [
+                  'Precio afiliado: '
+                      '${_precio(linea.producto.afiliado * linea.cantidad)}',
+                  'Precio público: '
+                      '${_precio(linea.producto.publico * linea.cantidad)}',
+                  'LP: ${(linea.producto.lp ?? 0) * linea.cantidad}',
+                ],
+              ),
+            )
+            .toList(),
+      ),
+    );
   }
 
   void _abrirCatalogo() {
@@ -958,9 +993,7 @@ class _PaginaCalculadoraPreciosState extends State<PaginaCalculadoraPrecios> {
             child: _accionSecundaria(
               icono: Icons.share_rounded,
               texto: "Compartir lista",
-              onTap: _productos.isEmpty
-                  ? null
-                  : () => Share.share(_resumenCompartir()),
+              onTap: _productos.isEmpty ? null : _compartirResultado,
             ),
           ),
         ],

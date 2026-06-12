@@ -825,17 +825,12 @@ class _ConsultaProductoPaginaState extends State<ConsultaProductoPagina> {
                     tooltip: "Compartir",
                     icon: const Icon(Icons.share_rounded),
                     color: const Color(0xFF12248B),
-                    onPressed: () async {
-                      if (imagenProducto == null ||
-                          productoIdentificado == null) {
-                        await Share.share(resultado);
-                        return;
-                      }
-
-                      final imagen = await imagenProductoComoPng(
-                          imagenProducto, productoIdentificado);
-                      await Share.shareXFiles([imagen], text: resultado);
-                    },
+                    onPressed: () => _compartirConsultaProducto(
+                      titulo: titulo,
+                      resultado: resultado,
+                      imagenProducto: imagenProducto,
+                      productoIdentificado: productoIdentificado,
+                    ),
                   ),
                   const Spacer(),
                   TextButton(
@@ -878,6 +873,64 @@ class _ConsultaProductoPaginaState extends State<ConsultaProductoPagina> {
             "LP",
             producto.lp?.toString() ?? 'Sin dato',
             Icons.star_outline_rounded,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _compartirConsultaProducto({
+    required String titulo,
+    required String resultado,
+    required String? imagenProducto,
+    required String? productoIdentificado,
+  }) {
+    final secciones = _seccionesResultadoProducto(resultado);
+    final dosis = secciones
+        .where(
+          (seccion) =>
+              normalizarTexto(seccion.key).contains('dosis sugerida') ||
+              normalizarTexto(seccion.key).contains('indicaciones de uso'),
+        )
+        .map((seccion) => seccion.value)
+        .where((texto) => texto.trim().isNotEmpty)
+        .toList();
+    final detalle = secciones
+        .where(
+          (seccion) => normalizarTexto(seccion.key).contains('descripcion'),
+        )
+        .map((seccion) => seccion.value)
+        .join('\n');
+    final nombre = productoIdentificado ?? titulo;
+
+    return ServicioCompartir.mostrarOpciones(
+      context,
+      DocumentoCompartible(
+        titulo: 'INFORME DEL PRODUCTO ${nombre.toUpperCase()}',
+        nombreArchivo: 'informe_producto_$nombre',
+        texto: resultado,
+        fecha: DateTime.now(),
+        secciones: secciones
+            .where(
+              (seccion) =>
+                  !normalizarTexto(seccion.key)
+                      .contains('producto identificado') &&
+                  !normalizarTexto(seccion.key).contains('dosis sugerida') &&
+                  !normalizarTexto(seccion.key).contains('indicaciones de uso'),
+            )
+            .map(
+              (seccion) => SeccionDocumento(
+                titulo: seccion.key,
+                contenido: seccion.value,
+              ),
+            )
+            .toList(),
+        productos: [
+          ProductoDocumento(
+            nombre: nombre,
+            imagenAsset: imagenProducto,
+            indicaciones: dosis,
+            detalle: detalle,
           ),
         ],
       ),

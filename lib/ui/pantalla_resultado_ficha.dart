@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:share_plus/share_plus.dart';
 
+import '../services/servicio_compartir.dart';
 import '../services/servicio_texto_voz.dart';
 
 class ProductoResultadoFicha {
@@ -365,7 +365,7 @@ class _PantallaResultadoFichaState extends State<PantallaResultadoFicha> {
             iconColor: azul,
             onSelected: (valor) {
               if (valor == 'copiar') _copiar();
-              if (valor == 'compartir') Share.share(widget.resultado);
+              if (valor == 'compartir') _compartir();
             },
             itemBuilder: (_) => const [
               PopupMenuItem(value: 'copiar', child: Text('Copiar')),
@@ -1013,7 +1013,7 @@ class _PantallaResultadoFichaState extends State<PantallaResultadoFicha> {
           _accion(
             Icons.share_rounded,
             'Compartir',
-            () => Share.share(widget.resultado),
+            _compartir,
           ),
           Expanded(
             child: Padding(
@@ -1072,6 +1072,58 @@ class _PantallaResultadoFichaState extends State<PantallaResultadoFicha> {
     Clipboard.setData(ClipboardData(text: widget.resultado));
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Copiado al portapapeles')),
+    );
+  }
+
+  Future<void> _compartir() {
+    final esCambio = widget.tipoFicha.toLowerCase().contains('cambio');
+    final paciente =
+        widget.paciente.trim().isEmpty ? 'PACIENTE' : widget.paciente.trim();
+    final titulo = esCambio
+        ? 'PLAN DE CAMBIO FÍSICO DE $paciente'
+        : 'DIAGNÓSTICO DE $paciente';
+    final secciones = <SeccionDocumento>[
+      SeccionDocumento(
+        titulo: esCambio ? 'Análisis del perfil' : 'Diagnóstico',
+        contenido:
+            contenido.analisis.isEmpty ? widget.resultado : contenido.analisis,
+      ),
+      if (contenido.objetivo.isNotEmpty)
+        SeccionDocumento(
+          titulo: 'Objetivo',
+          contenido: contenido.objetivo,
+        ),
+      if (contenido.recomendaciones.isNotEmpty)
+        SeccionDocumento(
+          titulo: esCambio
+              ? 'Hábitos y recomendaciones'
+              : 'Recomendaciones generales',
+          contenido: contenido.recomendaciones,
+        ),
+    ];
+    final productos = contenido.productos
+        .map(
+          (producto) => ProductoDocumento(
+            nombre: producto.nombre,
+            imagenAsset: producto.imagen,
+            indicaciones: producto.dosis,
+            detalle: producto.beneficio,
+          ),
+        )
+        .toList();
+
+    return ServicioCompartir.mostrarOpciones(
+      context,
+      DocumentoCompartible(
+        titulo: titulo,
+        nombreArchivo: titulo,
+        texto: widget.resultado,
+        paciente: widget.paciente,
+        fecha: widget.fecha,
+        secciones: secciones,
+        productos: productos,
+        nota: contenido.nota,
+      ),
     );
   }
 }

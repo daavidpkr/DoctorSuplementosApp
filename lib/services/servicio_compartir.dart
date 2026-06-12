@@ -1,0 +1,684 @@
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:share_plus/share_plus.dart';
+
+class SeccionDocumento {
+  final String titulo;
+  final String contenido;
+
+  const SeccionDocumento({
+    required this.titulo,
+    required this.contenido,
+  });
+}
+
+class ProductoDocumento {
+  final String nombre;
+  final String? imagenAsset;
+  final List<String> indicaciones;
+  final String detalle;
+
+  const ProductoDocumento({
+    required this.nombre,
+    this.imagenAsset,
+    this.indicaciones = const [],
+    this.detalle = '',
+  });
+}
+
+class DocumentoCompartible {
+  final String titulo;
+  final String nombreArchivo;
+  final String texto;
+  final String? paciente;
+  final DateTime fecha;
+  final List<SeccionDocumento> secciones;
+  final List<ProductoDocumento> productos;
+  final String nota;
+
+  const DocumentoCompartible({
+    required this.titulo,
+    required this.nombreArchivo,
+    required this.texto,
+    required this.fecha,
+    this.paciente,
+    this.secciones = const [],
+    this.productos = const [],
+    this.nota = '',
+  });
+}
+
+class ServicioCompartir {
+  static const _azul = PdfColor.fromInt(0xFF12248B);
+  static const _azulOscuro = PdfColor.fromInt(0xFF0A175E);
+  static const _violeta = PdfColor.fromInt(0xFF4B48D8);
+  static const _verde = PdfColor.fromInt(0xFF118B48);
+  static const _texto = PdfColor.fromInt(0xFF20294F);
+  static const _gris = PdfColor.fromInt(0xFF66708F);
+  static const _borde = PdfColor.fromInt(0xFFE2E5F0);
+  static const _fondo = PdfColor.fromInt(0xFFF6F7FC);
+
+  static Future<void> mostrarOpciones(
+    BuildContext context,
+    DocumentoCompartible documento,
+  ) async {
+    final opcion = await showModalBottomSheet<String>(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
+      ),
+      builder: (sheetContext) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 44,
+                  height: 5,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFD8DCEB),
+                    borderRadius: BorderRadius.circular(99),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+              const Text(
+                '¿Cómo deseas compartir?',
+                style: TextStyle(
+                  color: Color(0xFF12248B),
+                  fontSize: 22,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              const SizedBox(height: 6),
+              const Text(
+                'Elige un documento PDF o un mensaje de texto para WhatsApp.',
+                style: TextStyle(
+                  color: Color(0xFF596284),
+                  fontSize: 15,
+                  height: 1.35,
+                ),
+              ),
+              const SizedBox(height: 18),
+              _opcion(
+                context: sheetContext,
+                valor: 'pdf',
+                icono: Icons.picture_as_pdf_rounded,
+                titulo: 'Compartir como PDF',
+                descripcion: 'Documento profesional, ordenado y con imágenes.',
+                color: const Color(0xFFC62828),
+              ),
+              const SizedBox(height: 10),
+              _opcion(
+                context: sheetContext,
+                valor: 'texto',
+                icono: Icons.chat_bubble_outline_rounded,
+                titulo: 'Mensaje de texto',
+                descripcion: 'Contenido listo para enviar por WhatsApp.',
+                color: const Color(0xFF118B48),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    if (opcion == null || !context.mounted) return;
+    if (opcion == 'texto') {
+      await Share.share(documento.texto, subject: documento.titulo);
+      return;
+    }
+
+    _mostrarProcesando(context);
+    try {
+      final bytes = await generarPdf(documento);
+      if (!context.mounted) return;
+      Navigator.of(context, rootNavigator: true).pop();
+      final nombre = '${_archivoSeguro(documento.nombreArchivo)}.pdf';
+      await Share.shareXFiles(
+        [
+          XFile.fromData(
+            bytes,
+            name: nombre,
+            mimeType: 'application/pdf',
+          ),
+        ],
+        subject: documento.titulo,
+        text: documento.titulo,
+      );
+    } catch (error) {
+      if (!context.mounted) return;
+      Navigator.of(context, rootNavigator: true).pop();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No se pudo generar el PDF. Inténtalo nuevamente.'),
+        ),
+      );
+    }
+  }
+
+  static Widget _opcion({
+    required BuildContext context,
+    required String valor,
+    required IconData icono,
+    required String titulo,
+    required String descripcion,
+    required Color color,
+  }) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(18),
+      onTap: () => Navigator.pop(context, valor),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.06),
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: color.withValues(alpha: 0.18)),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 52,
+              height: 52,
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(15),
+              ),
+              child: Icon(icono, color: color, size: 29),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    titulo,
+                    style: const TextStyle(
+                      color: Color(0xFF17204B),
+                      fontSize: 16,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    descripcion,
+                    style: const TextStyle(
+                      color: Color(0xFF66708F),
+                      fontSize: 13.5,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(
+              Icons.chevron_right_rounded,
+              color: Color(0xFF66708F),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  static void _mostrarProcesando(BuildContext context) {
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(
+        child: Card(
+          child: Padding(
+            padding: EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                SizedBox(
+                  width: 24,
+                  height: 24,
+                  child: CircularProgressIndicator(strokeWidth: 3),
+                ),
+                SizedBox(width: 16),
+                Text(
+                  'Preparando PDF...',
+                  style: TextStyle(fontWeight: FontWeight.w800),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  static Future<Uint8List> generarPdf(
+    DocumentoCompartible documento,
+  ) async {
+    final fuenteData = await rootBundle.load('assets/fonts/NotoSans.ttf');
+    final fuente = pw.Font.ttf(fuenteData);
+    final pdf = pw.Document(
+      title: documento.titulo,
+      author: 'DoctorSuplementos',
+      creator: 'DoctorSuplementos',
+    );
+    final logo = await _cargarImagen('assets/icon.png');
+    final imagenes = <String, pw.MemoryImage?>{};
+    for (final producto in documento.productos) {
+      final ruta = producto.imagenAsset;
+      if (ruta != null && !imagenes.containsKey(ruta)) {
+        imagenes[ruta] = await _cargarImagen(ruta);
+      }
+    }
+
+    pdf.addPage(
+      pw.MultiPage(
+        pageFormat: PdfPageFormat.a4,
+        margin: const pw.EdgeInsets.fromLTRB(34, 30, 34, 34),
+        theme: pw.ThemeData.withFont(
+          base: fuente,
+          bold: fuente,
+          italic: fuente,
+        ),
+        header: (context) => context.pageNumber == 1
+            ? pw.SizedBox()
+            : pw.Container(
+                padding: const pw.EdgeInsets.only(bottom: 10),
+                decoration: const pw.BoxDecoration(
+                  border: pw.Border(
+                    bottom: pw.BorderSide(color: _borde, width: 0.8),
+                  ),
+                ),
+                child: pw.Row(
+                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                  children: [
+                    pw.Text(
+                      documento.titulo,
+                      style: pw.TextStyle(
+                        color: _azul,
+                        fontSize: 9,
+                        fontWeight: pw.FontWeight.bold,
+                      ),
+                    ),
+                    pw.Text(
+                      'DoctorSuplementos',
+                      style: const pw.TextStyle(color: _gris, fontSize: 8),
+                    ),
+                  ],
+                ),
+              ),
+        footer: (context) => pw.Container(
+          padding: const pw.EdgeInsets.only(top: 10),
+          decoration: const pw.BoxDecoration(
+            border: pw.Border(
+              top: pw.BorderSide(color: _borde, width: 0.8),
+            ),
+          ),
+          child: pw.Row(
+            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+            children: [
+              pw.Text(
+                'Documento informativo de bienestar',
+                style: const pw.TextStyle(color: _gris, fontSize: 8),
+              ),
+              pw.Text(
+                'Página ${context.pageNumber} de ${context.pagesCount}',
+                style: const pw.TextStyle(color: _gris, fontSize: 8),
+              ),
+            ],
+          ),
+        ),
+        build: (_) => [
+          _encabezadoPdf(documento, logo),
+          pw.SizedBox(height: 18),
+          for (final seccion in documento.secciones) ...[
+            _seccionPdf(seccion),
+            pw.SizedBox(height: 12),
+          ],
+          if (documento.productos.isNotEmpty) ...[
+            _tituloBloque('PRODUCTOS RECOMENDADOS', _violeta),
+            pw.SizedBox(height: 10),
+            for (var i = 0; i < documento.productos.length; i++) ...[
+              _productoPdf(
+                documento.productos[i],
+                i + 1,
+                documento.productos[i].imagenAsset == null
+                    ? null
+                    : imagenes[documento.productos[i].imagenAsset],
+              ),
+              pw.SizedBox(height: 10),
+            ],
+          ],
+          if (documento.nota.trim().isNotEmpty) ...[
+            pw.SizedBox(height: 4),
+            _notaPdf(documento.nota),
+          ],
+        ],
+      ),
+    );
+    return pdf.save();
+  }
+
+  static pw.Widget _encabezadoPdf(
+    DocumentoCompartible documento,
+    pw.MemoryImage? logo,
+  ) {
+    final paciente = documento.paciente?.trim() ?? '';
+    return pw.Column(
+      crossAxisAlignment: pw.CrossAxisAlignment.stretch,
+      children: [
+        pw.Container(
+          padding: const pw.EdgeInsets.all(18),
+          decoration: pw.BoxDecoration(
+            gradient: const pw.LinearGradient(
+              colors: [_azul, _azulOscuro],
+            ),
+            borderRadius: pw.BorderRadius.circular(16),
+          ),
+          child: pw.Row(
+            crossAxisAlignment: pw.CrossAxisAlignment.center,
+            children: [
+              if (logo != null)
+                pw.Container(
+                  width: 66,
+                  height: 66,
+                  padding: const pw.EdgeInsets.all(5),
+                  decoration: const pw.BoxDecoration(
+                    color: PdfColors.white,
+                    shape: pw.BoxShape.circle,
+                  ),
+                  child: pw.Image(logo, fit: pw.BoxFit.contain),
+                ),
+              if (logo != null) pw.SizedBox(width: 15),
+              pw.Expanded(
+                child: pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+                  children: [
+                    pw.Text(
+                      _textoPdf(documento.titulo).toUpperCase(),
+                      style: pw.TextStyle(
+                        color: PdfColors.white,
+                        fontSize: 19,
+                        fontWeight: pw.FontWeight.bold,
+                      ),
+                    ),
+                    pw.SizedBox(height: 5),
+                    pw.Text(
+                      'Informe profesional de bienestar',
+                      style: const pw.TextStyle(
+                        color: PdfColor.fromInt(0xFFDDE3FF),
+                        fontSize: 10,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        pw.SizedBox(height: 12),
+        pw.Container(
+          padding: const pw.EdgeInsets.symmetric(horizontal: 15, vertical: 12),
+          decoration: pw.BoxDecoration(
+            color: _fondo,
+            borderRadius: pw.BorderRadius.circular(12),
+            border: pw.Border.all(color: _borde),
+          ),
+          child: pw.Row(
+            children: [
+              if (paciente.isNotEmpty) ...[
+                pw.Expanded(
+                  child: _datoCabecera('PACIENTE', _textoPdf(paciente)),
+                ),
+                pw.Container(width: 1, height: 30, color: _borde),
+                pw.SizedBox(width: 16),
+              ],
+              pw.Expanded(
+                child: _datoCabecera(
+                  'FECHA',
+                  '${documento.fecha.day.toString().padLeft(2, '0')}/'
+                      '${documento.fecha.month.toString().padLeft(2, '0')}/'
+                      '${documento.fecha.year}',
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  static pw.Widget _datoCabecera(String etiqueta, String valor) {
+    return pw.Column(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: [
+        pw.Text(
+          etiqueta,
+          style: pw.TextStyle(
+            color: _violeta,
+            fontSize: 8,
+            fontWeight: pw.FontWeight.bold,
+          ),
+        ),
+        pw.SizedBox(height: 3),
+        pw.Text(
+          valor,
+          style: pw.TextStyle(
+            color: _texto,
+            fontSize: 11,
+            fontWeight: pw.FontWeight.bold,
+          ),
+        ),
+      ],
+    );
+  }
+
+  static pw.Widget _seccionPdf(SeccionDocumento seccion) {
+    return pw.Container(
+      padding: const pw.EdgeInsets.all(15),
+      decoration: pw.BoxDecoration(
+        color: PdfColors.white,
+        borderRadius: pw.BorderRadius.circular(12),
+        border: pw.Border.all(color: _borde),
+      ),
+      child: pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: [
+          _tituloBloque(_textoPdf(seccion.titulo).toUpperCase(), _azul),
+          pw.SizedBox(height: 8),
+          pw.Text(
+            _textoPdf(seccion.contenido),
+            style: const pw.TextStyle(
+              color: _texto,
+              fontSize: 10.5,
+              lineSpacing: 3,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  static pw.Widget _tituloBloque(String titulo, PdfColor color) {
+    return pw.Row(
+      children: [
+        pw.Container(
+          width: 4,
+          height: 18,
+          decoration: pw.BoxDecoration(
+            color: color,
+            borderRadius: pw.BorderRadius.circular(2),
+          ),
+        ),
+        pw.SizedBox(width: 8),
+        pw.Expanded(
+          child: pw.Text(
+            titulo,
+            style: pw.TextStyle(
+              color: color,
+              fontSize: 11,
+              fontWeight: pw.FontWeight.bold,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  static pw.Widget _productoPdf(
+    ProductoDocumento producto,
+    int indice,
+    pw.MemoryImage? imagen,
+  ) {
+    return pw.Container(
+      padding: const pw.EdgeInsets.all(14),
+      decoration: pw.BoxDecoration(
+        color: PdfColors.white,
+        borderRadius: pw.BorderRadius.circular(12),
+        border: pw.Border.all(color: _borde),
+      ),
+      child: pw.Row(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: [
+          pw.Container(
+            width: 104,
+            height: 112,
+            padding: const pw.EdgeInsets.all(8),
+            decoration: pw.BoxDecoration(
+              color: _fondo,
+              borderRadius: pw.BorderRadius.circular(10),
+            ),
+            child: imagen == null
+                ? pw.Center(
+                    child: pw.Text(
+                      '$indice',
+                      style: pw.TextStyle(
+                        color: _violeta,
+                        fontSize: 26,
+                        fontWeight: pw.FontWeight.bold,
+                      ),
+                    ),
+                  )
+                : pw.Image(imagen, fit: pw.BoxFit.contain),
+          ),
+          pw.SizedBox(width: 14),
+          pw.Expanded(
+            child: pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                pw.Text(
+                  '$indice. ${_textoPdf(producto.nombre)}',
+                  style: pw.TextStyle(
+                    color: _azul,
+                    fontSize: 13,
+                    fontWeight: pw.FontWeight.bold,
+                  ),
+                ),
+                if (producto.indicaciones.isNotEmpty) pw.SizedBox(height: 8),
+                for (final indicacion in producto.indicaciones)
+                  pw.Padding(
+                    padding: const pw.EdgeInsets.only(bottom: 4),
+                    child: pw.Row(
+                      crossAxisAlignment: pw.CrossAxisAlignment.start,
+                      children: [
+                        pw.Container(
+                          margin: const pw.EdgeInsets.only(top: 4),
+                          width: 5,
+                          height: 5,
+                          decoration: const pw.BoxDecoration(
+                            color: _verde,
+                            shape: pw.BoxShape.circle,
+                          ),
+                        ),
+                        pw.SizedBox(width: 7),
+                        pw.Expanded(
+                          child: pw.Text(
+                            _textoPdf(indicacion),
+                            style: const pw.TextStyle(
+                              color: _texto,
+                              fontSize: 9.5,
+                              lineSpacing: 2,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                if (producto.detalle.trim().isNotEmpty) ...[
+                  pw.SizedBox(height: 5),
+                  pw.Container(
+                    padding: const pw.EdgeInsets.all(8),
+                    decoration: pw.BoxDecoration(
+                      color: const PdfColor.fromInt(0xFFF0F8F3),
+                      borderRadius: pw.BorderRadius.circular(7),
+                    ),
+                    child: pw.Text(
+                      _textoPdf(producto.detalle),
+                      style: const pw.TextStyle(
+                        color: _texto,
+                        fontSize: 9,
+                        lineSpacing: 2,
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  static pw.Widget _notaPdf(String nota) {
+    return pw.Container(
+      padding: const pw.EdgeInsets.all(12),
+      decoration: pw.BoxDecoration(
+        color: const PdfColor.fromInt(0xFFFFF8E8),
+        borderRadius: pw.BorderRadius.circular(10),
+        border: pw.Border.all(
+          color: const PdfColor.fromInt(0xFFF1D999),
+        ),
+      ),
+      child: pw.Text(
+        _textoPdf(nota),
+        style: const pw.TextStyle(
+          color: _texto,
+          fontSize: 8.8,
+          lineSpacing: 2,
+        ),
+      ),
+    );
+  }
+
+  static Future<pw.MemoryImage?> _cargarImagen(String asset) async {
+    try {
+      final data = await rootBundle.load(asset);
+      return pw.MemoryImage(
+        data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes),
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
+  static String _textoPdf(String texto) {
+    return texto
+        .replaceAll(RegExp(r'[*#_`]'), '')
+        .replaceAll('•', '-')
+        .replaceAll(RegExp(r'[^\x09\x0A\x0D\x20-\xFF]'), '')
+        .replaceAll(RegExp(r'[ \t]+'), ' ')
+        .trim();
+  }
+
+  static String _archivoSeguro(String texto) {
+    final limpio = _textoPdf(texto)
+        .toLowerCase()
+        .replaceAll(RegExp(r'[^a-z0-9áéíóúüñ ]'), '')
+        .replaceAll(RegExp(r'\s+'), '_');
+    return limpio.isEmpty ? 'documento_doctorsuplementos' : limpio;
+  }
+}

@@ -1,5 +1,53 @@
 part of '../main.dart';
 
+Future<void> _compartirRespuestaChat(
+  BuildContext context,
+  String texto,
+) {
+  final contenido = ContenidoResultadoFicha.desdeTexto(
+    texto,
+    imagenesProducto4Life,
+  );
+  final productos = contenido.productos
+      .map(
+        (producto) => ProductoDocumento(
+          nombre: producto.nombre,
+          imagenAsset: producto.imagen,
+          indicaciones: producto.dosis,
+          detalle: producto.beneficio,
+        ),
+      )
+      .toList();
+  final secciones = <SeccionDocumento>[
+    SeccionDocumento(
+      titulo: productos.isEmpty ? 'Respuesta del asesor' : 'Análisis',
+      contenido: contenido.analisis.isEmpty ? texto : contenido.analisis,
+    ),
+    if (contenido.objetivo.isNotEmpty)
+      SeccionDocumento(
+        titulo: 'Objetivo',
+        contenido: contenido.objetivo,
+      ),
+    if (contenido.recomendaciones.isNotEmpty)
+      SeccionDocumento(
+        titulo: 'Recomendaciones',
+        contenido: contenido.recomendaciones,
+      ),
+  ];
+  return ServicioCompartir.mostrarOpciones(
+    context,
+    DocumentoCompartible(
+      titulo: 'RESPUESTA DEL ASESOR IA 4LIFE',
+      nombreArchivo: 'respuesta_asesor_ia_4life',
+      texto: texto,
+      fecha: DateTime.now(),
+      secciones: secciones,
+      productos: productos,
+      nota: contenido.nota,
+    ),
+  );
+}
+
 class PaginaChatbot extends StatefulWidget {
   final String titulo;
   final bool modoLlamada;
@@ -425,7 +473,8 @@ class _PaginaChatbotState extends State<PaginaChatbot> {
                                   ),
                                   IconButton(
                                     icon: const Icon(Icons.share),
-                                    onPressed: () => Share.share(texto),
+                                    onPressed: () =>
+                                        _compartirRespuestaChat(context, texto),
                                   ),
                                 ],
                               )
@@ -1101,7 +1150,7 @@ extension _PaginaChatbotUi on _PaginaChatbotState {
                     visualDensity: VisualDensity.compact,
                     icon: const Icon(Icons.share_rounded, size: 20),
                     color: const Color(0xFF4059EA),
-                    onPressed: () => Share.share(texto),
+                    onPressed: () => _compartirRespuestaChat(context, texto),
                   ),
                 ],
               ),
