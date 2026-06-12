@@ -11,6 +11,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:record/record.dart';
 import 'services/servicio_texto_voz.dart';
 import 'services/servicio_version.dart';
+import 'ui/pantalla_resultado_ficha.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
@@ -3643,7 +3644,7 @@ class _FormularioPacienteState extends State<FormularioPaciente> {
                 : historialController.text,
       });
 
-      _mostrarResultado(textoFinal);
+      _mostrarResultado(textoFinal, perfilAsesor);
     } catch (e) {
       _mostrarDialogoSimple("Error", "No se pudo conectar con la IA.");
     } finally {
@@ -3651,37 +3652,20 @@ class _FormularioPacienteState extends State<FormularioPaciente> {
     }
   }
 
-  void _mostrarResultado(String mensaje) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text("Resultado del Diagnóstico"),
-        content: SingleChildScrollView(child: Text(mensaje)),
-        actions: [
-          IconButton(
-            tooltip: "Escuchar respuesta",
-            icon: const Icon(Icons.volume_up_rounded),
-            onPressed: () => ServicioTextoVoz.reproducir(mensaje),
-          ),
-          IconButton(
-            tooltip: "Detener audio",
-            icon: const Icon(Icons.stop_circle_outlined),
-            onPressed: ServicioTextoVoz.detener,
-          ),
-          IconButton(
-              icon: const Icon(Icons.copy),
-              onPressed: () {
-                Clipboard.setData(ClipboardData(text: mensaje));
-                ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text("Copiado al portapapeles")));
-              }),
-          IconButton(
-              icon: const Icon(Icons.share),
-              onPressed: () => Share.share(mensaje)),
-          TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text("Cerrar")),
-        ],
+  void _mostrarResultado(String mensaje, PerfilAsesor perfilAsesor) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => PantallaResultadoFicha(
+          titulo: "Resultado del Diagnóstico",
+          tipoFicha: "Diagnóstico",
+          paciente: nombreController.text,
+          nombreAsesor: perfilAsesor.nombre,
+          especialidad: "Especialista en inmunología y bioenergética",
+          resultado: mensaje,
+          fecha: DateTime.now(),
+          imagenesProducto: imagenesProducto4Life,
+        ),
       ),
     );
   }
@@ -4720,7 +4704,7 @@ class _FormularioCambioFisicoState extends State<FormularioCambioFisico> {
         tipo: 'cambio_fisico',
       );
 
-      _mostrarResultado(textoFinal);
+      _mostrarResultado(textoFinal, perfilAsesor);
     } catch (e) {
       _mostrarDialogoSimple("Error", "No se pudo conectar con la IA.");
     } finally {
@@ -4728,41 +4712,20 @@ class _FormularioCambioFisicoState extends State<FormularioCambioFisico> {
     }
   }
 
-  void _mostrarResultado(String mensaje) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text("Resultado de Cambio Fisico"),
-        content: SingleChildScrollView(child: Text(mensaje)),
-        actions: [
-          IconButton(
-            tooltip: "Escuchar respuesta",
-            icon: const Icon(Icons.volume_up_rounded),
-            onPressed: () => ServicioTextoVoz.reproducir(mensaje),
-          ),
-          IconButton(
-            tooltip: "Detener audio",
-            icon: const Icon(Icons.stop_circle_outlined),
-            onPressed: ServicioTextoVoz.detener,
-          ),
-          IconButton(
-            icon: const Icon(Icons.copy),
-            onPressed: () {
-              Clipboard.setData(ClipboardData(text: mensaje));
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text("Copiado al portapapeles")),
-              );
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.share),
-            onPressed: () => Share.share(mensaje),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text("Cerrar"),
-          ),
-        ],
+  void _mostrarResultado(String mensaje, PerfilAsesor perfilAsesor) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => PantallaResultadoFicha(
+          titulo: "Resultado de Cambio Físico",
+          tipoFicha: "Cambio físico",
+          paciente: nombreController.text,
+          nombreAsesor: perfilAsesor.nombre,
+          especialidad: "Asesor de bienestar y composición corporal",
+          resultado: mensaje,
+          fecha: DateTime.now(),
+          imagenesProducto: imagenesProducto4Life,
+        ),
       ),
     );
   }

@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-class PantallaActualizacionObligatoria extends StatelessWidget {
+class PantallaBloqueoVersion extends StatelessWidget {
   final String versionActual;
   final String versionMinima;
   final String urlDescarga;
 
-  const PantallaActualizacionObligatoria({
+  const PantallaBloqueoVersion({
     super.key,
     required this.versionActual,
     required this.versionMinima,

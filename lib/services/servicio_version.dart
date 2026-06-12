@@ -12,15 +12,8 @@ class ServicioVersion {
 
   static Future<void> validarVersion(BuildContext context) async {
     try {
-      final packageInfo = await PackageInfo.fromPlatform();
       final remoteConfig = FirebaseRemoteConfig.instance;
 
-      await remoteConfig.setConfigSettings(
-        RemoteConfigSettings(
-          fetchTimeout: const Duration(seconds: 8),
-          minimumFetchInterval: const Duration(minutes: 5),
-        ),
-      );
       await remoteConfig.setDefaults({
         'version_minima_android': _versionPorDefecto,
         'version_minima_ios': _versionPorDefecto,
@@ -29,22 +22,31 @@ class ServicioVersion {
         'url_descarga_ios': _urlPorDefecto,
         'url_descarga_desktop': _urlPorDefecto,
       });
+      await remoteConfig.setConfigSettings(
+        RemoteConfigSettings(
+          fetchTimeout: const Duration(seconds: 5),
+          minimumFetchInterval: Duration.zero,
+        ),
+      );
       await remoteConfig.fetchAndActivate();
 
+      final packageInfo = await PackageInfo.fromPlatform();
+      final versionActual = packageInfo.version;
       final sufijo = _sufijoPlataforma();
       final versionMinima =
           remoteConfig.getString('version_minima_$sufijo').trim();
       final urlDescarga = remoteConfig.getString('url_descarga_$sufijo').trim();
 
       if (!context.mounted ||
-          !esVersionInferior(packageInfo.version, versionMinima)) {
+          !esVersionInferior(versionActual, versionMinima)) {
         return;
       }
 
-      Navigator.of(context).pushReplacement(
+      Navigator.pushReplacement(
+        context,
         MaterialPageRoute(
-          builder: (_) => PantallaActualizacionObligatoria(
-            versionActual: packageInfo.version,
+          builder: (_) => PantallaBloqueoVersion(
+            versionActual: versionActual,
             versionMinima: versionMinima,
             urlDescarga: urlDescarga.isEmpty ? _urlPorDefecto : urlDescarga,
           ),
@@ -59,8 +61,8 @@ class ServicioVersion {
   static bool esVersionInferior(String actual, String minima) {
     if (minima.trim().isEmpty) return false;
 
-    final actualPartes = _partesVersion(actual);
-    final minimaPartes = _partesVersion(minima);
+    final actualPartes = actual.split('.').map(int.parse).toList();
+    final minimaPartes = minima.split('.').map(int.parse).toList();
     final cantidad = actualPartes.length > minimaPartes.length
         ? actualPartes.length
         : minimaPartes.length;
@@ -72,16 +74,6 @@ class ServicioVersion {
       if (actualParte > minimaParte) return false;
     }
     return false;
-  }
-
-  static List<int> _partesVersion(String version) {
-    return version
-        .split('.')
-        .map(
-          (parte) =>
-              int.tryParse(RegExp(r'\d+').stringMatch(parte) ?? '0') ?? 0,
-        )
-        .toList();
   }
 
   static String _sufijoPlataforma() {
