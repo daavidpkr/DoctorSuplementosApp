@@ -7,8 +7,7 @@ import '../ui/pantalla_actualizacion_obligatoria.dart';
 
 class ServicioVersion {
   static const String _versionPorDefecto = '0.0.0';
-  static const String _urlPorDefecto =
-      'https://www.mediafire.com/folder/vamhbgj6fo7bi/DOCTORSUPLEMENTOS_FILES';
+  static const String _urlPorDefecto = '';
 
   static Future<void> validarVersion(BuildContext context) async {
     try {
@@ -48,7 +47,7 @@ class ServicioVersion {
           builder: (_) => PantallaBloqueoVersion(
             versionActual: versionActual,
             versionMinima: versionMinima,
-            urlDescarga: urlDescarga.isEmpty ? _urlPorDefecto : urlDescarga,
+            urlDescarga: urlDescarga,
           ),
         ),
       );
