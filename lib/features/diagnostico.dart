@@ -62,7 +62,7 @@ class _FormularioPacienteState extends State<FormularioPaciente> {
 
     final model = GenerativeModel(
       model: 'gemini-3-flash-preview',
-      apiKey: 'AIzaSyB3ea3TYD72dtfGyP9kSrjyot7RzMk0ZXk',
+      apiKey: geminiApiKey,
     );
 
     String contextoAnterior = widget.infoPrevia != null

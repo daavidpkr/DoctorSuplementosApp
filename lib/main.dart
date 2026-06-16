@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_generative_ai/google_generative_ai.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/services.dart';
@@ -40,8 +41,25 @@ const FirebaseOptions _firebaseOptionsEscritorio = FirebaseOptions(
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await inicializarVariablesEntorno();
   await inicializarFirebaseSeguro();
   runApp(const DoctorSuplementos());
+}
+
+Future<void> inicializarVariablesEntorno() async {
+  try {
+    await dotenv.load(fileName: '.env');
+  } catch (e) {
+    debugPrint('No se pudo cargar .env: $e');
+  }
+}
+
+String get geminiApiKey {
+  final apiKey = dotenv.env['API_KEY']?.trim() ?? '';
+  if (apiKey.isEmpty) {
+    throw StateError('Falta configurar API_KEY en el archivo .env.');
+  }
+  return apiKey;
 }
 
 Future<void> inicializarFirebaseSeguro() async {
