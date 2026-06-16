@@ -61,7 +61,7 @@ class _FormularioPacienteState extends State<FormularioPaciente> {
     setState(() => cargando = true);
 
     final model = GenerativeModel(
-      model: 'gemini-3-flash-preview',
+      model: 'gemini-3.1-flash-lite',
       apiKey: geminiApiKey,
     );
 

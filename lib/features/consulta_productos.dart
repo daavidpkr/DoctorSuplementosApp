@@ -60,7 +60,7 @@ class _ConsultaProductoPaginaState extends State<ConsultaProductoPagina> {
     final productoParaIa = productoCoincidenteLocal ?? productoBuscado;
 
     final model = GenerativeModel(
-        model: 'gemini-3-flash-preview',
+        model: 'gemini-3.1-flash-lite',
         apiKey: geminiApiKey);
     final prompt = """
     Actua como un asesor experto de productos 4Life.

@@ -70,7 +70,7 @@ class _FormularioCambioFisicoState extends State<FormularioCambioFisico> {
     setState(() => cargando = true);
 
     final model = GenerativeModel(
-      model: 'gemini-3-flash-preview',
+      model: 'gemini-3.1-flash-lite',
       apiKey: geminiApiKey,
     );
 

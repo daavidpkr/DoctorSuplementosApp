@@ -119,7 +119,7 @@ class _PaginaChatbotState extends State<PaginaChatbot> {
     _controller.clear();
 
     final model = GenerativeModel(
-      model: 'gemini-3-flash-preview',
+      model: 'gemini-3.1-flash-lite',
       apiKey: geminiApiKey,
     );
 
