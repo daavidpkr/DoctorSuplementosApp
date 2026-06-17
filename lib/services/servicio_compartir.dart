@@ -37,6 +37,7 @@ class DocumentoCompartible {
   final List<SeccionDocumento> secciones;
   final List<ProductoDocumento> productos;
   final String nota;
+  final bool adjuntarImagenEnTexto;
 
   const DocumentoCompartible({
     required this.titulo,
@@ -47,6 +48,17 @@ class DocumentoCompartible {
     this.secciones = const [],
     this.productos = const [],
     this.nota = '',
+    this.adjuntarImagenEnTexto = false,
+  });
+}
+
+class _OpcionCompartirDocumento {
+  final String tipo;
+  final DocumentoCompartible documento;
+
+  const _OpcionCompartirDocumento({
+    required this.tipo,
+    required this.documento,
   });
 }
 
@@ -62,9 +74,11 @@ class ServicioCompartir {
 
   static Future<void> mostrarOpciones(
     BuildContext context,
-    DocumentoCompartible documento,
-  ) async {
-    final opcion = await showModalBottomSheet<String>(
+    DocumentoCompartible documento, {
+    DocumentoCompartible? documentoInformativo,
+  }) async {
+    final tieneInformativo = documentoInformativo != null;
+    final opcion = await showModalBottomSheet<_OpcionCompartirDocumento>(
       context: context,
       backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(
@@ -97,9 +111,11 @@ class ServicioCompartir {
                 ),
               ),
               const SizedBox(height: 6),
-              const Text(
-                'Elige un documento PDF o un mensaje de texto para WhatsApp.',
-                style: TextStyle(
+              Text(
+                tieneInformativo
+                    ? 'Elige con precios o solo informativo.'
+                    : 'Elige un PDF o un mensaje de texto.',
+                style: const TextStyle(
                   color: Color(0xFF596284),
                   fontSize: 15,
                   height: 1.35,
@@ -108,21 +124,55 @@ class ServicioCompartir {
               const SizedBox(height: 18),
               _opcion(
                 context: sheetContext,
-                valor: 'pdf',
+                valor: _OpcionCompartirDocumento(
+                  tipo: 'pdf',
+                  documento: documento,
+                ),
                 icono: Icons.picture_as_pdf_rounded,
-                titulo: 'Compartir como PDF',
+                titulo: tieneInformativo ? 'PDF con precios' : 'PDF',
                 descripcion: 'Documento profesional, ordenado y con imágenes.',
                 color: const Color(0xFFC62828),
               ),
               const SizedBox(height: 10),
+              if (tieneInformativo) ...[
+                _opcion(
+                  context: sheetContext,
+                  valor: _OpcionCompartirDocumento(
+                    tipo: 'pdf',
+                    documento: documentoInformativo,
+                  ),
+                  icono: Icons.picture_as_pdf_rounded,
+                  titulo: 'PDF informativo',
+                  descripcion: 'Documento sin precios.',
+                  color: const Color(0xFF4B48D8),
+                ),
+                const SizedBox(height: 10),
+              ],
               _opcion(
                 context: sheetContext,
-                valor: 'texto',
+                valor: _OpcionCompartirDocumento(
+                  tipo: 'texto',
+                  documento: documento,
+                ),
                 icono: Icons.chat_bubble_outline_rounded,
-                titulo: 'Mensaje de texto',
+                titulo: tieneInformativo ? 'Texto con precios' : 'Texto',
                 descripcion: 'Contenido listo para enviar por WhatsApp.',
                 color: const Color(0xFF118B48),
               ),
+              if (tieneInformativo) ...[
+                const SizedBox(height: 10),
+                _opcion(
+                  context: sheetContext,
+                  valor: _OpcionCompartirDocumento(
+                    tipo: 'texto',
+                    documento: documentoInformativo,
+                  ),
+                  icono: Icons.chat_bubble_outline_rounded,
+                  titulo: 'Texto informativo',
+                  descripcion: 'Mensaje sin precios.',
+                  color: const Color(0xFF008C7E),
+                ),
+              ],
             ],
           ),
         ),
@@ -130,17 +180,18 @@ class ServicioCompartir {
     );
 
     if (opcion == null || !context.mounted) return;
-    if (opcion == 'texto') {
-      await Share.share(documento.texto, subject: documento.titulo);
+    final documentoElegido = opcion.documento;
+    if (opcion.tipo == 'texto') {
+      await _compartirTexto(documentoElegido);
       return;
     }
 
     _mostrarProcesando(context);
     try {
-      final bytes = await generarPdf(documento);
+      final bytes = await generarPdf(documentoElegido);
       if (!context.mounted) return;
       Navigator.of(context, rootNavigator: true).pop();
-      final nombre = '${_archivoSeguro(documento.nombreArchivo)}.pdf';
+      final nombre = '${_nombreArchivoPdf(documentoElegido.nombreArchivo)}.pdf';
       await Share.shareXFiles(
         [
           XFile.fromData(
@@ -149,8 +200,8 @@ class ServicioCompartir {
             mimeType: 'application/pdf',
           ),
         ],
-        subject: documento.titulo,
-        text: documento.titulo,
+        subject: documentoElegido.titulo,
+        text: documentoElegido.titulo,
       );
     } catch (error) {
       if (!context.mounted) return;
@@ -165,7 +216,7 @@ class ServicioCompartir {
 
   static Widget _opcion({
     required BuildContext context,
-    required String valor,
+    required _OpcionCompartirDocumento valor,
     required IconData icono,
     required String titulo,
     required String descripcion,
@@ -224,6 +275,47 @@ class ServicioCompartir {
         ),
       ),
     );
+  }
+
+  static Future<void> _compartirTexto(DocumentoCompartible documento) async {
+    if (!documento.adjuntarImagenEnTexto) {
+      await Share.share(documento.texto, subject: documento.titulo);
+      return;
+    }
+
+    final imagenAsset = documento.productos
+        .map((producto) => producto.imagenAsset)
+        .whereType<String>()
+        .where((ruta) => ruta.trim().isNotEmpty)
+        .cast<String?>()
+        .firstWhere((ruta) => ruta != null, orElse: () => null);
+
+    if (imagenAsset == null) {
+      await Share.share(documento.texto, subject: documento.titulo);
+      return;
+    }
+
+    try {
+      final data = await rootBundle.load(imagenAsset);
+      final bytes = data.buffer.asUint8List(
+        data.offsetInBytes,
+        data.lengthInBytes,
+      );
+      await Share.shareXFiles(
+        [
+          XFile.fromData(
+            bytes,
+            name:
+                '${_nombreArchivoPdf(documento.nombreArchivo)}.${_extensionImagen(imagenAsset)}',
+            mimeType: _mimeImagen(imagenAsset),
+          ),
+        ],
+        subject: documento.titulo,
+        text: documento.texto,
+      );
+    } catch (_) {
+      await Share.share(documento.texto, subject: documento.titulo);
+    }
   }
 
   static void _mostrarProcesando(BuildContext context) {
@@ -672,6 +764,35 @@ class ServicioCompartir {
         .replaceAll(RegExp(r'[^\x09\x0A\x0D\x20-\xFF]'), '')
         .replaceAll(RegExp(r'[ \t]+'), ' ')
         .trim();
+  }
+
+  static String _nombreArchivoPdf(String texto) {
+    final respaldo = _archivoSeguro(texto);
+    final limpio = _textoPdf(texto)
+        .replaceAll(RegExp(r'[\\/:*?"<>|]'), ' ')
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .trim();
+    return limpio.isEmpty ? respaldo.toUpperCase() : limpio;
+  }
+
+  static String _extensionImagen(String ruta) {
+    final extension = ruta.split('.').last.toLowerCase();
+    if (extension == 'jpg' || extension == 'jpeg' || extension == 'webp') {
+      return extension;
+    }
+    return 'png';
+  }
+
+  static String _mimeImagen(String ruta) {
+    switch (_extensionImagen(ruta)) {
+      case 'jpg':
+      case 'jpeg':
+        return 'image/jpeg';
+      case 'webp':
+        return 'image/webp';
+      default:
+        return 'image/png';
+    }
   }
 
   static String _archivoSeguro(String texto) {

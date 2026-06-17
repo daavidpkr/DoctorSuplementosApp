@@ -78,7 +78,7 @@ class _PaginaHistorialState extends State<PaginaHistorial> {
 
   Future<void> _cargarDatos() async {
     final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getStringList('historial_pacientes') ?? [];
+    final raw = prefs.getStringList(HistorialService.prefsKey) ?? [];
     final datos =
         raw.map((e) => jsonDecode(e) as Map<String, dynamic>).toList();
 
@@ -458,7 +458,7 @@ class _PaginaHistorialState extends State<PaginaHistorial> {
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         color: Colors.white,
-                        fontSize: 31,
+                        fontSize: 28,
                         fontWeight: FontWeight.w800,
                       ),
                     ),
@@ -476,11 +476,11 @@ class _PaginaHistorialState extends State<PaginaHistorial> {
               child: Stack(
                 children: [
                   ListView(
-                    padding: const EdgeInsets.fromLTRB(24, 28, 24, 138),
+                    padding: const EdgeInsets.fromLTRB(20, 24, 20, 126),
                     children: [
                       Container(
-                        height: 86,
-                        padding: const EdgeInsets.symmetric(horizontal: 24),
+                        height: 72,
+                        padding: const EdgeInsets.symmetric(horizontal: 18),
                         decoration: BoxDecoration(
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(20),
@@ -495,18 +495,18 @@ class _PaginaHistorialState extends State<PaginaHistorial> {
                         child: TextField(
                           controller: _searchController,
                           onChanged: _filtrarHistorial,
-                          textAlign: TextAlign.center,
+                          textAlign: TextAlign.start,
                           textAlignVertical: TextAlignVertical.center,
                           style: const TextStyle(
                             color: Color(0xFF0D1430),
-                            fontSize: 20,
+                            fontSize: 16,
                           ),
                           decoration: const InputDecoration(
                             border: InputBorder.none,
                             hintText: 'Buscar paciente, fecha o registro...',
                             hintStyle: TextStyle(
                               color: Color(0xFF747A9E),
-                              fontSize: 20,
+                              fontSize: 16,
                             ),
                             icon: Icon(
                               Icons.search,
@@ -521,7 +521,7 @@ class _PaginaHistorialState extends State<PaginaHistorial> {
                           ),
                         ),
                       ),
-                      const SizedBox(height: 30),
+                      const SizedBox(height: 24),
                       _selectorTipoHistorial(),
                       const SizedBox(height: 26),
                       Row(
@@ -530,10 +530,10 @@ class _PaginaHistorialState extends State<PaginaHistorial> {
                             child: Text(
                               _tipoSeleccionado == 'cambio_fisico'
                                   ? 'Cambios fisicos'
-                                  : 'Diagnosticos de enfermedades',
+                                  : 'Diagnosticos',
                               style: const TextStyle(
                                 color: Color(0xFF646B88),
-                                fontSize: 23,
+                                fontSize: 20,
                                 fontWeight: FontWeight.w800,
                               ),
                             ),
@@ -542,7 +542,7 @@ class _PaginaHistorialState extends State<PaginaHistorial> {
                             '$cantidad ${cantidad == 1 ? 'resultado' : 'resultados'}',
                             style: const TextStyle(
                               color: azul,
-                              fontSize: 20,
+                              fontSize: 18,
                               fontWeight: FontWeight.w800,
                             ),
                           ),
@@ -573,14 +573,14 @@ class _PaginaHistorialState extends State<PaginaHistorial> {
                     ],
                   ),
                   Positioned(
-                    right: 28,
-                    bottom: 72,
+                    right: 24,
+                    bottom: 74,
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         SizedBox(
-                          width: 88,
-                          height: 88,
+                          width: 64,
+                          height: 64,
                           child: FloatingActionButton(
                             heroTag: 'nuevo-diagnostico-historial',
                             backgroundColor: azul,
@@ -588,17 +588,17 @@ class _PaginaHistorialState extends State<PaginaHistorial> {
                             elevation: 9,
                             shape: const CircleBorder(),
                             onPressed: _nuevoDiagnostico,
-                            child: const Icon(Icons.add, size: 40),
+                            child: const Icon(Icons.add, size: 32),
                           ),
                         ),
-                        const SizedBox(height: 12),
+                        const SizedBox(height: 8),
                         Text(
                           _tipoSeleccionado == 'cambio_fisico'
                               ? 'Nuevo cambio'
                               : 'Nuevo diagnostico',
                           style: TextStyle(
                             color: azul,
-                            fontSize: 17,
+                            fontSize: 13,
                             fontWeight: FontWeight.w800,
                           ),
                         ),
@@ -710,7 +710,7 @@ class _TarjetaPacienteHistorial extends StatelessWidget {
     const azul = Color(0xFF2839C7);
 
     return Container(
-      height: 156,
+      constraints: const BoxConstraints(minHeight: 150),
       margin: const EdgeInsets.only(bottom: 10),
       child: Material(
         color: Colors.white,
@@ -721,12 +721,12 @@ class _TarjetaPacienteHistorial extends StatelessWidget {
           borderRadius: BorderRadius.circular(24),
           onTap: onAbrir,
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 20, 20, 18),
+            padding: const EdgeInsets.fromLTRB(16, 16, 14, 14),
             child: Row(
               children: [
                 Container(
-                  width: 74,
-                  height: 74,
+                  width: 64,
+                  height: 64,
                   decoration: BoxDecoration(
                     color: colorAvatar,
                     shape: BoxShape.circle,
@@ -736,16 +736,16 @@ class _TarjetaPacienteHistorial extends StatelessWidget {
                     inicial,
                     style: TextStyle(
                       color: colorInicial,
-                      fontSize: 36,
+                      fontSize: 30,
                       fontWeight: FontWeight.w800,
                     ),
                   ),
                 ),
-                const SizedBox(width: 22),
+                const SizedBox(width: 16),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.center,
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Row(
                         children: [
@@ -756,15 +756,16 @@ class _TarjetaPacienteHistorial extends StatelessWidget {
                               overflow: TextOverflow.ellipsis,
                               style: const TextStyle(
                                 color: Color(0xFF10162F),
-                                fontSize: 24,
+                                fontSize: 21,
                                 fontWeight: FontWeight.w800,
+                                height: 1.08,
                               ),
                             ),
                           ),
                           const Icon(
                             Icons.chevron_right_rounded,
                             color: azul,
-                            size: 36,
+                            size: 32,
                           ),
                         ],
                       ),
@@ -774,9 +775,9 @@ class _TarjetaPacienteHistorial extends StatelessWidget {
                           const Icon(
                             Icons.calendar_month_outlined,
                             color: Color(0xFF68708C),
-                            size: 20,
+                            size: 18,
                           ),
-                          const SizedBox(width: 7),
+                          const SizedBox(width: 6),
                           Flexible(
                             child: Text(
                               fecha,
@@ -784,29 +785,29 @@ class _TarjetaPacienteHistorial extends StatelessWidget {
                               overflow: TextOverflow.ellipsis,
                               style: const TextStyle(
                                 color: Color(0xFF68708C),
-                                fontSize: 17,
+                                fontSize: 14.5,
                                 fontWeight: FontWeight.w500,
                               ),
                             ),
                           ),
-                          const SizedBox(width: 20),
+                          const SizedBox(width: 12),
                           const Icon(
                             Icons.access_time,
                             color: Color(0xFF68708C),
-                            size: 20,
+                            size: 18,
                           ),
-                          const SizedBox(width: 7),
+                          const SizedBox(width: 6),
                           Text(
                             hora,
                             style: const TextStyle(
                               color: Color(0xFF68708C),
-                              fontSize: 17,
+                              fontSize: 14.5,
                               fontWeight: FontWeight.w500,
                             ),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 10),
                       Row(
                         children: [
                           Expanded(
@@ -825,7 +826,7 @@ class _TarjetaPacienteHistorial extends StatelessWidget {
                                     overflow: TextOverflow.ellipsis,
                                     style: TextStyle(
                                       color: estado.color,
-                                      fontSize: 17,
+                                      fontSize: 14.5,
                                       fontWeight: FontWeight.w600,
                                     ),
                                   ),
@@ -835,14 +836,14 @@ class _TarjetaPacienteHistorial extends StatelessWidget {
                           ),
                           _BotonAccionPaciente(
                             icono: Icons.visibility_outlined,
-                            texto: 'Ver',
+                            tooltip: 'Ver reporte',
                             onTap: onVer,
                             relleno: false,
                           ),
-                          const SizedBox(width: 10),
+                          const SizedBox(width: 8),
                           _BotonAccionPaciente(
                             icono: Icons.refresh,
-                            texto: 'Repetir',
+                            tooltip: 'Repetir',
                             onTap: onRepetir,
                             relleno: true,
                           ),
@@ -862,13 +863,13 @@ class _TarjetaPacienteHistorial extends StatelessWidget {
 
 class _BotonAccionPaciente extends StatelessWidget {
   final IconData icono;
-  final String texto;
+  final String tooltip;
   final VoidCallback onTap;
   final bool relleno;
 
   const _BotonAccionPaciente({
     required this.icono,
-    required this.texto,
+    required this.tooltip,
     required this.onTap,
     required this.relleno,
   });
@@ -877,27 +878,27 @@ class _BotonAccionPaciente extends StatelessWidget {
   Widget build(BuildContext context) {
     const azul = Color(0xFF2839C7);
 
-    return SizedBox(
-      width: relleno ? 98 : 82,
-      height: 40,
-      child: OutlinedButton.icon(
-        onPressed: onTap,
-        icon: Icon(icono, size: 22),
-        label: Text(texto),
-        style: OutlinedButton.styleFrom(
-          backgroundColor: relleno ? const Color(0xFFEDEEFF) : Colors.white,
-          foregroundColor: azul,
-          side: BorderSide(
-            color: relleno ? const Color(0xFFEDEEFF) : const Color(0xFFD6D9F1),
-            width: 1.4,
+    return Tooltip(
+      message: tooltip,
+      child: SizedBox(
+        width: 44,
+        height: 40,
+        child: OutlinedButton(
+          onPressed: onTap,
+          style: OutlinedButton.styleFrom(
+            backgroundColor: relleno ? const Color(0xFFEDEEFF) : Colors.white,
+            foregroundColor: azul,
+            side: BorderSide(
+              color:
+                  relleno ? const Color(0xFFEDEEFF) : const Color(0xFFD6D9F1),
+              width: 1.4,
+            ),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(13),
+            ),
+            padding: EdgeInsets.zero,
           ),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(13),
-          ),
-          textStyle: const TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.w800,
-          ),
+          child: Icon(icono, size: 22),
         ),
       ),
     );
@@ -1150,7 +1151,7 @@ class _PaginaHistorialChatbotState extends State<PaginaHistorialChatbot> {
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         color: Colors.white,
-                        fontSize: 32,
+                        fontSize: 28,
                         fontWeight: FontWeight.w800,
                       ),
                     ),
@@ -1170,12 +1171,12 @@ class _PaginaHistorialChatbotState extends State<PaginaHistorialChatbot> {
                   _cargando
                       ? const Center(child: CircularProgressIndicator())
                       : ListView(
-                          padding: const EdgeInsets.fromLTRB(24, 24, 24, 138),
+                          padding: const EdgeInsets.fromLTRB(20, 24, 20, 126),
                           children: [
                             Container(
-                              height: 86,
+                              height: 72,
                               padding:
-                                  const EdgeInsets.symmetric(horizontal: 24),
+                                  const EdgeInsets.symmetric(horizontal: 18),
                               decoration: BoxDecoration(
                                 color: Colors.white,
                                 borderRadius: BorderRadius.circular(20),
@@ -1190,18 +1191,18 @@ class _PaginaHistorialChatbotState extends State<PaginaHistorialChatbot> {
                               child: TextField(
                                 controller: _busquedaController,
                                 onChanged: _buscar,
-                                textAlign: TextAlign.center,
+                                textAlign: TextAlign.start,
                                 textAlignVertical: TextAlignVertical.center,
                                 style: const TextStyle(
                                   color: Color(0xFF0D1430),
-                                  fontSize: 20,
+                                  fontSize: 16,
                                 ),
                                 decoration: const InputDecoration(
                                   border: InputBorder.none,
                                   hintText: 'Buscar en el historial...',
                                   hintStyle: TextStyle(
                                     color: Color(0xFF747A9E),
-                                    fontSize: 20,
+                                    fontSize: 16,
                                   ),
                                   icon: Icon(
                                     Icons.search,
@@ -1224,7 +1225,7 @@ class _PaginaHistorialChatbotState extends State<PaginaHistorialChatbot> {
                                     'Conversaciones recientes',
                                     style: TextStyle(
                                       color: Color(0xFF646B88),
-                                      fontSize: 20,
+                                      fontSize: 18,
                                       fontWeight: FontWeight.w800,
                                     ),
                                   ),
@@ -1233,7 +1234,7 @@ class _PaginaHistorialChatbotState extends State<PaginaHistorialChatbot> {
                                   '$cantidad ${cantidad == 1 ? 'conversación' : 'conversaciones'}',
                                   style: const TextStyle(
                                     color: azul,
-                                    fontSize: 20,
+                                    fontSize: 17,
                                     fontWeight: FontWeight.w800,
                                   ),
                                 ),
@@ -1265,14 +1266,14 @@ class _PaginaHistorialChatbotState extends State<PaginaHistorialChatbot> {
                           ],
                         ),
                   Positioned(
-                    right: 28,
-                    bottom: 72,
+                    right: 24,
+                    bottom: 74,
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         SizedBox(
-                          width: 88,
-                          height: 88,
+                          width: 64,
+                          height: 64,
                           child: FloatingActionButton(
                             heroTag: 'nuevo-chat-historial',
                             backgroundColor: azul,
@@ -1280,15 +1281,15 @@ class _PaginaHistorialChatbotState extends State<PaginaHistorialChatbot> {
                             elevation: 9,
                             shape: const CircleBorder(),
                             onPressed: _nuevoChat,
-                            child: const Icon(Icons.add, size: 40),
+                            child: const Icon(Icons.add, size: 32),
                           ),
                         ),
-                        const SizedBox(height: 12),
+                        const SizedBox(height: 8),
                         const Text(
                           'Nuevo chat',
                           style: TextStyle(
                             color: azul,
-                            fontSize: 18,
+                            fontSize: 13,
                             fontWeight: FontWeight.w800,
                           ),
                         ),
@@ -1392,7 +1393,7 @@ class _TarjetaConversacion extends StatelessWidget {
     const azul = Color(0xFF2839C7);
 
     return Container(
-      height: 142,
+      constraints: const BoxConstraints(minHeight: 128),
       margin: const EdgeInsets.only(bottom: 8),
       child: Material(
         color: Colors.white,
@@ -1403,12 +1404,12 @@ class _TarjetaConversacion extends StatelessWidget {
           borderRadius: BorderRadius.circular(22),
           onTap: onAbrir,
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 20, 20, 18),
+            padding: const EdgeInsets.fromLTRB(16, 16, 14, 14),
             child: Row(
               children: [
                 Container(
-                  width: 78,
-                  height: 78,
+                  width: 64,
+                  height: 64,
                   decoration: const BoxDecoration(
                     color: Color(0xFFEDEEFF),
                     shape: BoxShape.circle,
@@ -1416,10 +1417,10 @@ class _TarjetaConversacion extends StatelessWidget {
                   child: const Icon(
                     Icons.chat_bubble_outline_rounded,
                     color: azul,
-                    size: 34,
+                    size: 30,
                   ),
                 ),
-                const SizedBox(width: 26),
+                const SizedBox(width: 16),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -1431,19 +1432,20 @@ class _TarjetaConversacion extends StatelessWidget {
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
                           color: Color(0xFF10162F),
-                          fontSize: 20,
+                          fontSize: 18,
                           fontWeight: FontWeight.w800,
+                          height: 1.08,
                         ),
                       ),
-                      const SizedBox(height: 9),
+                      const SizedBox(height: 8),
                       Row(
                         children: [
                           const Icon(
                             Icons.calendar_month_outlined,
                             color: Color(0xFF68708C),
-                            size: 20,
+                            size: 18,
                           ),
-                          const SizedBox(width: 7),
+                          const SizedBox(width: 6),
                           Expanded(
                             child: Text(
                               fecha,
@@ -1451,19 +1453,19 @@ class _TarjetaConversacion extends StatelessWidget {
                               overflow: TextOverflow.ellipsis,
                               style: const TextStyle(
                                 color: Color(0xFF68708C),
-                                fontSize: 18,
+                                fontSize: 14.5,
                                 fontWeight: FontWeight.w500,
                               ),
                             ),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 10),
+                      const SizedBox(height: 9),
                       Align(
                         alignment: Alignment.centerLeft,
                         child: Container(
                           padding: const EdgeInsets.symmetric(
-                            horizontal: 11,
+                            horizontal: 10,
                             vertical: 5,
                           ),
                           decoration: BoxDecoration(
@@ -1483,7 +1485,7 @@ class _TarjetaConversacion extends StatelessWidget {
                                 categoria.texto,
                                 style: TextStyle(
                                   color: categoria.color,
-                                  fontSize: 14,
+                                  fontSize: 13,
                                   fontWeight: FontWeight.w800,
                                 ),
                               ),
@@ -1494,28 +1496,28 @@ class _TarjetaConversacion extends StatelessWidget {
                     ],
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 10),
                 IconButton(
                   tooltip: 'Eliminar',
                   onPressed: onEliminar,
                   style: IconButton.styleFrom(
                     backgroundColor: const Color(0xFFF0F1F8),
-                    fixedSize: const Size(58, 58),
+                    fixedSize: const Size(46, 46),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
+                      borderRadius: BorderRadius.circular(12),
                     ),
                   ),
                   icon: const Icon(
                     Icons.delete_outline,
                     color: Color(0xFF5E637C),
-                    size: 28,
+                    size: 24,
                   ),
                 ),
-                const SizedBox(width: 14),
+                const SizedBox(width: 8),
                 const Icon(
                   Icons.chevron_right_rounded,
                   color: azul,
-                  size: 36,
+                  size: 32,
                 ),
               ],
             ),
@@ -1577,8 +1579,8 @@ class _ItemNavegacionHistorial extends StatelessWidget {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(icono, color: color, size: 27),
-              const SizedBox(width: 9),
+              Icon(icono, color: color, size: 24),
+              const SizedBox(width: 7),
               Flexible(
                 child: Text(
                   texto,
@@ -1586,7 +1588,7 @@ class _ItemNavegacionHistorial extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     color: color,
-                    fontSize: 17,
+                    fontSize: 15,
                     fontWeight: activo ? FontWeight.w800 : FontWeight.w700,
                   ),
                 ),

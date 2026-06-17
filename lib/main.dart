@@ -28,6 +28,7 @@ part 'features/diagnostico.dart';
 part 'features/cambio_fisico.dart';
 part 'features/consulta_productos.dart';
 part 'features/calculadora_precios.dart';
+part 'features/diccionario.dart';
 part 'features/historial.dart';
 part 'features/chatbot.dart';
 
@@ -43,6 +44,7 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await inicializarVariablesEntorno();
   await inicializarFirebaseSeguro();
+  await IdiomaService.inicializar();
   runApp(const DoctorSuplementos());
 }
 
@@ -83,28 +85,89 @@ class DoctorSuplementos extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: 'Doctor de Suplementos',
-      builder: (context, child) {
-        final media = MediaQuery.of(context);
-        return MediaQuery(
-          data: media.copyWith(
-            textScaler: media.textScaler.clamp(
-              minScaleFactor: 0.82,
-              maxScaleFactor: escalaTextoInterfaces,
-            ),
+    return ValueListenableBuilder<IdiomaApp>(
+      valueListenable: IdiomaService.actual,
+      builder: (context, idioma, _) {
+        return MaterialApp(
+          key: ValueKey('app-${idioma.codigo}'),
+          debugShowCheckedModeBanner: false,
+          title: idioma == IdiomaApp.ingles
+              ? 'Doctor Supplements'
+              : 'Doctor de Suplementos',
+          builder: (context, child) {
+            final media = MediaQuery.of(context);
+            return MediaQuery(
+              data: media.copyWith(
+                textScaler: media.textScaler.clamp(
+                  minScaleFactor: 0.82,
+                  maxScaleFactor: escalaTextoInterfaces,
+                ),
+              ),
+              child: child ?? const SizedBox.shrink(),
+            );
+          },
+          theme: ThemeData(
+            scaffoldBackgroundColor: const Color(0xFFF5F5EE),
+            primaryColor: const Color(0xFF1A237E),
           ),
-          child: child ?? const SizedBox.shrink(),
+          home: const ArranqueDoctorSuplementos(),
         );
       },
-      theme: ThemeData(
-        scaffoldBackgroundColor: const Color(0xFFF5F5EE),
-        primaryColor: const Color(0xFF1A237E),
-      ),
-      home: const PantallaPrincipal(),
     );
   }
 }
 
 // --- PANTALLA PRINCIPAL ---
+
+class ArranqueDoctorSuplementos extends StatefulWidget {
+  const ArranqueDoctorSuplementos({super.key});
+
+  @override
+  State<ArranqueDoctorSuplementos> createState() =>
+      _ArranqueDoctorSuplementosState();
+}
+
+class _ArranqueDoctorSuplementosState extends State<ArranqueDoctorSuplementos> {
+  late final Future<bool> _primeraInstalacionFuture;
+  bool _mostrandoPerfilInicial = false;
+  bool _perfilInicialPreparado = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _primeraInstalacionFuture =
+        InstalacionInicialService.prepararSiEsPrimeraInstalacion();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<bool>(
+      future: _primeraInstalacionFuture,
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) {
+          return const Scaffold(
+            backgroundColor: Color(0xFFF7F7FB),
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
+
+        if (snapshot.data == true && !_perfilInicialPreparado) {
+          _mostrandoPerfilInicial = true;
+          _perfilInicialPreparado = true;
+        }
+
+        if (_mostrandoPerfilInicial) {
+          return PaginaPerfil(
+            onPerfilGuardado: () {
+              if (mounted) {
+                setState(() => _mostrandoPerfilInicial = false);
+              }
+            },
+          );
+        }
+
+        return const PantallaPrincipal();
+      },
+    );
+  }
+}

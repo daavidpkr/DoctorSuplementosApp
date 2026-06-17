@@ -75,11 +75,15 @@ class _FormularioCambioFisicoState extends State<FormularioCambioFisico> {
     );
 
     final perfilAsesor = await PerfilService.cargar();
+    final instruccionIdioma = await IdiomaService.instruccionIa();
     final saludoAsesor = perfilAsesor.tieneNombre
         ? "Inicia el reporte con este saludo personalizado: Hola, como estas, mi nombre es ${perfilAsesor.nombre.trim()}. Luego continua con la guia."
         : "Inicia con un saludo empatico breve y luego continua con la guia.";
 
     final prompt = """
+    IDIOMA OBLIGATORIO:
+    $instruccionIdioma
+
     DATOS PARA CAMBIO FISICO:
     Nombre: ${nombreController.text}
     Edad: ${edadController.text}

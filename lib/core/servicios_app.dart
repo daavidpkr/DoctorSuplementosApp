@@ -17,6 +17,9 @@ class ArchivoAdjuntoIA {
 }
 
 class PerfilAsesor {
+  static const PerfilAsesor porDefecto =
+      PerfilAsesor(nombre: 'Socio', fotoBase64: '');
+
   final String nombre;
   final String fotoBase64;
 
@@ -41,37 +44,22 @@ class PerfilAsesor {
 }
 
 class PerfilService {
-  static const String _prefsKey = 'perfil_asesor_4life';
+  static const String prefsKey = 'perfil_asesor_4life';
   static const String _documentId = 'perfil_principal';
 
   static Future<PerfilAsesor> cargar() async {
     final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getString(_prefsKey);
+    final raw = prefs.getString(prefsKey);
     if (raw != null && raw.isNotEmpty) {
       return PerfilAsesor.fromJson(jsonDecode(raw) as Map<String, dynamic>);
     }
 
-    try {
-      final doc = await FirebaseFirestore.instance
-          .collection('perfiles_asesores')
-          .doc(_documentId)
-          .get();
-      final data = doc.data();
-      if (data != null) {
-        final perfil = PerfilAsesor.fromJson(data);
-        await prefs.setString(_prefsKey, jsonEncode(perfil.toJson()));
-        return perfil;
-      }
-    } catch (e) {
-      debugPrint('No se pudo cargar el perfil desde Firebase: $e');
-    }
-
-    return const PerfilAsesor(nombre: '', fotoBase64: '');
+    return PerfilAsesor.porDefecto;
   }
 
   static Future<void> guardar(PerfilAsesor perfil) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_prefsKey, jsonEncode(perfil.toJson()));
+    await prefs.setString(prefsKey, jsonEncode(perfil.toJson()));
 
     try {
       await FirebaseFirestore.instance
@@ -87,8 +75,133 @@ class PerfilService {
   }
 }
 
+enum IdiomaApp {
+  espanol('es', 'Español', 'Spanish'),
+  ingles('en', 'English', 'English');
+
+  final String codigo;
+  final String etiqueta;
+  final String etiquetaIngles;
+
+  const IdiomaApp(this.codigo, this.etiqueta, this.etiquetaIngles);
+}
+
+class IdiomaService {
+  static const String prefsKey = 'idioma_app_4life';
+  static final ValueNotifier<IdiomaApp> actual =
+      ValueNotifier<IdiomaApp>(IdiomaApp.espanol);
+
+  static const Map<String, Map<String, String>> _textos = {
+    'hello_adviser': {'es': '¡Hola, Asesor!', 'en': 'Hello, Adviser!'},
+    'hero_subtitle': {
+      'es': 'Gestiona, asesora y mejora la vida de mas personas.',
+      'en': 'Manage, advise, and improve more lives.',
+    },
+    'impact': {'es': 'Tu impacto 4Life', 'en': 'Your 4Life impact'},
+    'consult_products': {
+      'es': 'Consultar producto(s)',
+      'en': 'Product consultation',
+    },
+    'consult_products_desc': {
+      'es': 'Explora el catalogo y descubre todos nuestros productos.',
+      'en': 'Explore the catalog and discover all products.',
+    },
+    'price_calculator': {
+      'es': 'Calculadora de precios',
+      'en': 'Price calculator',
+    },
+    'price_calculator_desc': {
+      'es': 'Calcula precios, LP y totales para uno o varios productos.',
+      'en': 'Calculate prices, LP, and totals for one or more products.',
+    },
+    'diagnosis': {'es': 'Diagnostico', 'en': 'Diagnosis'},
+    'diagnosis_desc': {
+      'es': 'Evalua y conoce las necesidades de tus clientes.',
+      'en': 'Evaluate and understand your clients needs.',
+    },
+    'body_change': {'es': 'Cambio fisico', 'en': 'Body transformation'},
+    'body_change_desc': {
+      'es': 'Crea una guia personalizada para objetivos corporales.',
+      'en': 'Create a personalized guide for body goals.',
+    },
+    'history': {'es': 'Historial', 'en': 'History'},
+    'history_desc': {
+      'es': 'Revisa tus consultas, diagnosticos y recomendaciones previas.',
+      'en': 'Review previous consultations, diagnoses, and recommendations.',
+    },
+    'chat_live_desc': {
+      'es':
+          'Pregunta en tiempo real y recibe respuestas personalizadas de la IA.',
+      'en': 'Ask in real time and receive personalized AI answers.',
+    },
+    'ai_adviser': {'es': 'Asesor IA 4Life', 'en': '4Life AI Adviser'},
+    'ai_adviser_desc': {
+      'es': 'Obten recomendaciones personalizadas con inteligencia artificial.',
+      'en': 'Get personalized recommendations with artificial intelligence.',
+    },
+    'profile': {'es': 'Perfil', 'en': 'Profile'},
+    'profile_desc': {
+      'es': 'Guarda tu nombre y foto para personalizar la app.',
+      'en': 'Save your name and photo to personalize the app.',
+    },
+    'dictionary': {'es': 'Diccionario', 'en': 'Dictionary'},
+    'dictionary_desc': {
+      'es': 'Consulta conceptos clave sobre productos y bienestar.',
+      'en': 'Check key concepts about products and wellness.',
+    },
+    'quick_access': {'es': 'Accesos rapidos', 'en': 'Quick access'},
+    'catalog': {'es': 'Catalogo', 'en': 'Catalog'},
+    'prices': {'es': 'Precios', 'en': 'Prices'},
+    'diagnoses': {'es': 'Diagnosticos', 'en': 'Diagnoses'},
+    'chats': {'es': 'Chats', 'en': 'Chats'},
+    'home': {'es': 'Inicio', 'en': 'Home'},
+    'consultations': {'es': 'Consultas', 'en': 'Consultations'},
+    'clients': {'es': 'Clientes', 'en': 'Clients'},
+  };
+
+  static Future<void> inicializar() async {
+    actual.value = await cargar();
+  }
+
+  static Future<IdiomaApp> cargar() async {
+    final prefs = await SharedPreferences.getInstance();
+    final codigo = prefs.getString(prefsKey) ?? IdiomaApp.espanol.codigo;
+    return _desdeCodigo(codigo);
+  }
+
+  static Future<void> guardar(IdiomaApp idioma) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(prefsKey, idioma.codigo);
+    actual.value = idioma;
+  }
+
+  static String texto(String clave) {
+    final idioma = actual.value.codigo;
+    return _textos[clave]?[idioma] ?? _textos[clave]?['es'] ?? clave;
+  }
+
+  static IdiomaApp _desdeCodigo(String codigo) {
+    return IdiomaApp.values.firstWhere(
+      (idioma) => idioma.codigo == codigo,
+      orElse: () => IdiomaApp.espanol,
+    );
+  }
+
+  static Future<String> instruccionIa() async {
+    final idioma = await cargar();
+    return idioma == IdiomaApp.ingles
+        ? 'Respond in English. Translate all headings, explanations, notes, diagnoses, product descriptions, doses, recommendations and share-ready content into English. Keep official 4Life product names unchanged.'
+        : 'Responde en español. Mantén todo el contenido, encabezados, notas, diagnósticos, productos, dosis, recomendaciones y fichas en español.';
+  }
+
+  static Future<String> etiquetaContenido() async {
+    final idioma = await cargar();
+    return idioma == IdiomaApp.ingles ? 'English' : 'español';
+  }
+}
+
 class ImpactoService {
-  static const String _prefsKey = 'impacto_4life';
+  static const String prefsKey = 'impacto_4life';
 
   static Future<void> registrar({
     required String tipo,
@@ -104,9 +217,9 @@ class ImpactoService {
     };
 
     final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getStringList(_prefsKey) ?? [];
+    final raw = prefs.getStringList(prefsKey) ?? [];
     raw.insert(0, jsonEncode(registro));
-    await prefs.setStringList(_prefsKey, raw);
+    await prefs.setStringList(prefsKey, raw);
 
     if (!guardarEnFirebase) return;
 
@@ -122,7 +235,38 @@ class ImpactoService {
 
   static Future<List<Map<String, dynamic>>> cargarEventos() async {
     final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getStringList(_prefsKey) ?? [];
+    final raw = prefs.getStringList(prefsKey) ?? [];
     return raw.map((e) => jsonDecode(e) as Map<String, dynamic>).toList();
+  }
+}
+
+class InstalacionInicialService {
+  static const String _key = 'instalacion_inicial_configurada_v1';
+
+  static Future<bool> prepararSiEsPrimeraInstalacion() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (prefs.getBool(_key) == true) return false;
+
+    final tieneDatosPrevios = prefs.containsKey(PerfilService.prefsKey) ||
+        prefs.containsKey(HistorialService.prefsKey) ||
+        prefs.containsKey(ChatHistoryService.prefsKey) ||
+        prefs.containsKey(ImpactoService.prefsKey);
+
+    if (tieneDatosPrevios) {
+      await prefs.setBool(_key, true);
+      return false;
+    }
+
+    await prefs.setString(
+      PerfilService.prefsKey,
+      jsonEncode(PerfilAsesor.porDefecto.toJson()),
+    );
+    await prefs.setStringList(HistorialService.prefsKey, []);
+    await prefs.setStringList(ChatHistoryService.prefsKey, []);
+    await prefs.setStringList(ImpactoService.prefsKey, []);
+    await prefs.setString(IdiomaService.prefsKey, IdiomaApp.espanol.codigo);
+    IdiomaService.actual.value = IdiomaApp.espanol;
+    await prefs.setBool(_key, true);
+    return true;
   }
 }

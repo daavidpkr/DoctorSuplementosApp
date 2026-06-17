@@ -1082,6 +1082,8 @@ class _PantallaResultadoFichaState extends State<PantallaResultadoFicha> {
     final titulo = esCambio
         ? 'PLAN DE CAMBIO FÍSICO DE $paciente'
         : 'DIAGNÓSTICO DE $paciente';
+    final nombreArchivo =
+        esCambio ? 'GUIA CAMBIO FISICO $paciente' : 'DIAGNOSTICO $paciente';
     final secciones = <SeccionDocumento>[
       SeccionDocumento(
         titulo: esCambio ? 'Análisis del perfil' : 'Diagnóstico',
@@ -1101,7 +1103,7 @@ class _PantallaResultadoFichaState extends State<PantallaResultadoFicha> {
           contenido: contenido.recomendaciones,
         ),
     ];
-    final productos = contenido.productos
+    final productosInformativos = contenido.productos
         .map(
           (producto) => ProductoDocumento(
             nombre: producto.nombre,
@@ -1111,19 +1113,58 @@ class _PantallaResultadoFichaState extends State<PantallaResultadoFicha> {
           ),
         )
         .toList();
+    final productosConPrecios = contenido.productos.map(
+      (producto) {
+        final precio = widget.preciosProducto[producto.nombre];
+        return ProductoDocumento(
+          nombre: producto.nombre,
+          imagenAsset: producto.imagen,
+          indicaciones: [
+            ...producto.dosis,
+            if (precio != null) ...[
+              'Precio afiliado: \$${precio.afiliado.toStringAsFixed(2)}',
+              'Precio publico: \$${precio.publico.toStringAsFixed(2)}',
+              'LP: ${precio.lp ?? 0}',
+            ],
+          ],
+          detalle: producto.beneficio,
+        );
+      },
+    ).toList();
+    final incluyePrecios = contenido.productos.any(
+      (producto) => widget.preciosProducto.containsKey(producto.nombre),
+    );
+    final textoConPrecios = incluyePrecios
+        ? '${widget.resultado}\n\nPrecios de productos:\n${contenido.productos.where((producto) => widget.preciosProducto.containsKey(producto.nombre)).map((producto) {
+            final precio = widget.preciosProducto[producto.nombre]!;
+            return '${producto.nombre}: Afiliado \$${precio.afiliado.toStringAsFixed(2)} | Publico \$${precio.publico.toStringAsFixed(2)} | LP ${precio.lp ?? 0}';
+          }).join('\n')}'
+        : widget.resultado;
 
     return ServicioCompartir.mostrarOpciones(
       context,
       DocumentoCompartible(
         titulo: titulo,
-        nombreArchivo: titulo,
-        texto: widget.resultado,
+        nombreArchivo: nombreArchivo,
+        texto: textoConPrecios,
         paciente: widget.paciente,
         fecha: widget.fecha,
         secciones: secciones,
-        productos: productos,
+        productos: productosConPrecios,
         nota: contenido.nota,
       ),
+      documentoInformativo: incluyePrecios
+          ? DocumentoCompartible(
+              titulo: titulo,
+              nombreArchivo: nombreArchivo,
+              texto: widget.resultado,
+              paciente: widget.paciente,
+              fecha: widget.fecha,
+              secciones: secciones,
+              productos: productosInformativos,
+              nota: contenido.nota,
+            )
+          : null,
     );
   }
 }

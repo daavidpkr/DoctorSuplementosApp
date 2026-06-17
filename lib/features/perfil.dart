@@ -12,6 +12,7 @@ class PaginaPerfil extends StatefulWidget {
 class _PaginaPerfilState extends State<PaginaPerfil> {
   final TextEditingController _nombreController = TextEditingController();
   String _fotoBase64 = '';
+  IdiomaApp _idioma = IdiomaApp.espanol;
   bool _cargando = true;
   bool _guardando = false;
 
@@ -23,12 +24,29 @@ class _PaginaPerfilState extends State<PaginaPerfil> {
 
   Future<void> _cargarPerfil() async {
     final perfil = await PerfilService.cargar();
+    final idioma = await IdiomaService.cargar();
     if (!mounted) return;
     setState(() {
       _nombreController.text = perfil.nombre;
       _fotoBase64 = perfil.fotoBase64;
+      _idioma = idioma;
       _cargando = false;
     });
+  }
+
+  Future<void> _cambiarIdioma(IdiomaApp idioma) async {
+    await IdiomaService.guardar(idioma);
+    if (!mounted) return;
+    setState(() => _idioma = idioma);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          idioma == IdiomaApp.ingles
+              ? 'Language changed to English'
+              : 'Idioma cambiado a español',
+        ),
+      ),
+    );
   }
 
   Future<void> _seleccionarFoto() async {
@@ -70,6 +88,7 @@ class _PaginaPerfilState extends State<PaginaPerfil> {
   @override
   Widget build(BuildContext context) {
     final fotoBytes = _fotoBase64.isEmpty ? null : base64Decode(_fotoBase64);
+    final ingles = IdiomaService.actual.value == IdiomaApp.ingles;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF7F7FB),
@@ -98,13 +117,15 @@ class _PaginaPerfilState extends State<PaginaPerfil> {
                       children: [
                         _encabezadoPerfil(),
                         const SizedBox(height: 44),
-                        _tarjetaFotoPerfil(fotoBytes),
+                        _tarjetaFotoPerfil(fotoBytes, ingles),
                         const SizedBox(height: 22),
-                        _tarjetaInformacionAsesor(),
+                        _tarjetaInformacionAsesor(ingles),
+                        const SizedBox(height: 22),
+                        _tarjetaIdioma(),
                         const SizedBox(height: 28),
-                        _botonGuardarPerfil(),
+                        _botonGuardarPerfil(ingles),
                         const SizedBox(height: 28),
-                        _tarjetaSeguridadPerfil(),
+                        _tarjetaSeguridadPerfil(ingles),
                         const SizedBox(height: 18),
                         _copyrightPerfil(),
                       ],
@@ -117,6 +138,7 @@ class _PaginaPerfilState extends State<PaginaPerfil> {
   }
 
   Widget _encabezadoPerfil() {
+    final ingles = IdiomaService.actual.value == IdiomaApp.ingles;
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -128,23 +150,25 @@ class _PaginaPerfilState extends State<PaginaPerfil> {
           constraints: const BoxConstraints.tightFor(width: 44, height: 44),
         ),
         const SizedBox(width: 12),
-        const Expanded(
+        Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                "Perfil del asesor",
-                style: TextStyle(
+                ingles ? "Adviser profile" : "Perfil del asesor",
+                style: const TextStyle(
                   color: Colors.white,
                   fontSize: 31,
                   height: 1.1,
                   fontWeight: FontWeight.w700,
                 ),
               ),
-              SizedBox(height: 10),
+              const SizedBox(height: 10),
               Text(
-                "Gestiona tu informacion personal",
-                style: TextStyle(
+                ingles
+                    ? "Manage your personal information"
+                    : "Gestiona tu informacion personal",
+                style: const TextStyle(
                   color: Color(0xFFD9DFFF),
                   fontSize: 18,
                   height: 1.2,
@@ -158,7 +182,7 @@ class _PaginaPerfilState extends State<PaginaPerfil> {
     );
   }
 
-  Widget _tarjetaFotoPerfil(Uint8List? fotoBytes) {
+  Widget _tarjetaFotoPerfil(Uint8List? fotoBytes, bool ingles) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(28, 30, 28, 30),
@@ -216,18 +240,20 @@ class _PaginaPerfilState extends State<PaginaPerfil> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  "Foto de perfil",
-                  style: TextStyle(
+                Text(
+                  ingles ? "Profile photo" : "Foto de perfil",
+                  style: const TextStyle(
                     color: Color(0xFF12248B),
                     fontSize: 24,
                     fontWeight: FontWeight.w900,
                   ),
                 ),
                 const SizedBox(height: 18),
-                const Text(
-                  "Agrega una foto para personalizar tu perfil y que otros te reconozcan facilmente.",
-                  style: TextStyle(
+                Text(
+                  ingles
+                      ? "Add a photo to personalize your profile and help others recognize you easily."
+                      : "Agrega una foto para personalizar tu perfil y que otros te reconozcan facilmente.",
+                  style: const TextStyle(
                     color: Color(0xFF3F4A82),
                     fontSize: 18,
                     height: 1.35,
@@ -247,15 +273,15 @@ class _PaginaPerfilState extends State<PaginaPerfil> {
                       color: const Color(0xFFEFF1FF),
                       borderRadius: BorderRadius.circular(16),
                     ),
-                    child: const Row(
+                    child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.photo_camera_rounded,
+                        const Icon(Icons.photo_camera_rounded,
                             color: Color(0xFF4059EA), size: 28),
-                        SizedBox(width: 14),
+                        const SizedBox(width: 14),
                         Text(
-                          "Cambiar foto",
-                          style: TextStyle(
+                          ingles ? "Change photo" : "Cambiar foto",
+                          style: const TextStyle(
                             color: Color(0xFF3150D9),
                             fontSize: 18,
                             fontWeight: FontWeight.w900,
@@ -273,7 +299,7 @@ class _PaginaPerfilState extends State<PaginaPerfil> {
     );
   }
 
-  Widget _tarjetaInformacionAsesor() {
+  Widget _tarjetaInformacionAsesor(bool ingles) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(22, 28, 22, 28),
@@ -281,18 +307,18 @@ class _PaginaPerfilState extends State<PaginaPerfil> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            "Informacion del asesor",
-            style: TextStyle(
+          Text(
+            ingles ? "Adviser information" : "Informacion del asesor",
+            style: const TextStyle(
               color: Color(0xFF12248B),
               fontSize: 21,
               fontWeight: FontWeight.w900,
             ),
           ),
           const SizedBox(height: 24),
-          const Text(
-            "Nombre del asesor",
-            style: TextStyle(
+          Text(
+            ingles ? "Adviser name" : "Nombre del asesor",
+            style: const TextStyle(
               color: Color(0xFF2F3A78),
               fontSize: 17,
               fontWeight: FontWeight.w600,
@@ -303,7 +329,9 @@ class _PaginaPerfilState extends State<PaginaPerfil> {
             controller: _nombreController,
             textInputAction: TextInputAction.done,
             decoration: InputDecoration(
-              hintText: "Ingresa tu nombre completo",
+              hintText: ingles
+                  ? "Enter your full name"
+                  : "Ingresa tu nombre completo",
               hintStyle: const TextStyle(
                 color: Color(0xFF6B7192),
                 fontSize: 17,
@@ -331,9 +359,11 @@ class _PaginaPerfilState extends State<PaginaPerfil> {
             ),
           ),
           const SizedBox(height: 14),
-          const Text(
-            "Este nombre sera visible para tus clientes y en tus reportes.",
-            style: TextStyle(
+          Text(
+            ingles
+                ? "This name will be visible to your clients and in your reports."
+                : "Este nombre sera visible para tus clientes y en tus reportes.",
+            style: const TextStyle(
               color: Color(0xFF2F3A78),
               fontSize: 16,
               height: 1.35,
@@ -345,7 +375,7 @@ class _PaginaPerfilState extends State<PaginaPerfil> {
     );
   }
 
-  Widget _botonGuardarPerfil() {
+  Widget _botonGuardarPerfil(bool ingles) {
     return InkWell(
       borderRadius: BorderRadius.circular(36),
       onTap: _guardando ? null : _guardar,
@@ -375,14 +405,15 @@ class _PaginaPerfilState extends State<PaginaPerfil> {
                     strokeWidth: 3,
                   ),
                 )
-              : const Row(
+              : Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.save_rounded, color: Colors.white, size: 30),
-                    SizedBox(width: 18),
+                    const Icon(Icons.save_rounded,
+                        color: Colors.white, size: 30),
+                    const SizedBox(width: 18),
                     Text(
-                      "Guardar perfil",
-                      style: TextStyle(
+                      ingles ? "Save profile" : "Guardar perfil",
+                      style: const TextStyle(
                         color: Colors.white,
                         fontSize: 21,
                         fontWeight: FontWeight.w900,
@@ -395,7 +426,92 @@ class _PaginaPerfilState extends State<PaginaPerfil> {
     );
   }
 
-  Widget _tarjetaSeguridadPerfil() {
+  Widget _tarjetaIdioma() {
+    final ingles = IdiomaService.actual.value == IdiomaApp.ingles;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
+      decoration: _decoracionTarjetaPerfil(),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Center(
+            child: Text(
+              ingles ? 'Select your language' : 'Selecciona tu idioma',
+              style: const TextStyle(
+                color: Color(0xFF12248B),
+                fontSize: 16,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ),
+          const SizedBox(height: 14),
+          PopupMenuButton<IdiomaApp>(
+            initialValue: _idioma,
+            onSelected: _cambiarIdioma,
+            offset: const Offset(0, 56),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(14),
+            ),
+            itemBuilder: (context) => const [
+              PopupMenuItem(
+                value: IdiomaApp.espanol,
+                child: Text('Español'),
+              ),
+              PopupMenuItem(
+                value: IdiomaApp.ingles,
+                child: Text('English'),
+              ),
+            ],
+            child: Container(
+              height: 62,
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: const Color(0xFFE1E4F0), width: 1.4),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 38,
+                    height: 38,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF0F2FF),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(
+                      Icons.language_rounded,
+                      color: Color(0xFF172394),
+                      size: 22,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Text(
+                      _idioma.etiqueta,
+                      style: const TextStyle(
+                        color: Color(0xFF18215E),
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                  const Icon(
+                    Icons.keyboard_arrow_down_rounded,
+                    color: Color(0xFF2839C7),
+                    size: 28,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _tarjetaSeguridadPerfil(bool ingles) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(22, 28, 22, 28),
@@ -405,9 +521,9 @@ class _PaginaPerfilState extends State<PaginaPerfil> {
         ),
         borderRadius: BorderRadius.circular(18),
       ),
-      child: const Row(
+      child: Row(
         children: [
-          CircleAvatar(
+          const CircleAvatar(
             radius: 36,
             backgroundColor: Color(0xFFE1E6FF),
             child: Icon(
@@ -416,23 +532,27 @@ class _PaginaPerfilState extends State<PaginaPerfil> {
               size: 42,
             ),
           ),
-          SizedBox(width: 26),
+          const SizedBox(width: 26),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  "Tu informacion esta segura",
-                  style: TextStyle(
+                  ingles
+                      ? "Your information is secure"
+                      : "Tu informacion esta segura",
+                  style: const TextStyle(
                     color: Color(0xFF12248B),
                     fontSize: 21,
                     fontWeight: FontWeight.w900,
                   ),
                 ),
-                SizedBox(height: 14),
+                const SizedBox(height: 14),
                 Text(
-                  "Tus datos personales estan protegidos y solo se utilizaran dentro de la aplicacion.",
-                  style: TextStyle(
+                  ingles
+                      ? "Your personal data is protected and will only be used inside the application."
+                      : "Tus datos personales estan protegidos y solo se utilizaran dentro de la aplicacion.",
+                  style: const TextStyle(
                     color: Color(0xFF17246B),
                     fontSize: 18,
                     height: 1.35,

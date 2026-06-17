@@ -135,8 +135,12 @@ class _PaginaChatbotState extends State<PaginaChatbot> {
     final instruccionVoz = widget.modoLlamada
         ? "Esta es una llamada de voz. Responde de forma natural, breve y directa, sin listas extensas ni formatos visuales. No saludes de nuevo en cada respuesta."
         : "";
+    final instruccionIdioma = await IdiomaService.instruccionIa();
 
     final promptLimpioParaChatbot = """
+    IDIOMA OBLIGATORIO:
+    $instruccionIdioma
+
     Eres un asesor IA para socios de 4Life.
     Responde de manera clara, conversacional, sumamente ordenada y amigable.
     IMPORTANTE: No uses asteriscos (*), no uses almohadillas (#), ni guiones extraños para dar formato.

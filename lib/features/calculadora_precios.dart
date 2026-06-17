@@ -242,14 +242,32 @@ class _PaginaCalculadoraPreciosState extends State<PaginaCalculadoraPrecios> {
     return buffer.toString();
   }
 
+  String _resumenCompartirInformativo() {
+    final buffer = StringBuffer('Productos 4Life seleccionados\n\n');
+    for (final linea in _productos) {
+      buffer.writeln('${linea.cantidad} x ${linea.producto.nombre}');
+    }
+    return buffer.toString();
+  }
+
   Future<void> _compartirResultado() {
+    final fecha = DateTime.now();
+    final productosInformativos = _productos
+        .map(
+          (linea) => ProductoDocumento(
+            nombre: '${linea.cantidad} x ${linea.producto.nombre}',
+            imagenAsset: imagenesProducto4Life[linea.producto.nombre],
+          ),
+        )
+        .toList();
+
     return ServicioCompartir.mostrarOpciones(
       context,
       DocumentoCompartible(
         titulo: 'COTIZACIÓN DE PRODUCTOS 4LIFE',
-        nombreArchivo: 'cotizacion_productos_4life',
+        nombreArchivo: 'COTIZACION PRODUCTOS 4LIFE',
         texto: _resumenCompartir(),
-        fecha: DateTime.now(),
+        fecha: fecha,
         secciones: [
           SeccionDocumento(
             titulo: 'Resumen de la cotización',
@@ -273,6 +291,20 @@ class _PaginaCalculadoraPreciosState extends State<PaginaCalculadoraPrecios> {
               ),
             )
             .toList(),
+      ),
+      documentoInformativo: DocumentoCompartible(
+        titulo: 'PRODUCTOS 4LIFE',
+        nombreArchivo: 'COTIZACION PRODUCTOS 4LIFE',
+        texto: _resumenCompartirInformativo(),
+        fecha: fecha,
+        secciones: const [
+          SeccionDocumento(
+            titulo: 'Productos seleccionados',
+            contenido:
+                'Lista informativa de productos 4Life. No incluye precios ni LP.',
+          ),
+        ],
+        productos: productosInformativos,
       ),
     );
   }

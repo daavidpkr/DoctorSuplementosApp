@@ -47,45 +47,40 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
                     const SizedBox(height: 18),
                     _tarjetaMenu(
                       context,
-                      titulo: "Consultar producto(s)",
-                      descripcion:
-                          "Explora el catalogo y descubre todos nuestros productos.",
+                      titulo: IdiomaService.texto('consult_products'),
+                      descripcion: IdiomaService.texto('consult_products_desc'),
                       icono: Icons.search_rounded,
                       colores: const [Color(0xFF2E3192), Color(0xFF151B7C)],
                       destino: const ConsultaProductoPagina(),
                     ),
                     _tarjetaMenu(
                       context,
-                      titulo: "Calculadora de precios",
-                      descripcion:
-                          "Calcula precios, LP y totales para uno o varios productos.",
+                      titulo: IdiomaService.texto('price_calculator'),
+                      descripcion: IdiomaService.texto('price_calculator_desc'),
                       icono: Icons.calculate_rounded,
                       colores: const [Color(0xFF008C7E), Color(0xFF006B61)],
                       destino: const PaginaCalculadoraPrecios(),
                     ),
                     _tarjetaMenu(
                       context,
-                      titulo: "Diagnostico",
-                      descripcion:
-                          "Evalua y conoce las necesidades de tus clientes.",
+                      titulo: IdiomaService.texto('diagnosis'),
+                      descripcion: IdiomaService.texto('diagnosis_desc'),
                       icono: Icons.medical_services_rounded,
                       colores: const [Color(0xFF1457E8), Color(0xFF1531A6)],
                       destino: const FormularioPaciente(),
                     ),
                     _tarjetaMenu(
                       context,
-                      titulo: "Cambio fisico",
-                      descripcion:
-                          "Crea una guia personalizada para objetivos corporales.",
+                      titulo: IdiomaService.texto('body_change'),
+                      descripcion: IdiomaService.texto('body_change_desc'),
                       icono: Icons.fitness_center_rounded,
                       colores: const [Color(0xFF1457E8), Color(0xFF1531A6)],
                       destino: const FormularioCambioFisico(),
                     ),
                     _tarjetaMenu(
                       context,
-                      titulo: "Historial",
-                      descripcion:
-                          "Revisa tus consultas, diagnosticos y recomendaciones previas.",
+                      titulo: IdiomaService.texto('history'),
+                      descripcion: IdiomaService.texto('history_desc'),
                       icono: Icons.history_rounded,
                       colores: const [Color(0xFF8051D4), Color(0xFF6047B7)],
                       destino: const PaginaHistorial(),
@@ -93,8 +88,7 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
                     _tarjetaMenu(
                       context,
                       titulo: "Chat Live 4Life",
-                      descripcion:
-                          "Pregunta en tiempo real y recibe respuestas personalizadas de la IA.",
+                      descripcion: IdiomaService.texto('chat_live_desc'),
                       icono: Icons.forum_rounded,
                       colores: const [Color(0xFF6A4DE8), Color(0xFF3C2AAE)],
                       destino: const PaginaChatbot(
@@ -104,28 +98,34 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
                     ),
                     _tarjetaMenu(
                       context,
-                      titulo: "Asesor IA 4Life",
-                      descripcion:
-                          "Obten recomendaciones personalizadas con inteligencia artificial.",
+                      titulo: IdiomaService.texto('ai_adviser'),
+                      descripcion: IdiomaService.texto('ai_adviser_desc'),
                       icono: Icons.chat_rounded,
                       colores: const [Color(0xFF1487A8), Color(0xFF087394)],
                       destino: const PaginaChatbot(),
                     ),
                     _tarjetaMenu(
                       context,
-                      titulo: "Perfil",
-                      descripcion:
-                          "Guarda tu nombre y foto para personalizar la app.",
+                      titulo: IdiomaService.texto('profile'),
+                      descripcion: IdiomaService.texto('profile_desc'),
                       icono: Icons.person_rounded,
                       colores: const [Color(0xFF455A64), Color(0xFF263238)],
                       destino: PaginaPerfil(onPerfilGuardado: _recargarPerfil),
                     ),
+                    _tarjetaMenu(
+                      context,
+                      titulo: IdiomaService.texto('dictionary'),
+                      descripcion: IdiomaService.texto('dictionary_desc'),
+                      icono: Icons.menu_book_rounded,
+                      colores: const [Color(0xFF3047CC), Color(0xFF172394)],
+                      destino: const PaginaDiccionario4Life(),
+                    ),
                     const SizedBox(height: 8),
-                    const Padding(
-                      padding: EdgeInsets.only(left: 8, bottom: 10),
+                    Padding(
+                      padding: const EdgeInsets.only(left: 8, bottom: 10),
                       child: Text(
-                        "Accesos rapidos",
-                        style: TextStyle(
+                        IdiomaService.texto('quick_access'),
+                        style: const TextStyle(
                           color: Color(0xFF0A1552),
                           fontSize: 13,
                           fontWeight: FontWeight.w800,
@@ -366,25 +366,25 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
         children: [
           _accesoRapido(
             context,
-            "Catalogo",
+            IdiomaService.texto('catalog'),
             Icons.article_outlined,
             const ConsultaProductoPagina(),
           ),
           _accesoRapido(
             context,
-            "Precios",
+            IdiomaService.texto('prices'),
             Icons.calculate_outlined,
             const PaginaCalculadoraPrecios(),
           ),
           _accesoRapido(
             context,
-            "Diagnosticos",
+            IdiomaService.texto('diagnoses'),
             Icons.assignment_turned_in_outlined,
             const PaginaHistorial(),
           ),
           _accesoRapido(
             context,
-            "Chats",
+            IdiomaService.texto('chats'),
             Icons.school_outlined,
             const PaginaHistorialChatbot(),
           ),
@@ -433,26 +433,26 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
         children: [
           _itemBarra(
             context,
-            "Inicio",
+            IdiomaService.texto('home'),
             Icons.home_outlined,
             null,
             seleccionado: true,
           ),
           _itemBarra(
             context,
-            "Consultas",
+            IdiomaService.texto('consultations'),
             Icons.search_rounded,
             const ConsultaProductoPagina(),
           ),
           _itemBarra(
             context,
-            "Clientes",
+            IdiomaService.texto('clients'),
             Icons.groups_2_outlined,
             const PaginaHistorial(),
           ),
           _itemBarra(
             context,
-            "Perfil",
+            IdiomaService.texto('profile'),
             Icons.person_outline_rounded,
             PaginaPerfil(onPerfilGuardado: _recargarPerfil),
           ),

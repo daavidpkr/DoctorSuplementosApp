@@ -1,6 +1,7 @@
 part of '../main.dart';
 
 class HistorialService {
+  static const String prefsKey = 'historial_pacientes';
   static final List<Map<String, dynamic>> registros = [];
 
   static Future<void> guardar(
@@ -21,9 +22,9 @@ class HistorialService {
     registros.insert(0, registro);
 
     final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getStringList('historial_pacientes') ?? [];
+    final raw = prefs.getStringList(prefsKey) ?? [];
     raw.insert(0, jsonEncode(registro));
-    await prefs.setStringList('historial_pacientes', raw);
+    await prefs.setStringList(prefsKey, raw);
 
     try {
       await FirebaseFirestore.instance.collection('diagnosticos').add({
@@ -47,11 +48,11 @@ class HistorialService {
 }
 
 class ChatHistoryService {
-  static const String _key = 'historial_chat_4life';
+  static const String prefsKey = 'historial_chat_4life';
 
   static Future<List<Map<String, dynamic>>> cargarConversaciones() async {
     final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getStringList(_key) ?? [];
+    final raw = prefs.getStringList(prefsKey) ?? [];
     return raw
         .map((e) => jsonDecode(e) as Map<String, dynamic>)
         .where((e) => e['mensajes'] is List)
@@ -82,7 +83,7 @@ class ChatHistoryService {
     conversaciones.removeWhere((chat) => chat['id'] == id);
     conversaciones.insert(0, registro);
     await prefs.setStringList(
-      _key,
+      prefsKey,
       conversaciones.map((chat) => jsonEncode(chat)).toList(),
     );
   }
@@ -92,7 +93,7 @@ class ChatHistoryService {
     final conversaciones = await cargarConversaciones();
     conversaciones.removeWhere((chat) => chat['id'] == id);
     await prefs.setStringList(
-      _key,
+      prefsKey,
       conversaciones.map((chat) => jsonEncode(chat)).toList(),
     );
   }

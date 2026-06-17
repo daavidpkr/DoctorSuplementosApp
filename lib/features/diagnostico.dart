@@ -70,11 +70,15 @@ class _FormularioPacienteState extends State<FormularioPaciente> {
         : "";
 
     final perfilAsesor = await PerfilService.cargar();
+    final instruccionIdioma = await IdiomaService.instruccionIa();
     final saludoAsesor = perfilAsesor.tieneNombre
         ? "Inicia el reporte con este saludo personalizado: Hola, como estas, mi nombre es ${perfilAsesor.nombre.trim()}. Luego continua con el diagnostico."
         : "Inicia con un saludo empatico breve y luego continua con el diagnostico.";
 
     final prompt = """
+    IDIOMA OBLIGATORIO:
+    $instruccionIdioma
+
     $contextoAnterior
     SÍNTOMAS ACTUALES: ${historialController.text}
     DATOS: Nombre: ${nombreController.text}, Edad: ${edadController.text}, Género: $_generoSeleccionado.

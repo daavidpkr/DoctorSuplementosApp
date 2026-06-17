@@ -61,7 +61,12 @@ class _ConsultaProductoPaginaState extends State<ConsultaProductoPagina> {
 
     final model =
         GenerativeModel(model: 'gemini-3.1-flash-lite', apiKey: geminiApiKey);
+    final idioma = await IdiomaService.cargar();
+    final instruccionIdioma = await IdiomaService.instruccionIa();
     final prompt = """
+    IDIOMA OBLIGATORIO:
+    $instruccionIdioma
+
     Actua como un asesor experto de productos 4Life.
 
     Producto consultado:
@@ -84,7 +89,7 @@ class _ConsultaProductoPaginaState extends State<ConsultaProductoPagina> {
     Si contiene "riovida burst" o "burst", responde solo sobre Riovida burst.
     Si contiene "energy", "energy go" o "go stix", responde solo sobre Energy go stix.
 
-    Responde en espanol, claro y ordenado, con esta estructura:
+    Responde en el idioma obligatorio indicado arriba, claro y ordenado, con esta estructura traducida al idioma seleccionado:
 
     Producto identificado:
     [Nombre correcto del producto]
@@ -105,11 +110,15 @@ class _ConsultaProductoPaginaState extends State<ConsultaProductoPagina> {
     [Dosis general si la conoces. Si no estas seguro, indicalo y recomienda revisar la etiqueta oficial]
 
     Nota:
+    Incluye obligatoriamente esta idea: Este producto no es medicina, no diagnostica, no trata, no cura ni previene enfermedades. Es un suplemento de bienestar y no reemplaza la indicacion de un profesional de salud.
     No inventes informacion si no estas seguro. No recomiendes medicamentos, marcas externas ni productos fuera del catalogo permitido.
     """;
     try {
       final response = await model.generateContent([Content.text(prompt)]);
-      final resultado = response.text ?? "No pude generar una respuesta.";
+      final resultado = _asegurarNotaNoMedicina(
+        response.text ?? "No pude generar una respuesta.",
+        idioma,
+      );
       final productoIdentificado = productoDesdeTexto(resultado) ??
           productoCoincidenteLocal ??
           buscarProductoPermitido(productoBuscado);
@@ -838,6 +847,7 @@ class _ConsultaProductoPaginaState extends State<ConsultaProductoPagina> {
                       resultado: resultado,
                       imagenProducto: imagenProducto,
                       productoIdentificado: productoIdentificado,
+                      precioProducto: precioProducto,
                     ),
                   ),
                   const Spacer(),
@@ -892,30 +902,90 @@ class _ConsultaProductoPaginaState extends State<ConsultaProductoPagina> {
     required String resultado,
     required String? imagenProducto,
     required String? productoIdentificado,
-  }) {
+    required ProductoPrecio? precioProducto,
+  }) async {
+    final idioma = await IdiomaService.cargar();
+    final notaNoMedicina = idioma == IdiomaApp.ingles
+        ? 'This product is not medicine, does not diagnose, treat, cure, or prevent diseases. It is a wellness supplement and does not replace guidance from a healthcare professional.'
+        : 'Este producto no es medicina, no diagnostica, no trata, no cura ni previene enfermedades. Es un suplemento de bienestar y no reemplaza la indicacion de un profesional de salud.';
     final secciones = _seccionesResultadoProducto(resultado);
     final dosis = secciones
         .where(
           (seccion) =>
               normalizarTexto(seccion.key).contains('dosis sugerida') ||
-              normalizarTexto(seccion.key).contains('indicaciones de uso'),
+              normalizarTexto(seccion.key).contains('suggested dosage') ||
+              normalizarTexto(seccion.key).contains('indicaciones de uso') ||
+              normalizarTexto(seccion.key).contains('directions for use'),
         )
         .map((seccion) => seccion.value)
         .where((texto) => texto.trim().isNotEmpty)
         .toList();
     final detalle = secciones
         .where(
-          (seccion) => normalizarTexto(seccion.key).contains('descripcion'),
+          (seccion) =>
+              normalizarTexto(seccion.key).contains('descripcion') ||
+              normalizarTexto(seccion.key).contains('description'),
         )
         .map((seccion) => seccion.value)
         .join('\n');
     final nombre = productoIdentificado ?? titulo;
+    final indicacionesConPrecios = [
+      ...dosis,
+      if (precioProducto != null) ...[
+        'Precio afiliado: \$${precioProducto.afiliado.toStringAsFixed(2)}',
+        'Precio publico: \$${precioProducto.publico.toStringAsFixed(2)}',
+        'LP: ${precioProducto.lp ?? 0}',
+      ],
+    ];
+    final textoConPrecios = precioProducto == null
+        ? resultado
+        : '$resultado\n\nPrecios:\n'
+            'Afiliado: \$${precioProducto.afiliado.toStringAsFixed(2)}\n'
+            'Publico: \$${precioProducto.publico.toStringAsFixed(2)}\n'
+            'LP: ${precioProducto.lp ?? 0}';
+    if (!mounted) return;
 
     return ServicioCompartir.mostrarOpciones(
       context,
       DocumentoCompartible(
         titulo: 'INFORME DEL PRODUCTO ${nombre.toUpperCase()}',
-        nombreArchivo: 'informe_producto_$nombre',
+        nombreArchivo: 'INFORME $nombre',
+        texto: textoConPrecios,
+        fecha: DateTime.now(),
+        secciones: secciones
+            .where(
+              (seccion) =>
+                  !normalizarTexto(seccion.key)
+                      .contains('producto identificado') &&
+                  !normalizarTexto(seccion.key)
+                      .contains('product identified') &&
+                  !normalizarTexto(seccion.key).contains('dosis sugerida') &&
+                  !normalizarTexto(seccion.key).contains('suggested dosage') &&
+                  !normalizarTexto(seccion.key)
+                      .contains('indicaciones de uso') &&
+                  !normalizarTexto(seccion.key).contains('directions for use'),
+            )
+            .map(
+              (seccion) => SeccionDocumento(
+                titulo: seccion.key,
+                contenido: seccion.value,
+              ),
+            )
+            .toList(),
+        productos: [
+          ProductoDocumento(
+            nombre: nombre,
+            imagenAsset: imagenProducto,
+            indicaciones: indicacionesConPrecios,
+            detalle: detalle,
+          ),
+        ],
+        nota: notaNoMedicina,
+        adjuntarImagenEnTexto: true,
+      ),
+      documentoInformativo: DocumentoCompartible(
+        titulo: 'INFORME DEL PRODUCTO ${nombre.toUpperCase()}',
+        nombreArchivo: 'INFORME $nombre',
         texto: resultado,
         fecha: DateTime.now(),
         secciones: secciones
@@ -923,8 +993,13 @@ class _ConsultaProductoPaginaState extends State<ConsultaProductoPagina> {
               (seccion) =>
                   !normalizarTexto(seccion.key)
                       .contains('producto identificado') &&
+                  !normalizarTexto(seccion.key)
+                      .contains('product identified') &&
                   !normalizarTexto(seccion.key).contains('dosis sugerida') &&
-                  !normalizarTexto(seccion.key).contains('indicaciones de uso'),
+                  !normalizarTexto(seccion.key).contains('suggested dosage') &&
+                  !normalizarTexto(seccion.key)
+                      .contains('indicaciones de uso') &&
+                  !normalizarTexto(seccion.key).contains('directions for use'),
             )
             .map(
               (seccion) => SeccionDocumento(
@@ -941,6 +1016,8 @@ class _ConsultaProductoPaginaState extends State<ConsultaProductoPagina> {
             detalle: detalle,
           ),
         ],
+        nota: notaNoMedicina,
+        adjuntarImagenEnTexto: true,
       ),
     );
   }
@@ -986,12 +1063,19 @@ class _ConsultaProductoPaginaState extends State<ConsultaProductoPagina> {
   List<MapEntry<String, String>> _seccionesResultadoProducto(String resultado) {
     const titulos = [
       'Producto identificado',
+      'Product identified',
       'Descripcion',
+      'Description',
       'Ingredientes o componentes principales',
+      'Main ingredients or components',
       'Indicaciones de uso',
+      'Directions for use',
       'Contraindicaciones o precauciones',
+      'Contraindications or precautions',
       'Dosis sugerida',
+      'Suggested dosage',
       'Nota',
+      'Note',
     ];
     final secciones = <String, List<String>>{};
     String? actual;
@@ -1025,15 +1109,44 @@ class _ConsultaProductoPaginaState extends State<ConsultaProductoPagina> {
         .toList();
   }
 
+  String _asegurarNotaNoMedicina(String resultado, IdiomaApp idioma) {
+    final notaNoMedicina = idioma == IdiomaApp.ingles
+        ? 'This product is not medicine, does not diagnose, treat, cure, or prevent diseases. It is a wellness supplement and does not replace guidance from a healthcare professional.'
+        : 'Este producto no es medicina, no diagnostica, no trata, no cura ni previene enfermedades. Es un suplemento de bienestar y no reemplaza la indicacion de un profesional de salud.';
+    final normalizado = normalizarTexto(resultado);
+    if ((normalizado.contains('no es medicina') &&
+            normalizado.contains('no reemplaza')) ||
+        (normalizado.contains('not medicine') &&
+            normalizado.contains('does not replace'))) {
+      return resultado;
+    }
+
+    final limpio = resultado.trimRight();
+    if (normalizarTexto(limpio).contains('nota') ||
+        normalizarTexto(limpio).contains('note')) {
+      return '$limpio\n$notaNoMedicina';
+    }
+    return idioma == IdiomaApp.ingles
+        ? '$limpio\n\nNote:\n$notaNoMedicina'
+        : '$limpio\n\nNota:\n$notaNoMedicina';
+  }
+
   Widget _seccionResultadoProducto(String titulo, String contenido) {
     final iconos = <String, IconData>{
       'Producto identificado': Icons.description_outlined,
+      'Product identified': Icons.description_outlined,
       'Descripcion': Icons.assignment_outlined,
+      'Description': Icons.assignment_outlined,
       'Ingredientes o componentes principales': Icons.science_outlined,
+      'Main ingredients or components': Icons.science_outlined,
       'Indicaciones de uso': Icons.calendar_month_outlined,
+      'Directions for use': Icons.calendar_month_outlined,
       'Contraindicaciones o precauciones': Icons.health_and_safety_outlined,
+      'Contraindications or precautions': Icons.health_and_safety_outlined,
       'Dosis sugerida': Icons.medication_outlined,
+      'Suggested dosage': Icons.medication_outlined,
       'Nota': Icons.info_outline_rounded,
+      'Note': Icons.info_outline_rounded,
     };
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 15),

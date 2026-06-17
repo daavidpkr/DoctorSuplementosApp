@@ -798,6 +798,7 @@ class _CardProductosImpactoNuevo extends StatelessWidget {
                           child: _ProductoImpactoNuevo(
                             posicion: i + 1,
                             nombre: visibles[i].key,
+                            imagenAsset: _imagenProducto(visibles[i].key),
                             consultas: visibles[i].value,
                             color: [
                               _PaginaImpacto4LifeNuevaState._azulVivo,
@@ -817,17 +818,26 @@ class _CardProductosImpactoNuevo extends StatelessWidget {
       ),
     );
   }
+
+  String? _imagenProducto(String nombre) {
+    final exacta = imagenesProducto4Life[nombre];
+    if (exacta != null) return exacta;
+    final producto = buscarProductoPermitido(nombre);
+    return producto == null ? null : imagenesProducto4Life[producto];
+  }
 }
 
 class _ProductoImpactoNuevo extends StatelessWidget {
   final int posicion;
   final String nombre;
+  final String? imagenAsset;
   final int consultas;
   final Color color;
 
   const _ProductoImpactoNuevo({
     required this.posicion,
     required this.nombre,
+    required this.imagenAsset,
     required this.consultas,
     required this.color,
   });
@@ -848,8 +858,20 @@ class _ProductoImpactoNuevo extends StatelessWidget {
                     color: const Color(0xFFF0F2FD),
                     shape: BoxShape.circle,
                   ),
-                  child: Icon(Icons.medication_liquid_outlined,
-                      color: color, size: 42),
+                  child: Padding(
+                    padding: const EdgeInsets.all(10),
+                    child: imagenAsset == null
+                        ? Icon(
+                            Icons.medication_liquid_outlined,
+                            color: color,
+                            size: 42,
+                          )
+                        : Image.asset(
+                            imagenAsset!,
+                            fit: BoxFit.contain,
+                            filterQuality: FilterQuality.high,
+                          ),
+                  ),
                 ),
               ),
               Positioned(
