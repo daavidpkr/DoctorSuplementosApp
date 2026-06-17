@@ -59,9 +59,8 @@ class _ConsultaProductoPaginaState extends State<ConsultaProductoPagina> {
     final productoCoincidenteLocal = buscarProductoPermitido(productoBuscado);
     final productoParaIa = productoCoincidenteLocal ?? productoBuscado;
 
-    final model = GenerativeModel(
-        model: 'gemini-3.1-flash-lite',
-        apiKey: geminiApiKey);
+    final model =
+        GenerativeModel(model: 'gemini-3.1-flash-lite', apiKey: geminiApiKey);
     final prompt = """
     Actua como un asesor experto de productos 4Life.
 
@@ -75,6 +74,15 @@ class _ConsultaProductoPaginaState extends State<ConsultaProductoPagina> {
     $catalogoPermitido4Life.
     Si el usuario pregunta por un producto fuera de la lista, indica que no esta en el catalogo permitido
     y sugiere que escriba uno de los productos autorizados.
+
+    REGLA DE DIFERENCIACION OBLIGATORIA:
+    No mezcles productos con nombres parecidos. Transfer factor tri factor y Transfer factor plus son productos distintos.
+    Riovida stix, Riovida burst y Energy go stix tambien son productos distintos.
+    Si el nombre consultado contiene "tri factor", responde solo sobre Transfer factor tri factor.
+    Si contiene "plus", responde solo sobre Transfer factor plus.
+    Si contiene "riovida stix" o "riovida", responde solo sobre Riovida stix, salvo que diga "burst".
+    Si contiene "riovida burst" o "burst", responde solo sobre Riovida burst.
+    Si contiene "energy", "energy go" o "go stix", responde solo sobre Energy go stix.
 
     Responde en espanol, claro y ordenado, con esta estructura:
 

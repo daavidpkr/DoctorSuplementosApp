@@ -53,6 +53,14 @@ const List<String> productosCambioFisico4Life = [
 
 final String catalogoCambioFisico4Life = productosCambioFisico4Life.join(', ');
 
+const Map<String, List<String>> _diferenciadoresProducto4Life = {
+  'Transfer factor plus': ['plus'],
+  'Transfer factor tri factor': ['tri factor', 'trifactor'],
+  'Riovida burst': ['riovida burst', 'burst'],
+  'Riovida stix': ['riovida stix', 'riovida'],
+  'Energy go stix': ['energy go', 'energy', 'go stix'],
+};
+
 const Map<String, String> imagenesProducto4Life = {
   'Transfer factor plus': 'assets/productos/trasnfer_factor_plus.png',
   'Riovida stix': 'assets/productos/riovida_stix.png',
@@ -200,6 +208,24 @@ String normalizarClaveProducto(String texto) {
   return normalizarTexto(texto).replaceAll(RegExp(r'\s+'), '');
 }
 
+String? productoPorReglaDiferenciadora(String consulta) {
+  final normalizado = normalizarTexto(consulta);
+  final clave = normalizarClaveProducto(consulta);
+  if (normalizado.isEmpty) return null;
+
+  for (final entry in _diferenciadoresProducto4Life.entries) {
+    final coincide = entry.value.any((diferenciador) {
+      final normalizadoDiferenciador = normalizarTexto(diferenciador);
+      final claveDiferenciador = normalizarClaveProducto(diferenciador);
+      return normalizado.contains(normalizadoDiferenciador) ||
+          clave.contains(claveDiferenciador);
+    });
+    if (coincide) return entry.key;
+  }
+
+  return null;
+}
+
 int distanciaLevenshtein(String a, String b) {
   if (a == b) return 0;
   if (a.isEmpty) return b.length;
@@ -267,6 +293,13 @@ int puntajeCoincidencia(String consulta, String producto) {
 }
 
 ProductoPrecio? buscarProductoConPrecio(String consulta) {
+  final productoDiferenciado = productoPorReglaDiferenciadora(consulta);
+  if (productoDiferenciado != null) {
+    for (final producto in productosConPrecio4Life) {
+      if (producto.nombre == productoDiferenciado) return producto;
+    }
+  }
+
   ProductoPrecio? mejor;
   var mejorPuntaje = 0;
   for (final producto in productosConPrecio4Life) {
@@ -280,6 +313,9 @@ ProductoPrecio? buscarProductoConPrecio(String consulta) {
 }
 
 String? buscarProductoPermitido(String consulta) {
+  final productoDiferenciado = productoPorReglaDiferenciadora(consulta);
+  if (productoDiferenciado != null) return productoDiferenciado;
+
   String? mejor;
   var mejorPuntaje = 0;
   for (final producto in productosPermitidos4Life) {
