@@ -713,6 +713,7 @@ class _ConsultaProductoPaginaState extends State<ConsultaProductoPagina> {
     required String? productoIdentificado,
     required ProductoPrecio? precioProducto,
   }) {
+    final ingles = IdiomaService.actual.value == IdiomaApp.ingles;
     return Dialog(
       backgroundColor: Colors.white,
       insetPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 24),
@@ -738,7 +739,7 @@ class _ConsultaProductoPaginaState extends State<ConsultaProductoPagina> {
                     ),
                   ),
                   IconButton(
-                    tooltip: "Cerrar",
+                    tooltip: ingles ? "Close" : "Cerrar",
                     onPressed: () => Navigator.pop(dialogContext),
                     icon: const Icon(Icons.close_rounded),
                   ),
@@ -815,31 +816,34 @@ class _ConsultaProductoPaginaState extends State<ConsultaProductoPagina> {
               Row(
                 children: [
                   IconButton(
-                    tooltip: "Escuchar respuesta",
+                    tooltip: ingles ? "Listen to answer" : "Escuchar respuesta",
                     icon: const Icon(Icons.volume_up_rounded),
                     color: const Color(0xFF12248B),
                     onPressed: () => ServicioTextoVoz.reproducir(resultado),
                   ),
                   IconButton(
-                    tooltip: "Detener audio",
+                    tooltip: ingles ? "Stop audio" : "Detener audio",
                     icon: const Icon(Icons.stop_circle_outlined),
                     color: const Color(0xFF12248B),
                     onPressed: ServicioTextoVoz.detener,
                   ),
                   IconButton(
-                    tooltip: "Copiar",
+                    tooltip: ingles ? "Copy" : "Copiar",
                     icon: const Icon(Icons.copy_rounded),
                     color: const Color(0xFF12248B),
                     onPressed: () {
                       Clipboard.setData(ClipboardData(text: resultado));
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                            content: Text("Copiado al portapapeles")),
+                        SnackBar(
+                          content: Text(
+                            ingles ? "Copied" : "Copiado al portapapeles",
+                          ),
+                        ),
                       );
                     },
                   ),
                   IconButton(
-                    tooltip: "Compartir",
+                    tooltip: ingles ? "Share" : "Compartir",
                     icon: const Icon(Icons.share_rounded),
                     color: const Color(0xFF12248B),
                     onPressed: () => _compartirConsultaProducto(
@@ -853,7 +857,7 @@ class _ConsultaProductoPaginaState extends State<ConsultaProductoPagina> {
                   const Spacer(),
                   TextButton(
                     onPressed: () => Navigator.pop(dialogContext),
-                    child: const Text("Cerrar"),
+                    child: Text(ingles ? "Close" : "Cerrar"),
                   ),
                 ],
               ),
@@ -865,6 +869,7 @@ class _ConsultaProductoPaginaState extends State<ConsultaProductoPagina> {
   }
 
   Widget _precioResumenProducto(ProductoPrecio producto) {
+    final ingles = IdiomaService.actual.value == IdiomaApp.ingles;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
       decoration: BoxDecoration(
@@ -876,20 +881,20 @@ class _ConsultaProductoPaginaState extends State<ConsultaProductoPagina> {
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
           _datoPrecio(
-            "Afiliado",
+            ingles ? "Member" : "Afiliado",
             '\$${producto.afiliado.toStringAsFixed(2)}',
             Icons.person_outline_rounded,
           ),
           const Divider(height: 1),
           _datoPrecio(
-            "Público",
+            ingles ? "Retail" : "Publico",
             '\$${producto.publico.toStringAsFixed(2)}',
             Icons.groups_2_outlined,
           ),
           const Divider(height: 1),
           _datoPrecio(
             "LP",
-            producto.lp?.toString() ?? 'Sin dato',
+            producto.lp?.toString() ?? (ingles ? 'No data' : 'Sin dato'),
             Icons.star_outline_rounded,
           ),
         ],
@@ -932,24 +937,27 @@ class _ConsultaProductoPaginaState extends State<ConsultaProductoPagina> {
     final indicacionesConPrecios = [
       ...dosis,
       if (precioProducto != null) ...[
-        'Precio afiliado: \$${precioProducto.afiliado.toStringAsFixed(2)}',
-        'Precio publico: \$${precioProducto.publico.toStringAsFixed(2)}',
+        '${idioma == IdiomaApp.ingles ? 'Member price' : 'Precio afiliado'}: \$${precioProducto.afiliado.toStringAsFixed(2)}',
+        '${idioma == IdiomaApp.ingles ? 'Retail price' : 'Precio publico'}: \$${precioProducto.publico.toStringAsFixed(2)}',
         'LP: ${precioProducto.lp ?? 0}',
       ],
     ];
     final textoConPrecios = precioProducto == null
         ? resultado
-        : '$resultado\n\nPrecios:\n'
-            'Afiliado: \$${precioProducto.afiliado.toStringAsFixed(2)}\n'
-            'Publico: \$${precioProducto.publico.toStringAsFixed(2)}\n'
+        : '$resultado\n\n${idioma == IdiomaApp.ingles ? 'Prices' : 'Precios'}:\n'
+            '${idioma == IdiomaApp.ingles ? 'Member' : 'Afiliado'}: \$${precioProducto.afiliado.toStringAsFixed(2)}\n'
+            '${idioma == IdiomaApp.ingles ? 'Retail' : 'Publico'}: \$${precioProducto.publico.toStringAsFixed(2)}\n'
             'LP: ${precioProducto.lp ?? 0}';
     if (!mounted) return;
 
     return ServicioCompartir.mostrarOpciones(
       context,
       DocumentoCompartible(
-        titulo: 'INFORME DEL PRODUCTO ${nombre.toUpperCase()}',
-        nombreArchivo: 'INFORME $nombre',
+        titulo: idioma == IdiomaApp.ingles
+            ? 'PRODUCT REPORT ${nombre.toUpperCase()}'
+            : 'INFORME DEL PRODUCTO ${nombre.toUpperCase()}',
+        nombreArchivo:
+            idioma == IdiomaApp.ingles ? 'REPORT $nombre' : 'INFORME $nombre',
         texto: textoConPrecios,
         fecha: DateTime.now(),
         secciones: secciones
@@ -984,8 +992,11 @@ class _ConsultaProductoPaginaState extends State<ConsultaProductoPagina> {
         adjuntarImagenEnTexto: true,
       ),
       documentoInformativo: DocumentoCompartible(
-        titulo: 'INFORME DEL PRODUCTO ${nombre.toUpperCase()}',
-        nombreArchivo: 'INFORME $nombre',
+        titulo: idioma == IdiomaApp.ingles
+            ? 'PRODUCT REPORT ${nombre.toUpperCase()}'
+            : 'INFORME DEL PRODUCTO ${nombre.toUpperCase()}',
+        nombreArchivo:
+            idioma == IdiomaApp.ingles ? 'REPORT $nombre' : 'INFORME $nombre',
         texto: resultado,
         fecha: DateTime.now(),
         secciones: secciones
@@ -1012,13 +1023,13 @@ class _ConsultaProductoPaginaState extends State<ConsultaProductoPagina> {
           ProductoDocumento(
             nombre: nombre,
             imagenAsset: imagenProducto,
-            indicaciones: dosis,
             detalle: detalle,
           ),
         ],
         nota: notaNoMedicina,
         adjuntarImagenEnTexto: true,
       ),
+      ingles: idioma == IdiomaApp.ingles,
     );
   }
 

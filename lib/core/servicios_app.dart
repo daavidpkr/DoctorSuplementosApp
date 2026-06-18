@@ -86,6 +86,46 @@ enum IdiomaApp {
   const IdiomaApp(this.codigo, this.etiqueta, this.etiquetaIngles);
 }
 
+enum PaisApp {
+  ecuador('ec', 'Ecuador', 'Ecuador'),
+  estadosUnidos('us', 'Estados Unidos', 'United States');
+
+  final String codigo;
+  final String etiqueta;
+  final String etiquetaIngles;
+
+  const PaisApp(this.codigo, this.etiqueta, this.etiquetaIngles);
+}
+
+class PaisService {
+  static const String prefsKey = 'pais_app_4life';
+  static final ValueNotifier<PaisApp> actual =
+      ValueNotifier<PaisApp>(PaisApp.ecuador);
+
+  static Future<void> inicializar() async {
+    actual.value = await cargar();
+  }
+
+  static Future<PaisApp> cargar() async {
+    final prefs = await SharedPreferences.getInstance();
+    final codigo = prefs.getString(prefsKey) ?? PaisApp.ecuador.codigo;
+    return _desdeCodigo(codigo);
+  }
+
+  static Future<void> guardar(PaisApp pais) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(prefsKey, pais.codigo);
+    actual.value = pais;
+  }
+
+  static PaisApp _desdeCodigo(String codigo) {
+    return PaisApp.values.firstWhere(
+      (pais) => pais.codigo == codigo,
+      orElse: () => PaisApp.ecuador,
+    );
+  }
+}
+
 class IdiomaService {
   static const String prefsKey = 'idioma_app_4life';
   static final ValueNotifier<IdiomaApp> actual =
@@ -265,7 +305,9 @@ class InstalacionInicialService {
     await prefs.setStringList(ChatHistoryService.prefsKey, []);
     await prefs.setStringList(ImpactoService.prefsKey, []);
     await prefs.setString(IdiomaService.prefsKey, IdiomaApp.espanol.codigo);
+    await prefs.setString(PaisService.prefsKey, PaisApp.ecuador.codigo);
     IdiomaService.actual.value = IdiomaApp.espanol;
+    PaisService.actual.value = PaisApp.ecuador;
     await prefs.setBool(_key, true);
     return true;
   }

@@ -13,6 +13,7 @@ class _PaginaPerfilState extends State<PaginaPerfil> {
   final TextEditingController _nombreController = TextEditingController();
   String _fotoBase64 = '';
   IdiomaApp _idioma = IdiomaApp.espanol;
+  PaisApp _pais = PaisApp.ecuador;
   bool _cargando = true;
   bool _guardando = false;
 
@@ -25,11 +26,13 @@ class _PaginaPerfilState extends State<PaginaPerfil> {
   Future<void> _cargarPerfil() async {
     final perfil = await PerfilService.cargar();
     final idioma = await IdiomaService.cargar();
+    final pais = await PaisService.cargar();
     if (!mounted) return;
     setState(() {
       _nombreController.text = perfil.nombre;
       _fotoBase64 = perfil.fotoBase64;
       _idioma = idioma;
+      _pais = pais;
       _cargando = false;
     });
   }
@@ -44,6 +47,22 @@ class _PaginaPerfilState extends State<PaginaPerfil> {
           idioma == IdiomaApp.ingles
               ? 'Language changed to English'
               : 'Idioma cambiado a español',
+        ),
+      ),
+    );
+  }
+
+  Future<void> _cambiarPais(PaisApp pais) async {
+    await PaisService.guardar(pais);
+    if (!mounted) return;
+    setState(() => _pais = pais);
+    final ingles = IdiomaService.actual.value == IdiomaApp.ingles;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          ingles
+              ? 'Country changed to ${pais.etiquetaIngles}'
+              : 'Pais cambiado a ${pais.etiqueta}',
         ),
       ),
     );
@@ -122,6 +141,8 @@ class _PaginaPerfilState extends State<PaginaPerfil> {
                         _tarjetaInformacionAsesor(ingles),
                         const SizedBox(height: 22),
                         _tarjetaIdioma(),
+                        const SizedBox(height: 22),
+                        _tarjetaPais(),
                         const SizedBox(height: 28),
                         _botonGuardarPerfil(ingles),
                         const SizedBox(height: 28),
@@ -490,6 +511,91 @@ class _PaginaPerfilState extends State<PaginaPerfil> {
                   Expanded(
                     child: Text(
                       _idioma.etiqueta,
+                      style: const TextStyle(
+                        color: Color(0xFF18215E),
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                  const Icon(
+                    Icons.keyboard_arrow_down_rounded,
+                    color: Color(0xFF2839C7),
+                    size: 28,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _tarjetaPais() {
+    final ingles = IdiomaService.actual.value == IdiomaApp.ingles;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
+      decoration: _decoracionTarjetaPerfil(),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Center(
+            child: Text(
+              ingles ? 'Select your country' : 'Selecciona tu pais',
+              style: const TextStyle(
+                color: Color(0xFF12248B),
+                fontSize: 16,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ),
+          const SizedBox(height: 14),
+          PopupMenuButton<PaisApp>(
+            initialValue: _pais,
+            onSelected: _cambiarPais,
+            offset: const Offset(0, 56),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(14),
+            ),
+            itemBuilder: (context) => const [
+              PopupMenuItem(
+                value: PaisApp.ecuador,
+                child: Text('Ecuador'),
+              ),
+              PopupMenuItem(
+                value: PaisApp.estadosUnidos,
+                child: Text('Estados Unidos'),
+              ),
+            ],
+            child: Container(
+              height: 62,
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: const Color(0xFFE1E4F0), width: 1.4),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 38,
+                    height: 38,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF0F2FF),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(
+                      Icons.public_rounded,
+                      color: Color(0xFF172394),
+                      size: 22,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Text(
+                      ingles ? _pais.etiquetaIngles : _pais.etiqueta,
                       style: const TextStyle(
                         color: Color(0xFF18215E),
                         fontSize: 16,

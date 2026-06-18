@@ -174,6 +174,7 @@ class _FormularioPacienteState extends State<FormularioPaciente> {
           fecha: DateTime.now(),
           imagenesProducto: imagenesProducto4Life,
           preciosProducto: preciosResultado4Life,
+          ingles: IdiomaService.actual.value == IdiomaApp.ingles,
         ),
       ),
     );

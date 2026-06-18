@@ -45,6 +45,7 @@ Future<void> main() async {
   await inicializarVariablesEntorno();
   await inicializarFirebaseSeguro();
   await IdiomaService.inicializar();
+  await PaisService.inicializar();
   runApp(const DoctorSuplementos());
 }
 

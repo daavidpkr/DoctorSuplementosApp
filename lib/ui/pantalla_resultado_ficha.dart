@@ -81,6 +81,9 @@ class ContenidoResultadoFicha {
         'saludo y analisis',
         'analisis del caso',
         'saludo y analisis fisico',
+        'case analysis',
+        'profile analysis',
+        'greeting and case analysis',
       ])) {
         guardarProducto();
         seccion = 'analisis';
@@ -90,6 +93,9 @@ class ContenidoResultadoFicha {
         'sustrato y respaldo',
         'plan de apoyo 4life',
         'productos recomendados',
+        'recommended products',
+        'recommended support plan',
+        '4life support plan',
       ])) {
         guardarProducto();
         seccion = 'productos';
@@ -99,13 +105,18 @@ class ContenidoResultadoFicha {
         'recomendaciones de bienestar',
         'habitos para el objetivo',
         'recomendacion general',
+        'wellness recommendations',
+        'habits for the goal',
+        'general recommendations',
       ])) {
         guardarProducto();
         seccion = 'recomendaciones';
         continue;
       }
       if (normalizada.startsWith('nota de seguridad') ||
-          normalizada.startsWith('nota responsable')) {
+          normalizada.startsWith('nota responsable') ||
+          normalizada.startsWith('safety note') ||
+          normalizada.startsWith('responsible note')) {
         guardarProducto();
         seccion = 'nota';
         final contenido = linea.split(':').skip(1).join(':').trim();
@@ -129,10 +140,12 @@ class ContenidoResultadoFicha {
       if (seccion == 'productos' && actual != null) {
         final contenido = linea.replaceFirst(RegExp(r'^[-•]\s*'), '').trim();
         final campo = _normalizar(contenido);
-        if (campo.startsWith('dosis ')) {
+        if (campo.startsWith('dosis ') || campo.startsWith('dose ')) {
           actual!.dosis.add(contenido);
         } else if (campo.startsWith('beneficio clave') ||
             campo.startsWith('apoyo principal') ||
+            campo.startsWith('key benefit') ||
+            campo.startsWith('main support') ||
             actual!.beneficio.isNotEmpty) {
           actual!.beneficio.add(contenido);
         } else {
@@ -230,6 +243,7 @@ class PantallaResultadoFicha extends StatefulWidget {
   final DateTime fecha;
   final Map<String, String> imagenesProducto;
   final Map<String, PrecioProductoResultadoFicha> preciosProducto;
+  final bool ingles;
 
   const PantallaResultadoFicha({
     super.key,
@@ -242,6 +256,7 @@ class PantallaResultadoFicha extends StatefulWidget {
     required this.fecha,
     required this.imagenesProducto,
     this.preciosProducto = const {},
+    this.ingles = false,
   });
 
   @override
@@ -254,6 +269,23 @@ class _PantallaResultadoFichaState extends State<PantallaResultadoFicha> {
   static const texto = Color(0xFF17204B);
   late final ContenidoResultadoFicha contenido;
   bool reproduciendo = false;
+
+  String _txt(String es, String en) => widget.ingles ? en : es;
+
+  String _traducirTituloFicha(String titulo) {
+    final limpio = titulo
+        .toLowerCase()
+        .replaceAll(RegExp(r'[áàäâ]'), 'a')
+        .replaceAll(RegExp(r'[éèëê]'), 'e')
+        .replaceAll(RegExp(r'[íìïî]'), 'i')
+        .replaceAll(RegExp(r'[óòöô]'), 'o')
+        .replaceAll(RegExp(r'[úùüû]'), 'u');
+    if (limpio.contains('perfil')) return 'Profile analysis';
+    if (limpio.contains('caso')) return 'Case analysis';
+    if (limpio.contains('plan de apoyo')) return 'Recommended support plan';
+    if (limpio.contains('sustrato')) return 'Recommended support';
+    return titulo;
+  }
 
   @override
   void initState() {
@@ -367,13 +399,17 @@ class _PantallaResultadoFichaState extends State<PantallaResultadoFicha> {
               if (valor == 'copiar') _copiar();
               if (valor == 'compartir') _compartir();
             },
-            itemBuilder: (_) => const [
-              PopupMenuItem(value: 'copiar', child: Text('Copiar')),
-              PopupMenuItem(value: 'compartir', child: Text('Compartir')),
+            itemBuilder: (_) => [
+              PopupMenuItem(
+                  value: 'copiar', child: Text(_txt('Copiar', 'Copy'))),
+              PopupMenuItem(
+                value: 'compartir',
+                child: Text(_txt('Compartir', 'Share')),
+              ),
             ],
           ),
           IconButton(
-            tooltip: 'Cerrar',
+            tooltip: _txt('Cerrar', 'Close'),
             onPressed: () => Navigator.pop(context),
             icon: const Icon(Icons.close_rounded),
             color: const Color(0xFF20284F),
@@ -390,7 +426,7 @@ class _PantallaResultadoFichaState extends State<PantallaResultadoFicha> {
     final hora =
         '${widget.fecha.hour.toString().padLeft(2, '0')}:${widget.fecha.minute.toString().padLeft(2, '0')}';
     final asesor = widget.nombreAsesor.trim().isEmpty
-        ? 'Asesor de bienestar 4Life'
+        ? _txt('Asesor de bienestar 4Life', '4Life wellness adviser')
         : widget.nombreAsesor.trim();
     return _tarjeta(
       child: Column(
@@ -404,7 +440,9 @@ class _PantallaResultadoFichaState extends State<PantallaResultadoFicha> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Hola, soy $asesor',
+                      widget.ingles
+                          ? 'Hello, I am $asesor'
+                          : 'Hola, soy $asesor',
                       style: const TextStyle(
                         color: azul,
                         fontSize: 19,
@@ -433,14 +471,16 @@ class _PantallaResultadoFichaState extends State<PantallaResultadoFicha> {
               final widgets = [
                 _dato(
                   Icons.calendar_month_outlined,
-                  'Fecha de la ${widget.tipoFicha.toLowerCase()}',
+                  widget.ingles
+                      ? 'Report date'
+                      : 'Fecha de la ${widget.tipoFicha.toLowerCase()}',
                   '$fecha · $hora',
                 ),
                 _dato(
                   Icons.person_outline_rounded,
-                  'Paciente',
+                  _txt('Paciente', 'Client'),
                   widget.paciente.trim().isEmpty
-                      ? 'Sin nombre'
+                      ? _txt('Sin nombre', 'No name')
                       : widget.paciente.trim(),
                 ),
               ];
@@ -586,9 +626,9 @@ class _PantallaResultadoFichaState extends State<PantallaResultadoFicha> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Nuestro objetivo',
-                  style: TextStyle(
+                Text(
+                  _txt('Nuestro objetivo', 'Our goal'),
+                  style: const TextStyle(
                     color: violeta,
                     fontSize: 16,
                     fontWeight: FontWeight.w900,
@@ -617,6 +657,7 @@ class _PantallaResultadoFichaState extends State<PantallaResultadoFicha> {
     String titulo, {
     bool mostrarResumen = true,
   }) {
+    final tituloVisible = widget.ingles ? _traducirTituloFicha(titulo) : titulo;
     return Row(
       children: [
         Container(
@@ -631,7 +672,7 @@ class _PantallaResultadoFichaState extends State<PantallaResultadoFicha> {
         const SizedBox(width: 12),
         Expanded(
           child: Text(
-            titulo,
+            tituloVisible,
             style: const TextStyle(
               color: azul,
               fontSize: 19,
@@ -646,9 +687,9 @@ class _PantallaResultadoFichaState extends State<PantallaResultadoFicha> {
               color: const Color(0xFFF2F0FF),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: const Text(
-              'Resumen',
-              style: TextStyle(
+            child: Text(
+              _txt('Resumen', 'Summary'),
+              style: const TextStyle(
                 color: violeta,
                 fontSize: 12.5,
                 fontWeight: FontWeight.w800,
@@ -797,20 +838,20 @@ class _PantallaResultadoFichaState extends State<PantallaResultadoFicha> {
         children: [
           _datoComercial(
             Icons.person_outline_rounded,
-            'Afiliado',
+            _txt('Afiliado', 'Member'),
             '\$${precio.afiliado.toStringAsFixed(2)}',
           ),
           const Divider(height: 1, color: Color(0xFFE8EAF2)),
           _datoComercial(
             Icons.groups_2_outlined,
-            'Público',
+            _txt('Publico', 'Retail'),
             '\$${precio.publico.toStringAsFixed(2)}',
           ),
           const Divider(height: 1, color: Color(0xFFE8EAF2)),
           _datoComercial(
             Icons.star_outline_rounded,
             'LP',
-            precio.lp?.toString() ?? 'Sin dato',
+            precio.lp?.toString() ?? _txt('Sin dato', 'No data'),
           ),
         ],
       ),
@@ -997,7 +1038,9 @@ class _PantallaResultadoFichaState extends State<PantallaResultadoFicha> {
         children: [
           _accion(
             reproduciendo ? Icons.stop_circle_outlined : Icons.volume_up,
-            reproduciendo ? 'Detener' : 'Escuchar',
+            reproduciendo
+                ? _txt('Detener', 'Stop')
+                : _txt('Escuchar', 'Listen'),
             () async {
               if (reproduciendo) {
                 await ServicioTextoVoz.detener();
@@ -1009,10 +1052,10 @@ class _PantallaResultadoFichaState extends State<PantallaResultadoFicha> {
               if (mounted) setState(() => reproduciendo = false);
             },
           ),
-          _accion(Icons.copy_rounded, 'Copiar', _copiar),
+          _accion(Icons.copy_rounded, _txt('Copiar', 'Copy'), _copiar),
           _accion(
             Icons.share_rounded,
-            'Compartir',
+            _txt('Compartir', 'Share'),
             _compartir,
           ),
           Expanded(
@@ -1028,9 +1071,9 @@ class _PantallaResultadoFichaState extends State<PantallaResultadoFicha> {
                     borderRadius: BorderRadius.circular(14),
                   ),
                 ),
-                child: const Text(
-                  'Cerrar',
-                  style: TextStyle(fontWeight: FontWeight.w900),
+                child: Text(
+                  _txt('Cerrar', 'Close'),
+                  style: const TextStyle(fontWeight: FontWeight.w900),
                 ),
               ),
             ),
@@ -1071,35 +1114,41 @@ class _PantallaResultadoFichaState extends State<PantallaResultadoFicha> {
   void _copiar() {
     Clipboard.setData(ClipboardData(text: widget.resultado));
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Copiado al portapapeles')),
+      SnackBar(content: Text(_txt('Copiado al portapapeles', 'Copied'))),
     );
   }
 
   Future<void> _compartir() {
     final esCambio = widget.tipoFicha.toLowerCase().contains('cambio');
-    final paciente =
-        widget.paciente.trim().isEmpty ? 'PACIENTE' : widget.paciente.trim();
+    final paciente = widget.paciente.trim().isEmpty
+        ? _txt('PACIENTE', 'CLIENT')
+        : widget.paciente.trim();
     final titulo = esCambio
-        ? 'PLAN DE CAMBIO FÍSICO DE $paciente'
-        : 'DIAGNÓSTICO DE $paciente';
-    final nombreArchivo =
-        esCambio ? 'GUIA CAMBIO FISICO $paciente' : 'DIAGNOSTICO $paciente';
+        ? _txt('PLAN DE CAMBIO FISICO DE $paciente',
+            'BODY TRANSFORMATION PLAN FOR $paciente')
+        : _txt('DIAGNOSTICO DE $paciente', 'DIAGNOSIS FOR $paciente');
+    final nombreArchivo = esCambio
+        ? _txt('GUIA CAMBIO FISICO $paciente',
+            'BODY TRANSFORMATION GUIDE $paciente')
+        : _txt('DIAGNOSTICO $paciente', 'DIAGNOSIS $paciente');
     final secciones = <SeccionDocumento>[
       SeccionDocumento(
-        titulo: esCambio ? 'Análisis del perfil' : 'Diagnóstico',
+        titulo: esCambio
+            ? _txt('Analisis del perfil', 'Profile analysis')
+            : _txt('Diagnostico', 'Diagnosis'),
         contenido:
             contenido.analisis.isEmpty ? widget.resultado : contenido.analisis,
       ),
       if (contenido.objetivo.isNotEmpty)
         SeccionDocumento(
-          titulo: 'Objetivo',
+          titulo: _txt('Objetivo', 'Goal'),
           contenido: contenido.objetivo,
         ),
       if (contenido.recomendaciones.isNotEmpty)
         SeccionDocumento(
           titulo: esCambio
-              ? 'Hábitos y recomendaciones'
-              : 'Recomendaciones generales',
+              ? _txt('Habitos y recomendaciones', 'Habits and recommendations')
+              : _txt('Recomendaciones generales', 'General recommendations'),
           contenido: contenido.recomendaciones,
         ),
     ];
@@ -1108,7 +1157,6 @@ class _PantallaResultadoFichaState extends State<PantallaResultadoFicha> {
           (producto) => ProductoDocumento(
             nombre: producto.nombre,
             imagenAsset: producto.imagen,
-            indicaciones: producto.dosis,
             detalle: producto.beneficio,
           ),
         )
@@ -1122,8 +1170,8 @@ class _PantallaResultadoFichaState extends State<PantallaResultadoFicha> {
           indicaciones: [
             ...producto.dosis,
             if (precio != null) ...[
-              'Precio afiliado: \$${precio.afiliado.toStringAsFixed(2)}',
-              'Precio publico: \$${precio.publico.toStringAsFixed(2)}',
+              '${_txt('Precio afiliado', 'Member price')}: \$${precio.afiliado.toStringAsFixed(2)}',
+              '${_txt('Precio publico', 'Retail price')}: \$${precio.publico.toStringAsFixed(2)}',
               'LP: ${precio.lp ?? 0}',
             ],
           ],
@@ -1135,9 +1183,9 @@ class _PantallaResultadoFichaState extends State<PantallaResultadoFicha> {
       (producto) => widget.preciosProducto.containsKey(producto.nombre),
     );
     final textoConPrecios = incluyePrecios
-        ? '${widget.resultado}\n\nPrecios de productos:\n${contenido.productos.where((producto) => widget.preciosProducto.containsKey(producto.nombre)).map((producto) {
+        ? '${widget.resultado}\n\n${_txt('Precios de productos', 'Product prices')}:\n${contenido.productos.where((producto) => widget.preciosProducto.containsKey(producto.nombre)).map((producto) {
             final precio = widget.preciosProducto[producto.nombre]!;
-            return '${producto.nombre}: Afiliado \$${precio.afiliado.toStringAsFixed(2)} | Publico \$${precio.publico.toStringAsFixed(2)} | LP ${precio.lp ?? 0}';
+            return '${producto.nombre}: ${_txt('Afiliado', 'Member')} \$${precio.afiliado.toStringAsFixed(2)} | ${_txt('Publico', 'Retail')} \$${precio.publico.toStringAsFixed(2)} | LP ${precio.lp ?? 0}';
           }).join('\n')}'
         : widget.resultado;
 
@@ -1165,6 +1213,7 @@ class _PantallaResultadoFichaState extends State<PantallaResultadoFicha> {
               nota: contenido.nota,
             )
           : null,
+      ingles: widget.ingles,
     );
   }
 }

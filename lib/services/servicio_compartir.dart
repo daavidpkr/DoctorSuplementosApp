@@ -76,6 +76,7 @@ class ServicioCompartir {
     BuildContext context,
     DocumentoCompartible documento, {
     DocumentoCompartible? documentoInformativo,
+    bool ingles = false,
   }) async {
     final tieneInformativo = documentoInformativo != null;
     final opcion = await showModalBottomSheet<_OpcionCompartirDocumento>(
@@ -129,7 +130,9 @@ class ServicioCompartir {
                   documento: documento,
                 ),
                 icono: Icons.picture_as_pdf_rounded,
-                titulo: tieneInformativo ? 'PDF con precios' : 'PDF',
+                titulo: tieneInformativo
+                    ? (ingles ? 'PDF with prices' : 'PDF con precios')
+                    : 'PDF',
                 descripcion: 'Documento profesional, ordenado y con imágenes.',
                 color: const Color(0xFFC62828),
               ),
@@ -142,8 +145,10 @@ class ServicioCompartir {
                     documento: documentoInformativo,
                   ),
                   icono: Icons.picture_as_pdf_rounded,
-                  titulo: 'PDF informativo',
-                  descripcion: 'Documento sin precios.',
+                  titulo: ingles ? 'Informational PDF' : 'PDF informativo',
+                  descripcion: ingles
+                      ? 'Document without prices or doses.'
+                      : 'Documento sin precios ni dosis.',
                   color: const Color(0xFF4B48D8),
                 ),
                 const SizedBox(height: 10),
@@ -155,8 +160,12 @@ class ServicioCompartir {
                   documento: documento,
                 ),
                 icono: Icons.chat_bubble_outline_rounded,
-                titulo: tieneInformativo ? 'Texto con precios' : 'Texto',
-                descripcion: 'Contenido listo para enviar por WhatsApp.',
+                titulo: tieneInformativo
+                    ? (ingles ? 'Text with prices' : 'Texto con precios')
+                    : (ingles ? 'Text' : 'Texto'),
+                descripcion: ingles
+                    ? 'Content ready to send by WhatsApp.'
+                    : 'Contenido listo para enviar por WhatsApp.',
                 color: const Color(0xFF118B48),
               ),
               if (tieneInformativo) ...[
@@ -168,8 +177,10 @@ class ServicioCompartir {
                     documento: documentoInformativo,
                   ),
                   icono: Icons.chat_bubble_outline_rounded,
-                  titulo: 'Texto informativo',
-                  descripcion: 'Mensaje sin precios.',
+                  titulo: ingles ? 'Informational text' : 'Texto informativo',
+                  descripcion: ingles
+                      ? 'Message without prices or doses.'
+                      : 'Mensaje sin precios ni dosis.',
                   color: const Color(0xFF008C7E),
                 ),
               ],

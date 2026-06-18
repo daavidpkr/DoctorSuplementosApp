@@ -731,6 +731,116 @@ class _CardEvolucionImpactoNuevo extends StatelessWidget {
   }
 }
 
+void _mostrarTodosProductosImpacto(
+  BuildContext context,
+  List<MapEntry<String, int>> productos,
+) {
+  showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: Colors.white,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
+    ),
+    builder: (context) => DraggableScrollableSheet(
+      expand: false,
+      initialChildSize: 0.72,
+      minChildSize: 0.42,
+      maxChildSize: 0.92,
+      builder: (context, controller) => SafeArea(
+        child: Column(
+          children: [
+            const SizedBox(height: 10),
+            Container(
+              width: 44,
+              height: 5,
+              decoration: BoxDecoration(
+                color: const Color(0xFFD8DCEB),
+                borderRadius: BorderRadius.circular(99),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 18, 12, 10),
+              child: Row(
+                children: [
+                  const Expanded(
+                    child: Text(
+                      'Todos los productos consultados',
+                      style: TextStyle(
+                        color: _PaginaImpacto4LifeNuevaState._tinta,
+                        fontSize: 22,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(Icons.close_rounded),
+                    color: _PaginaImpacto4LifeNuevaState._textoSuave,
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: ListView.separated(
+                controller: controller,
+                padding: const EdgeInsets.fromLTRB(18, 4, 18, 22),
+                itemCount: productos.length,
+                separatorBuilder: (_, __) => const SizedBox(height: 10),
+                itemBuilder: (context, index) {
+                  final producto = productos[index];
+                  return Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF7F8FE),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: const Color(0xFFE1E5F2)),
+                    ),
+                    child: Row(
+                      children: [
+                        CircleAvatar(
+                          backgroundColor:
+                              _PaginaImpacto4LifeNuevaState._azulVivo,
+                          child: Text(
+                            '${index + 1}',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Text(
+                            producto.key,
+                            style: const TextStyle(
+                              color: _PaginaImpacto4LifeNuevaState._tinta,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                        ),
+                        Text(
+                          '${producto.value}',
+                          style: const TextStyle(
+                            color: _PaginaImpacto4LifeNuevaState._azulVivo,
+                            fontSize: 20,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+}
+
 class _CardProductosImpactoNuevo extends StatelessWidget {
   final List<MapEntry<String, int>> productos;
 
@@ -745,8 +855,8 @@ class _CardProductosImpactoNuevo extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            children: const [
-              Expanded(
+            children: [
+              const Expanded(
                 child: Text(
                   'Productos mas consultados',
                   style: TextStyle(
@@ -756,17 +866,34 @@ class _CardProductosImpactoNuevo extends StatelessWidget {
                   ),
                 ),
               ),
-              Text(
-                'Ver todos',
-                style: TextStyle(
-                  color: _PaginaImpacto4LifeNuevaState._azulVivo,
-                  fontSize: 17,
-                  fontWeight: FontWeight.w700,
+              if (productos.length > visibles.length)
+                InkWell(
+                  borderRadius: BorderRadius.circular(14),
+                  onTap: () =>
+                      _mostrarTodosProductosImpacto(context, productos),
+                  child: const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          'Ver todos',
+                          style: TextStyle(
+                            color: _PaginaImpacto4LifeNuevaState._azulVivo,
+                            fontSize: 17,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        SizedBox(width: 4),
+                        Icon(
+                          Icons.chevron_right_rounded,
+                          color: _PaginaImpacto4LifeNuevaState._azulVivo,
+                          size: 28,
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
-              ),
-              SizedBox(width: 4),
-              Icon(Icons.chevron_right_rounded,
-                  color: _PaginaImpacto4LifeNuevaState._azulVivo, size: 28),
             ],
           ),
           const SizedBox(height: 22),
