@@ -128,7 +128,7 @@ class _PaginaHistorialState extends State<PaginaHistorial> {
         datos['nombre'].toString().trim().isNotEmpty) {
       return datos['nombre'].toString();
     }
-    return registro['titulo']?.toString() ?? "Sin nombre";
+    return registro['titulo']?.toString() ?? txtApp("Sin nombre", "No name");
   }
 
   void _filtrarHistorial(String query) {
@@ -146,21 +146,24 @@ class _PaginaHistorialState extends State<PaginaHistorial> {
 
   void _reDiagnosticar(Map<String, dynamic> pacienteViejo) {
     final nombre = _nombrePaciente(pacienteViejo);
-    final resultado =
-        pacienteViejo['resultado']?.toString() ?? "Sin resultado guardado";
+    final resultado = pacienteViejo['resultado']?.toString() ??
+        txtApp("Sin resultado guardado", "No saved result");
     final esCambio = _esCambioFisico(pacienteViejo);
     final nuevaPreguntaController = TextEditingController();
 
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title:
-            Text(esCambio ? "Ajustar cambio fisico" : "Re-evaluar a $nombre"),
+        title: Text(
+          esCambio
+              ? txtApp("Ajustar cambio fisico", "Adjust body change")
+              : txtApp("Re-evaluar a $nombre", "Re-evaluate $nombre"),
+        ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              "${esCambio ? 'Guia anterior' : 'Diagnostico anterior'}:\n$resultado",
+              "${esCambio ? txtApp('Guia anterior', 'Previous guide') : txtApp('Diagnostico anterior', 'Previous diagnosis')}:\n$resultado",
               maxLines: 4,
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(fontSize: 12, color: Colors.grey),
@@ -168,9 +171,12 @@ class _PaginaHistorialState extends State<PaginaHistorial> {
             const SizedBox(height: 10),
             TextField(
               controller: nuevaPreguntaController,
-              decoration: const InputDecoration(
-                labelText: "Que cambio o que nueva duda tienes?",
-                border: OutlineInputBorder(),
+              decoration: InputDecoration(
+                labelText: txtApp(
+                  "Que cambio o que nueva duda tienes?",
+                  "What changed or what new question do you have?",
+                ),
+                border: const OutlineInputBorder(),
               ),
               minLines: 1,
               maxLines: 4,
@@ -180,7 +186,7 @@ class _PaginaHistorialState extends State<PaginaHistorial> {
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text("Cancelar")),
+              child: Text(txtApp("Cancelar", "Cancel"))),
           ElevatedButton(
             onPressed: () {
               final nuevaConsultaIA =
@@ -196,7 +202,7 @@ class _PaginaHistorialState extends State<PaginaHistorial> {
                 ),
               );
             },
-            child: const Text("Consultar Ajuste"),
+            child: Text(txtApp("Consultar Ajuste", "Ask for adjustment")),
           ),
         ],
       ),
@@ -207,8 +213,8 @@ class _PaginaHistorialState extends State<PaginaHistorial> {
     Map<String, dynamic> pacienteViejo,
   ) async {
     final nombre = _nombrePaciente(pacienteViejo);
-    final resultado =
-        pacienteViejo['resultado']?.toString() ?? "Sin resultado guardado";
+    final resultado = pacienteViejo['resultado']?.toString() ??
+        txtApp("Sin resultado guardado", "No saved result");
     final esCambio = _esCambioFisico(pacienteViejo);
     final fecha = DateTime.tryParse(
           pacienteViejo['fecha']?.toString() ?? '',
@@ -222,18 +228,21 @@ class _PaginaHistorialState extends State<PaginaHistorial> {
       MaterialPageRoute(
         builder: (context) => PantallaResultadoFicha(
           titulo: esCambio
-              ? 'Resultado de Cambio Físico'
-              : 'Resultado del Diagnóstico',
-          tipoFicha: esCambio ? 'Cambio físico' : 'Diagnóstico',
+              ? 'Resultado de Cambio Fisico'
+              : 'Resultado del Diagnostico',
+          tipoFicha: esCambio ? 'Cambio fisico' : 'Diagnostico',
           paciente: nombre,
           nombreAsesor: perfilAsesor.nombre,
           especialidad: esCambio
-              ? 'Asesor de bienestar y composición corporal'
-              : 'Especialista en inmunología y bioenergética',
+              ? txtApp('Asesor de bienestar y composicion corporal',
+                  'Wellness and body composition adviser')
+              : txtApp('Especialista en inmunologia y bioenergetica',
+                  'Immunology and bioenergetics specialist'),
           resultado: resultado,
           fecha: fecha,
           imagenesProducto: imagenesProducto4Life,
           preciosProducto: preciosResultado4Life,
+          ingles: IdiomaService.actual.value == IdiomaApp.ingles,
         ),
       ),
     );
@@ -242,21 +251,38 @@ class _PaginaHistorialState extends State<PaginaHistorial> {
   String _fechaPaciente(dynamic valor) {
     final texto = valor?.toString() ?? '';
     final fecha = DateTime.tryParse(texto);
-    if (fecha == null) return texto.isEmpty ? 'Sin fecha' : texto;
-    const meses = [
-      'Enero',
-      'Febrero',
-      'Marzo',
-      'Abril',
-      'Mayo',
-      'Junio',
-      'Julio',
-      'Agosto',
-      'Septiembre',
-      'Octubre',
-      'Noviembre',
-      'Diciembre',
-    ];
+    if (fecha == null) {
+      return texto.isEmpty ? txtApp('Sin fecha', 'No date') : texto;
+    }
+    final meses = IdiomaService.actual.value == IdiomaApp.ingles
+        ? [
+            'January',
+            'February',
+            'March',
+            'April',
+            'May',
+            'June',
+            'July',
+            'August',
+            'September',
+            'October',
+            'November',
+            'December',
+          ]
+        : [
+            'Enero',
+            'Febrero',
+            'Marzo',
+            'Abril',
+            'Mayo',
+            'Junio',
+            'Julio',
+            'Agosto',
+            'Septiembre',
+            'Octubre',
+            'Noviembre',
+            'Diciembre',
+          ];
     return '${fecha.day} ${meses[fecha.month - 1]} ${fecha.year}';
   }
 
@@ -272,21 +298,21 @@ class _PaginaHistorialState extends State<PaginaHistorial> {
   _EstadoPaciente _estadoPaciente(Map<String, dynamic> registro) {
     final resultado = registro['resultado']?.toString().trim() ?? '';
     if (resultado.isEmpty) {
-      return const _EstadoPaciente(
-        texto: 'Pendiente',
+      return _EstadoPaciente(
+        texto: txtApp('Pendiente', 'Pending'),
         icono: Icons.schedule_rounded,
         color: Color(0xFFF29A00),
       );
     }
     if (_esCambioFisico(registro)) {
-      return const _EstadoPaciente(
-        texto: 'Cambio fisico completo',
+      return _EstadoPaciente(
+        texto: txtApp('Cambio fisico completo', 'Body change complete'),
         icono: Icons.fitness_center_rounded,
         color: Color(0xFF14983E),
       );
     }
-    return const _EstadoPaciente(
-      texto: 'Diagnóstico completo',
+    return _EstadoPaciente(
+      texto: txtApp('Diagnostico completo', 'Diagnosis complete'),
       icono: Icons.check_circle_outline,
       color: Color(0xFF14983E),
     );
@@ -350,14 +376,14 @@ class _PaginaHistorialState extends State<PaginaHistorial> {
         children: [
           Expanded(
             child: _opcionTipoHistorial(
-              texto: 'Diagnosticos',
+              texto: txtApp('Diagnosticos', 'Diagnoses'),
               icono: Icons.medical_services_outlined,
               tipo: 'diagnostico',
             ),
           ),
           Expanded(
             child: _opcionTipoHistorial(
-              texto: 'Cambios fisicos',
+              texto: txtApp('Cambios fisicos', 'Body changes'),
               icono: Icons.fitness_center_rounded,
               tipo: 'cambio_fisico',
             ),
@@ -845,14 +871,14 @@ class _TarjetaPacienteHistorial extends StatelessWidget {
                           ),
                           _BotonAccionPaciente(
                             icono: Icons.visibility_outlined,
-                            tooltip: 'Ver reporte',
+                            tooltip: txtApp('Ver reporte', 'View report'),
                             onTap: onVer,
                             relleno: false,
                           ),
                           const SizedBox(width: 8),
                           _BotonAccionPaciente(
                             icono: Icons.refresh,
-                            tooltip: 'Repetir',
+                            tooltip: txtApp('Repetir', 'Repeat'),
                             onTap: onRepetir,
                             relleno: true,
                           ),
@@ -921,14 +947,17 @@ class PaginaDatosPaciente extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Datos del Paciente"),
+        title: Text(txtApp("Datos del Paciente", "Patient Data")),
         backgroundColor: const Color(0xFF1A237E),
         foregroundColor: Colors.white,
       ),
-      body: const Center(
+      body: Center(
         child: Text(
-          "No tienes datos guardados localmente.",
-          style: TextStyle(fontSize: 16, color: Colors.grey),
+          txtApp(
+            "No tienes datos guardados localmente.",
+            "You do not have locally saved data.",
+          ),
+          style: const TextStyle(fontSize: 16, color: Colors.grey),
         ),
       ),
       floatingActionButton: FloatingActionButton(
@@ -1026,21 +1055,38 @@ class _PaginaHistorialChatbotState extends State<PaginaHistorialChatbot> {
   String _fechaLegible(dynamic valor) {
     final texto = valor?.toString() ?? '';
     final fecha = DateTime.tryParse(texto);
-    if (fecha == null) return texto.isEmpty ? 'Sin fecha' : texto;
-    const meses = [
-      'Enero',
-      'Febrero',
-      'Marzo',
-      'Abril',
-      'Mayo',
-      'Junio',
-      'Julio',
-      'Agosto',
-      'Septiembre',
-      'Octubre',
-      'Noviembre',
-      'Diciembre',
-    ];
+    if (fecha == null) {
+      return texto.isEmpty ? txtApp('Sin fecha', 'No date') : texto;
+    }
+    final meses = IdiomaService.actual.value == IdiomaApp.ingles
+        ? [
+            'January',
+            'February',
+            'March',
+            'April',
+            'May',
+            'June',
+            'July',
+            'August',
+            'September',
+            'October',
+            'November',
+            'December',
+          ]
+        : [
+            'Enero',
+            'Febrero',
+            'Marzo',
+            'Abril',
+            'Mayo',
+            'Junio',
+            'Julio',
+            'Agosto',
+            'Septiembre',
+            'Octubre',
+            'Noviembre',
+            'Diciembre',
+          ];
     final hora = fecha.hour.toString().padLeft(2, '0');
     final minuto = fecha.minute.toString().padLeft(2, '0');
     return '${fecha.day} ${meses[fecha.month - 1]} ${fecha.year} · $hora:$minuto';
@@ -1052,8 +1098,8 @@ class _PaginaHistorialChatbotState extends State<PaginaHistorialChatbot> {
         t.contains('sueno') ||
         t.contains('insomnio') ||
         t.contains('descanso')) {
-      return const _CategoriaChat(
-        texto: 'Sueño y descanso',
+      return _CategoriaChat(
+        texto: txtApp('Sueno y descanso', 'Sleep and rest'),
         icono: Icons.nightlight_round,
         color: Color(0xFF5E46D8),
         fondo: Color(0xFFEAE6FF),
@@ -1064,8 +1110,8 @@ class _PaginaHistorialChatbotState extends State<PaginaHistorialChatbot> {
         t.contains('lesión') ||
         t.contains('espalda') ||
         t.contains('migraña')) {
-      return const _CategoriaChat(
-        texto: 'Dolor y lesiones',
+      return _CategoriaChat(
+        texto: txtApp('Dolor y lesiones', 'Pain and injuries'),
         icono: Icons.accessibility_new_rounded,
         color: Color(0xFF2876DF),
         fondo: Color(0xFFE7F1FF),
@@ -1075,8 +1121,8 @@ class _PaginaHistorialChatbotState extends State<PaginaHistorialChatbot> {
         t.contains('digest') ||
         t.contains('estomago') ||
         t.contains('estómago')) {
-      return const _CategoriaChat(
-        texto: 'Salud digestiva',
+      return _CategoriaChat(
+        texto: txtApp('Salud digestiva', 'Digestive health'),
         icono: Icons.local_fire_department_outlined,
         color: Color(0xFFC45B20),
         fondo: Color(0xFFFFE8D8),
@@ -1086,15 +1132,15 @@ class _PaginaHistorialChatbotState extends State<PaginaHistorialChatbot> {
         t.contains('creatina') ||
         t.contains('vitamina') ||
         t.contains('suplement')) {
-      return const _CategoriaChat(
-        texto: 'Suplementos',
+      return _CategoriaChat(
+        texto: txtApp('Suplementos', 'Supplements'),
         icono: Icons.spa_outlined,
         color: Color(0xFF3F9A4B),
         fondo: Color(0xFFE1F4E2),
       );
     }
-    return const _CategoriaChat(
-      texto: 'Salud general',
+    return _CategoriaChat(
+      texto: txtApp('Salud general', 'General health'),
       icono: Icons.health_and_safety_outlined,
       color: Color(0xFF3047CC),
       fondo: Color(0xFFE8ECFF),
@@ -1153,9 +1199,9 @@ class _PaginaHistorialChatbotState extends State<PaginaHistorialChatbot> {
                     onPressed: () => Navigator.maybePop(context),
                   ),
                   const SizedBox(width: 22),
-                  const Expanded(
+                  Expanded(
                     child: Text(
-                      'Historial de chats',
+                      txtApp('Historial de chats', 'Chat History'),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
@@ -1166,7 +1212,7 @@ class _PaginaHistorialChatbotState extends State<PaginaHistorialChatbot> {
                     ),
                   ),
                   IconButton(
-                    tooltip: 'Filtros',
+                    tooltip: txtApp('Filtros', 'Filters'),
                     icon: const Icon(Icons.filter_list_rounded, size: 34),
                     color: Colors.white,
                     onPressed: () {},
@@ -1206,19 +1252,22 @@ class _PaginaHistorialChatbotState extends State<PaginaHistorialChatbot> {
                                   color: Color(0xFF0D1430),
                                   fontSize: 16,
                                 ),
-                                decoration: const InputDecoration(
+                                decoration: InputDecoration(
                                   border: InputBorder.none,
-                                  hintText: 'Buscar en el historial...',
-                                  hintStyle: TextStyle(
+                                  hintText: txtApp(
+                                    'Buscar en el historial...',
+                                    'Search history...',
+                                  ),
+                                  hintStyle: const TextStyle(
                                     color: Color(0xFF747A9E),
                                     fontSize: 16,
                                   ),
-                                  icon: Icon(
+                                  icon: const Icon(
                                     Icons.search,
                                     color: Color(0xFF68709D),
                                     size: 34,
                                   ),
-                                  suffixIcon: Icon(
+                                  suffixIcon: const Icon(
                                     Icons.calendar_today_outlined,
                                     color: azul,
                                     size: 30,
@@ -1229,10 +1278,13 @@ class _PaginaHistorialChatbotState extends State<PaginaHistorialChatbot> {
                             const SizedBox(height: 26),
                             Row(
                               children: [
-                                const Expanded(
+                                Expanded(
                                   child: Text(
-                                    'Conversaciones recientes',
-                                    style: TextStyle(
+                                    txtApp(
+                                      'Conversaciones recientes',
+                                      'Recent conversations',
+                                    ),
+                                    style: const TextStyle(
                                       color: Color(0xFF646B88),
                                       fontSize: 18,
                                       fontWeight: FontWeight.w800,
@@ -1240,7 +1292,10 @@ class _PaginaHistorialChatbotState extends State<PaginaHistorialChatbot> {
                                   ),
                                 ),
                                 Text(
-                                  '$cantidad ${cantidad == 1 ? 'conversación' : 'conversaciones'}',
+                                  txtApp(
+                                    '$cantidad ${cantidad == 1 ? 'conversacion' : 'conversaciones'}',
+                                    '$cantidad ${cantidad == 1 ? 'conversation' : 'conversations'}',
+                                  ),
                                   style: const TextStyle(
                                     color: azul,
                                     fontSize: 17,
@@ -1251,12 +1306,18 @@ class _PaginaHistorialChatbotState extends State<PaginaHistorialChatbot> {
                             ),
                             const SizedBox(height: 22),
                             if (_conversaciones.isEmpty)
-                              const _EstadoHistorialVacio(
-                                texto: 'No hay conversaciones guardadas',
+                              _EstadoHistorialVacio(
+                                texto: txtApp(
+                                  'No hay conversaciones guardadas',
+                                  'No saved conversations',
+                                ),
                               )
                             else if (_conversacionesFiltradas.isEmpty)
-                              const _EstadoHistorialVacio(
-                                texto: 'No se encontraron conversaciones',
+                              _EstadoHistorialVacio(
+                                texto: txtApp(
+                                  'No se encontraron conversaciones',
+                                  'No conversations found',
+                                ),
                               )
                             else
                               ..._conversacionesFiltradas.map((chat) {
@@ -1294,9 +1355,9 @@ class _PaginaHistorialChatbotState extends State<PaginaHistorialChatbot> {
                           ),
                         ),
                         const SizedBox(height: 8),
-                        const Text(
-                          'Nuevo chat',
-                          style: TextStyle(
+                        Text(
+                          txtApp('Nuevo chat', 'New chat'),
+                          style: const TextStyle(
                             color: azul,
                             fontSize: 13,
                             fontWeight: FontWeight.w800,
@@ -1332,7 +1393,7 @@ class _PaginaHistorialChatbotState extends State<PaginaHistorialChatbot> {
               Expanded(
                 child: _ItemNavegacionHistorial(
                   icono: Icons.history,
-                  texto: 'Historial',
+                  texto: txtApp('Historial', 'History'),
                   activo: true,
                 ),
               ),
@@ -1507,7 +1568,7 @@ class _TarjetaConversacion extends StatelessWidget {
                 ),
                 const SizedBox(width: 10),
                 IconButton(
-                  tooltip: 'Eliminar',
+                  tooltip: txtApp('Eliminar', 'Delete'),
                   onPressed: onEliminar,
                   style: IconButton.styleFrom(
                     backgroundColor: const Color(0xFFF0F1F8),

@@ -346,9 +346,9 @@ class _HeaderImpactoNuevo extends StatelessWidget {
                     const BoxConstraints.tightFor(width: 46, height: 46),
               ),
               const SizedBox(width: 18),
-              const Expanded(
+              Expanded(
                 child: Text(
-                  'Tu impacto 4Life',
+                  txtApp('Tu impacto 4Life', 'Your 4Life Impact'),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
@@ -424,7 +424,7 @@ class _SelectorMesImpactoNuevo extends StatelessWidget {
             ),
           ),
           PopupMenuButton<String>(
-            tooltip: 'Cambiar mes',
+            tooltip: txtApp('Cambiar mes', 'Change month'),
             icon: const Icon(Icons.keyboard_arrow_down_rounded,
                 color: _PaginaImpacto4LifeNuevaState._azulVivo, size: 36),
             onSelected: onSeleccionar,
@@ -515,10 +515,10 @@ class _CardResumenImpactoNuevo extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 8),
-                    const Text(
-                      'acciones\ntotales',
+                    Text(
+                      txtApp('acciones\ntotales', 'total\nactions'),
                       textAlign: TextAlign.center,
-                      style: TextStyle(
+                      style: const TextStyle(
                         color: _PaginaImpacto4LifeNuevaState._textoSuave,
                         fontSize: 18,
                         height: 1.1,
@@ -534,21 +534,21 @@ class _CardResumenImpactoNuevo extends StatelessWidget {
             children: [
               _FilaMetricaImpacto(
                   icono: Icons.monitor_heart_outlined,
-                  etiqueta: 'Diagnosticos',
+                  etiqueta: txtApp('Diagnosticos', 'Diagnoses'),
                   valor: resumen.diagnosticos,
                   maximo: maximo,
                   color: _PaginaImpacto4LifeNuevaState._verde),
               const SizedBox(height: 24),
               _FilaMetricaImpacto(
                   icono: Icons.medication_liquid_outlined,
-                  etiqueta: 'Productos',
+                  etiqueta: txtApp('Productos', 'Products'),
                   valor: resumen.consultasProducto,
                   maximo: maximo,
                   color: _PaginaImpacto4LifeNuevaState._azulVivo),
               const SizedBox(height: 24),
               _FilaMetricaImpacto(
                   icono: Icons.calculate_outlined,
-                  etiqueta: 'Calculadora',
+                  etiqueta: txtApp('Calculadora', 'Calculator'),
                   valor: resumen.calculadoras,
                   maximo: maximo,
                   color: _PaginaImpacto4LifeNuevaState._naranja),
@@ -678,10 +678,10 @@ class _CardEvolucionImpactoNuevo extends StatelessWidget {
         children: [
           Row(
             children: [
-              const Expanded(
+              Expanded(
                 child: Text(
-                  'Evolucion de acciones',
-                  style: TextStyle(
+                  txtApp('Evolucion de acciones', 'Action trends'),
+                  style: const TextStyle(
                     color: _PaginaImpacto4LifeNuevaState._tinta,
                     fontSize: 22,
                     fontWeight: FontWeight.w900,
@@ -702,9 +702,9 @@ class _CardEvolucionImpactoNuevo extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 3),
-                  const Text(
-                    'vs. mes anterior',
-                    style: TextStyle(
+                  Text(
+                    txtApp('vs. mes anterior', 'vs. previous month'),
+                    style: const TextStyle(
                       color: _PaginaImpacto4LifeNuevaState._textoSuave,
                       fontSize: 14,
                       fontWeight: FontWeight.w700,
@@ -856,10 +856,13 @@ class _CardProductosImpactoNuevo extends StatelessWidget {
         children: [
           Row(
             children: [
-              const Expanded(
+              Expanded(
                 child: Text(
-                  'Productos mas consultados',
-                  style: TextStyle(
+                  txtApp(
+                    'Productos mas consultados',
+                    'Most consulted products',
+                  ),
+                  style: const TextStyle(
                     color: _PaginaImpacto4LifeNuevaState._tinta,
                     fontSize: 22,
                     fontWeight: FontWeight.w900,
@@ -871,21 +874,22 @@ class _CardProductosImpactoNuevo extends StatelessWidget {
                   borderRadius: BorderRadius.circular(14),
                   onTap: () =>
                       _mostrarTodosProductosImpacto(context, productos),
-                  child: const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+                  child: Padding(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
-                          'Ver todos',
-                          style: TextStyle(
+                          txtApp('Ver todos', 'View all'),
+                          style: const TextStyle(
                             color: _PaginaImpacto4LifeNuevaState._azulVivo,
                             fontSize: 17,
                             fontWeight: FontWeight.w700,
                           ),
                         ),
-                        SizedBox(width: 4),
-                        Icon(
+                        const SizedBox(width: 4),
+                        const Icon(
                           Icons.chevron_right_rounded,
                           color: _PaginaImpacto4LifeNuevaState._azulVivo,
                           size: 28,
@@ -898,12 +902,15 @@ class _CardProductosImpactoNuevo extends StatelessWidget {
           ),
           const SizedBox(height: 22),
           if (visibles.isEmpty)
-            const Center(
+            Center(
               child: Padding(
-                padding: EdgeInsets.symmetric(vertical: 20),
+                padding: const EdgeInsets.symmetric(vertical: 20),
                 child: Text(
-                  'Sin productos registrados este mes',
-                  style: TextStyle(
+                  txtApp(
+                    'Sin productos registrados este mes',
+                    'No products registered this month',
+                  ),
+                  style: const TextStyle(
                       color: _PaginaImpacto4LifeNuevaState._textoSuave,
                       fontWeight: FontWeight.w700),
                 ),
@@ -1034,7 +1041,10 @@ class _ProductoImpactoNuevo extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         Text(
-          '$consultas ${consultas == 1 ? 'consulta' : 'consultas'}',
+          txtApp(
+            '$consultas ${consultas == 1 ? 'consulta' : 'consultas'}',
+            '$consultas ${consultas == 1 ? 'consultation' : 'consultations'}',
+          ),
           style: const TextStyle(
             color: _PaginaImpacto4LifeNuevaState._textoSuave,
             fontSize: 14,
@@ -1057,9 +1067,9 @@ class _CardPacientesImpactoNuevo extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Pacientes atendidos',
-            style: TextStyle(
+          Text(
+            txtApp('Pacientes atendidos', 'Patients served'),
+            style: const TextStyle(
                 color: _PaginaImpacto4LifeNuevaState._tinta,
                 fontSize: 21,
                 fontWeight: FontWeight.w900),
@@ -1079,10 +1089,10 @@ class _CardPacientesImpactoNuevo extends StatelessWidget {
                     fontWeight: FontWeight.w900),
               ),
               const SizedBox(width: 10),
-              const Expanded(
+              Expanded(
                 child: Text(
-                  'este mes',
-                  style: TextStyle(
+                  txtApp('este mes', 'this month'),
+                  style: const TextStyle(
                       color: _PaginaImpacto4LifeNuevaState._textoSuave,
                       fontSize: 18,
                       fontWeight: FontWeight.w800),
@@ -1092,7 +1102,10 @@ class _CardPacientesImpactoNuevo extends StatelessWidget {
           ),
           const SizedBox(height: 22),
           Text(
-            '${resumen.variacion >= 0 ? '+' : ''}${resumen.variacion}%\nvs. mes anterior',
+            txtApp(
+              '${resumen.variacion >= 0 ? '+' : ''}${resumen.variacion}%\nvs. mes anterior',
+              '${resumen.variacion >= 0 ? '+' : ''}${resumen.variacion}%\nvs. previous month',
+            ),
             style: TextStyle(
               color: resumen.variacion >= 0
                   ? _PaginaImpacto4LifeNuevaState._verde
@@ -1125,9 +1138,9 @@ class _CardHorasImpactoNuevo extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Horas mas activas',
-            style: TextStyle(
+          Text(
+            txtApp('Horas mas activas', 'Most active hours'),
+            style: const TextStyle(
                 color: _PaginaImpacto4LifeNuevaState._tinta,
                 fontSize: 21,
                 fontWeight: FontWeight.w900),
@@ -1158,11 +1171,11 @@ class _CardHorasImpactoNuevo extends StatelessWidget {
               ),
             ],
           ),
-          const Padding(
-            padding: EdgeInsets.only(left: 50, top: 4),
+          Padding(
+            padding: const EdgeInsets.only(left: 50, top: 4),
             child: Text(
-              'Pico de consultas',
-              style: TextStyle(
+              txtApp('Pico de consultas', 'Consultation peak'),
+              style: const TextStyle(
                   color: _PaginaImpacto4LifeNuevaState._textoSuave,
                   fontSize: 15,
                   fontWeight: FontWeight.w700),
@@ -1201,21 +1214,24 @@ class _CardCompromisoImpactoNuevo extends StatelessWidget {
                   icono: Icons.volunteer_activism_outlined,
                   color: _PaginaImpacto4LifeNuevaState._verde),
               const SizedBox(width: 18),
-              const Expanded(
+              Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Tu compromiso en 4Life',
-                      style: TextStyle(
+                      txtApp('Tu compromiso en 4Life', 'Your 4Life commitment'),
+                      style: const TextStyle(
                           color: _PaginaImpacto4LifeNuevaState._tinta,
                           fontSize: 19,
                           fontWeight: FontWeight.w900),
                     ),
-                    SizedBox(height: 8),
+                    const SizedBox(height: 8),
                     Text(
-                      'Estas generando habitos mas saludables y ayudando a transformar vidas.',
-                      style: TextStyle(
+                      txtApp(
+                        'Estas generando habitos mas saludables y ayudando a transformar vidas.',
+                        'You are building healthier habits and helping transform lives.',
+                      ),
+                      style: const TextStyle(
                           color: _PaginaImpacto4LifeNuevaState._textoSuave,
                           fontSize: 15.5,
                           height: 1.35,

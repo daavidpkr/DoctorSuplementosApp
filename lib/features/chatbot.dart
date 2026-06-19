@@ -71,6 +71,7 @@ class PaginaChatbot extends StatefulWidget {
 class _PaginaChatbotState extends State<PaginaChatbot> {
   final TextEditingController _controller = TextEditingController();
   final AudioRecorder _audioRecorder = AudioRecorder();
+  final ScrollController _scrollRespuestaBot = ScrollController();
   final List<Map<String, String>> mensajes = [];
   ArchivoAdjuntoIA? _adjunto;
   bool enviando = false;
@@ -80,11 +81,97 @@ class _PaginaChatbotState extends State<PaginaChatbot> {
   bool _botHablando = false;
   String _estadoLlamada = "Conectando...";
   String _ultimaRespuestaBot = "";
+  List<String> _lineasRespuestaBot = [];
+  int _lineaRespuestaActiva = 0;
+  Timer? _temporizadorRespuestaBot;
   late String _conversacionId;
 
   bool get _ingles => IdiomaService.actual.value == IdiomaApp.ingles;
 
   String _txt(String es, String en) => _ingles ? en : es;
+
+  List<String> _dividirRespuestaBot(String texto) {
+    final limpio = texto.replaceAll(RegExp(r'\s+'), ' ').trim();
+    if (limpio.isEmpty) return const [];
+    final partes = RegExp(r'[^.!?;:]+[.!?;:]?')
+        .allMatches(limpio)
+        .map((match) => match.group(0)?.trim() ?? '')
+        .where((linea) => linea.isNotEmpty)
+        .toList();
+    if (partes.length <= 1) {
+      return limpio.split(RegExp(r'(?<=\S)\s+(?=\S)')).fold<List<String>>([],
+          (lineas, palabra) {
+        if (lineas.isEmpty || '${lineas.last} $palabra'.length > 52) {
+          lineas.add(palabra);
+        } else {
+          lineas[lineas.length - 1] = '${lineas.last} $palabra';
+        }
+        return lineas;
+      });
+    }
+    return partes;
+  }
+
+  void _iniciarAnimacionRespuestaBot(String texto) {
+    _temporizadorRespuestaBot?.cancel();
+    final lineas = _dividirRespuestaBot(texto);
+    setState(() {
+      _ultimaRespuestaBot = texto;
+      _lineasRespuestaBot = lineas;
+      _lineaRespuestaActiva = 0;
+      _botHablando = lineas.isNotEmpty;
+    });
+    if (lineas.isEmpty) return;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scrollRespuestaBot.hasClients) {
+        _scrollRespuestaBot.jumpTo(0);
+      }
+    });
+
+    final totalPalabras = texto.trim().split(RegExp(r'\s+')).length;
+    final duracionEstimada = Duration(
+      milliseconds: (totalPalabras * (_ingles ? 430 : 470)).clamp(4500, 28000),
+    );
+    final intervalo = Duration(
+      milliseconds:
+          (duracionEstimada.inMilliseconds / lineas.length).round().clamp(
+                900,
+                2600,
+              ),
+    );
+
+    _temporizadorRespuestaBot = Timer.periodic(intervalo, (timer) {
+      if (!mounted || !_botHablando || _lineasRespuestaBot.isEmpty) {
+        timer.cancel();
+        return;
+      }
+      final siguiente = _lineaRespuestaActiva + 1;
+      if (siguiente >= _lineasRespuestaBot.length) {
+        timer.cancel();
+        return;
+      }
+      setState(() => _lineaRespuestaActiva = siguiente);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!_scrollRespuestaBot.hasClients) return;
+        final maximo = _scrollRespuestaBot.position.maxScrollExtent;
+        final destino = (siguiente * 44.0).clamp(0.0, maximo);
+        _scrollRespuestaBot.animateTo(
+          destino,
+          duration: const Duration(milliseconds: 620),
+          curve: Curves.easeOutCubic,
+        );
+      });
+    });
+  }
+
+  void _detenerAnimacionRespuestaBot() {
+    _temporizadorRespuestaBot?.cancel();
+    _temporizadorRespuestaBot = null;
+    if (mounted) {
+      setState(() => _botHablando = false);
+    }
+  }
 
   @override
   void initState() {
@@ -194,22 +281,21 @@ class _PaginaChatbotState extends State<PaginaChatbot> {
             "DoctorSuplementos esta respondiendo...",
             "DoctorSuplementos is answering...",
           );
-          _ultimaRespuestaBot = respuestaIA;
-          _botHablando = true;
         }
       });
       await ChatHistoryService.guardarConversacion(_conversacionId, mensajes);
       if (widget.modoLlamada) {
+        _iniciarAnimacionRespuestaBot(respuestaIA);
         await ServicioTextoVoz.reproducir(respuestaIA);
         if (mounted) {
           setState(() {
-            _botHablando = false;
             _estadoLlamada = _txt(
               "Manten pulsado el microfono para hablar",
               "Hold the microphone to talk",
             );
           });
         }
+        _detenerAnimacionRespuestaBot();
       }
     } catch (e) {
       if (!mounted) return;
@@ -223,9 +309,11 @@ class _PaginaChatbotState extends State<PaginaChatbot> {
             "No pude responder. Intenta nuevamente",
             "I could not answer. Try again",
           );
-          _botHablando = false;
         }
       });
+      if (widget.modoLlamada) {
+        _detenerAnimacionRespuestaBot();
+      }
       await ChatHistoryService.guardarConversacion(_conversacionId, mensajes);
     } finally {
       if (mounted) {
@@ -242,6 +330,8 @@ class _PaginaChatbotState extends State<PaginaChatbot> {
     if (widget.modoLlamada) {
       unawaited(ServicioTextoVoz.detener());
     }
+    _temporizadorRespuestaBot?.cancel();
+    _scrollRespuestaBot.dispose();
     _audioRecorder.dispose();
     _controller.dispose();
     super.dispose();
@@ -319,10 +409,13 @@ class _PaginaChatbotState extends State<PaginaChatbot> {
       if (!mounted) return;
       showDialog(
         context: context,
-        builder: (context) => const AlertDialog(
-          title: Text("Permiso de microfono"),
+        builder: (context) => AlertDialog(
+          title: Text(txtApp("Permiso de microfono", "Microphone permission")),
           content: Text(
-            "Activa el permiso del microfono para grabar la nota de voz.",
+            txtApp(
+              "Activa el permiso del microfono para grabar la nota de voz.",
+              "Enable microphone permission to record the voice note.",
+            ),
           ),
         ),
       );
@@ -355,10 +448,14 @@ class _PaginaChatbotState extends State<PaginaChatbot> {
         setState(() => _estadoLlamada = "Se necesita acceso al micrófono");
         showDialog(
           context: context,
-          builder: (context) => const AlertDialog(
-            title: Text("Permiso de micrófono"),
+          builder: (context) => AlertDialog(
+            title:
+                Text(txtApp("Permiso de microfono", "Microphone permission")),
             content: Text(
-              "Activa el permiso del micrófono para conversar con DoctorSuplementos.",
+              txtApp(
+                "Activa el permiso del microfono para conversar con DoctorSuplementos.",
+                "Enable microphone permission to talk with DoctorSuplementos.",
+              ),
             ),
           ),
         );
@@ -575,7 +672,7 @@ extension _PaginaChatbotUi on _PaginaChatbotState {
                   child: Row(
                     children: [
                       IconButton(
-                        tooltip: "Finalizar llamada",
+                        tooltip: txtApp("Finalizar llamada", "End call"),
                         onPressed: () {
                           ServicioTextoVoz.detener();
                           Navigator.pop(context);
@@ -674,33 +771,8 @@ extension _PaginaChatbotUi on _PaginaChatbotState {
                 const SizedBox(height: 24),
                 AnimatedSwitcher(
                   duration: const Duration(milliseconds: 250),
-                  child: _botHablando && _ultimaRespuestaBot.trim().isNotEmpty
-                      ? Container(
-                          key: const ValueKey('respuesta_bot_live'),
-                          width: double.infinity,
-                          margin: const EdgeInsets.symmetric(horizontal: 24),
-                          padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
-                          constraints: const BoxConstraints(maxHeight: 168),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.12),
-                            borderRadius: BorderRadius.circular(18),
-                            border: Border.all(
-                              color: Colors.white.withValues(alpha: 0.22),
-                            ),
-                          ),
-                          child: SingleChildScrollView(
-                            child: Text(
-                              _ultimaRespuestaBot,
-                              textAlign: TextAlign.center,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 16,
-                                height: 1.35,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                        )
+                  child: _botHablando && _lineasRespuestaBot.isNotEmpty
+                      ? _letrasRespuestaBot()
                       : SizedBox(
                           key: const ValueKey('respuesta_bot_live_vacia'),
                           height: _ultimaRespuestaBot.trim().isEmpty ? 0 : 18,
@@ -778,6 +850,71 @@ extension _PaginaChatbotUi on _PaginaChatbotState {
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _letrasRespuestaBot() {
+    return Container(
+      key: const ValueKey('respuesta_bot_live'),
+      width: double.infinity,
+      height: 178,
+      margin: const EdgeInsets.symmetric(horizontal: 24),
+      padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.24),
+        ),
+      ),
+      child: ShaderMask(
+        shaderCallback: (rect) {
+          return const LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              Colors.transparent,
+              Colors.white,
+              Colors.white,
+              Colors.transparent,
+            ],
+            stops: [0, 0.16, 0.84, 1],
+          ).createShader(rect);
+        },
+        blendMode: BlendMode.dstIn,
+        child: ListView.builder(
+          controller: _scrollRespuestaBot,
+          physics: const NeverScrollableScrollPhysics(),
+          padding: const EdgeInsets.symmetric(vertical: 42),
+          itemCount: _lineasRespuestaBot.length,
+          itemBuilder: (context, index) {
+            final activa = index == _lineaRespuestaActiva;
+            final pasada = index < _lineaRespuestaActiva;
+            return AnimatedDefaultTextStyle(
+              duration: const Duration(milliseconds: 280),
+              curve: Curves.easeOutCubic,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: activa
+                    ? Colors.white
+                    : pasada
+                        ? Colors.white.withValues(alpha: 0.38)
+                        : Colors.white.withValues(alpha: 0.58),
+                fontSize: activa ? 20 : 17,
+                height: 1.28,
+                fontWeight: activa ? FontWeight.w900 : FontWeight.w700,
+              ),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 5),
+                child: Text(
+                  _lineasRespuestaBot[index],
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            );
+          },
         ),
       ),
     );
@@ -865,7 +1002,7 @@ extension _PaginaChatbotUi on _PaginaChatbotState {
             ),
           ),
           IconButton(
-            tooltip: "Historial de chats",
+            tooltip: txtApp("Historial de chats", "Chat history"),
             onPressed: () => Navigator.push(
               context,
               MaterialPageRoute(
@@ -1203,34 +1340,39 @@ extension _PaginaChatbotUi on _PaginaChatbotState {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   IconButton(
-                    tooltip: "Escuchar respuesta",
+                    tooltip: txtApp("Escuchar respuesta", "Listen to answer"),
                     visualDensity: VisualDensity.compact,
                     icon: const Icon(Icons.volume_up_rounded, size: 21),
                     color: const Color(0xFF4059EA),
                     onPressed: () => ServicioTextoVoz.reproducir(texto),
                   ),
                   IconButton(
-                    tooltip: "Detener audio",
+                    tooltip: txtApp("Detener audio", "Stop audio"),
                     visualDensity: VisualDensity.compact,
                     icon: const Icon(Icons.stop_circle_outlined, size: 21),
                     color: const Color(0xFF4059EA),
                     onPressed: ServicioTextoVoz.detener,
                   ),
                   IconButton(
-                    tooltip: "Copiar",
+                    tooltip: txtApp("Copiar", "Copy"),
                     visualDensity: VisualDensity.compact,
                     icon: const Icon(Icons.copy_rounded, size: 20),
                     color: const Color(0xFF4059EA),
                     onPressed: () {
                       Clipboard.setData(ClipboardData(text: texto));
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                            content: Text("Copiado al portapapeles")),
+                        SnackBar(
+                            content: Text(
+                          txtApp(
+                            "Copiado al portapapeles",
+                            "Copied to clipboard",
+                          ),
+                        )),
                       );
                     },
                   ),
                   IconButton(
-                    tooltip: "Compartir",
+                    tooltip: txtApp("Compartir", "Share"),
                     visualDensity: VisualDensity.compact,
                     icon: const Icon(Icons.share_rounded, size: 20),
                     color: const Color(0xFF4059EA),
@@ -1295,7 +1437,7 @@ extension _PaginaChatbotUi on _PaginaChatbotState {
                     ),
                   ),
                   IconButton(
-                    tooltip: "Quitar archivo",
+                    tooltip: txtApp("Quitar archivo", "Remove file"),
                     visualDensity: VisualDensity.compact,
                     onPressed: quitarAdjuntoChat,
                     icon: const Icon(Icons.close_rounded),
@@ -1315,21 +1457,23 @@ extension _PaginaChatbotUi on _PaginaChatbotState {
             child: Row(
               children: [
                 IconButton(
-                  tooltip: "Tomar foto",
+                  tooltip: txtApp("Tomar foto", "Take photo"),
                   visualDensity: VisualDensity.compact,
                   onPressed: enviando ? null : tomarFotoChat,
                   icon: const Icon(Icons.photo_camera_rounded),
                   color: const Color(0xFF535B86),
                 ),
                 IconButton(
-                  tooltip: "Adjuntar archivo",
+                  tooltip: txtApp("Adjuntar archivo", "Attach file"),
                   visualDensity: VisualDensity.compact,
                   onPressed: enviando ? null : seleccionarArchivoChat,
                   icon: const Icon(Icons.attach_file_rounded),
                   color: const Color(0xFF535B86),
                 ),
                 IconButton(
-                  tooltip: _grabandoAudio ? "Detener audio" : "Grabar audio",
+                  tooltip: _grabandoAudio
+                      ? txtApp("Detener audio", "Stop audio")
+                      : txtApp("Grabar audio", "Record audio"),
                   visualDensity: VisualDensity.compact,
                   onPressed: enviando ? null : alternarAudioChat,
                   icon: Icon(_grabandoAudio

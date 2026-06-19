@@ -121,7 +121,14 @@ class _PaginaCalculadoraPreciosState extends State<PaginaCalculadoraPrecios> {
     _agregarDesdeTexto();
     if (_productos.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Selecciona al menos un producto")),
+        SnackBar(
+          content: Text(
+            txtApp(
+              "Selecciona al menos un producto",
+              "Select at least one product",
+            ),
+          ),
+        ),
       );
       return;
     }
@@ -164,9 +171,9 @@ class _PaginaCalculadoraPreciosState extends State<PaginaCalculadoraPrecios> {
                 ),
               ),
               const SizedBox(height: 18),
-              const Text(
-                "Resultado",
-                style: TextStyle(
+              Text(
+                txtApp("Resultado", "Result"),
+                style: const TextStyle(
                   color: Color(0xFF13288E),
                   fontSize: 22,
                   fontWeight: FontWeight.w900,
@@ -181,7 +188,7 @@ class _PaginaCalculadoraPreciosState extends State<PaginaCalculadoraPrecios> {
                 onPressed: () =>
                     ServicioTextoVoz.reproducir(_resumenCompartir()),
                 icon: const Icon(Icons.volume_up_rounded),
-                label: const Text("Escuchar resultado"),
+                label: Text(txtApp("Escuchar resultado", "Listen to result")),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: const Color(0xFF17218D),
                   minimumSize: const Size(double.infinity, 52),
@@ -195,7 +202,7 @@ class _PaginaCalculadoraPreciosState extends State<PaginaCalculadoraPrecios> {
               ElevatedButton.icon(
                 onPressed: _compartirResultado,
                 icon: const Icon(Icons.share_rounded),
-                label: const Text("Compartir resultado"),
+                label: Text(txtApp("Compartir resultado", "Share result")),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF17218D),
                   foregroundColor: Colors.white,

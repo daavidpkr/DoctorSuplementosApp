@@ -156,11 +156,18 @@ class _ConsultaProductoPaginaState extends State<ConsultaProductoPagina> {
       showDialog(
         context: context,
         builder: (c) => AlertDialog(
-          title: const Text("Error"),
-          content: const Text("No se pudo consultar el producto con la IA."),
+          title: Text(txtApp("Error", "Error")),
+          content: Text(
+            txtApp(
+              "No se pudo consultar el producto con la IA.",
+              "The product could not be checked with AI.",
+            ),
+          ),
           actions: [
             TextButton(
-                onPressed: () => Navigator.pop(c), child: const Text("Cerrar")),
+              onPressed: () => Navigator.pop(c),
+              child: Text(txtApp("Cerrar", "Close")),
+            ),
           ],
         ),
       );
