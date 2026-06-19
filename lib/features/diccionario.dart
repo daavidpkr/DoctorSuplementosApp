@@ -264,6 +264,69 @@ const List<EntradaDiccionario4Life> entradasDiccionario4Life = [
     conceptoEs: 'Sensación de energía, actividad y bienestar diario.',
     conceptoEn: 'A sense of energy, activity, and daily wellness.',
   ),
+  EntradaDiccionario4Life(
+    termino: 'BBB+A',
+    conceptoEs:
+        'Concepto usado para explicar una base de bienestar, belleza, balance y actividad dentro de una estrategia de consumo y duplicacion.',
+    conceptoEn:
+        'A concept used to explain a base of wellness, beauty, balance, and activity within a consumption and duplication strategy.',
+  ),
+  EntradaDiccionario4Life(
+    termino: 'PDR',
+    conceptoEs:
+        'Sigla de uso comercial interno para referirse a una referencia, plan o registro de desarrollo dentro del seguimiento de negocio.',
+    conceptoEn:
+        'An internal business acronym used to refer to a development reference, plan, or record within business follow-up.',
+  ),
+  EntradaDiccionario4Life(
+    termino: 'Cliente Preferente',
+    conceptoEs:
+        'Cliente registrado para comprar productos de forma recurrente con beneficios comerciales segun las reglas vigentes de 4Life.',
+    conceptoEn:
+        'A registered customer who buys products repeatedly with commercial benefits according to current 4Life rules.',
+  ),
+  EntradaDiccionario4Life(
+    termino: 'Programa de Lealtad',
+    conceptoEs:
+        'Programa orientado a recompensar la compra recurrente y fortalecer el consumo constante de productos.',
+    conceptoEn:
+        'A program designed to reward repeat purchases and strengthen consistent product consumption.',
+  ),
+  EntradaDiccionario4Life(
+    termino: 'LP (Life Points)',
+    conceptoEs:
+        'Puntos de volumen asociados a productos 4Life que ayudan a medir consumo, actividad y avance comercial.',
+    conceptoEn:
+        'Volume points assigned to 4Life products that help measure consumption, activity, and business progress.',
+  ),
+  EntradaDiccionario4Life(
+    termino: 'Patentes',
+    conceptoEs:
+        'Protecciones legales relacionadas con formulas, procesos o tecnologias que respaldan la diferenciacion de ciertos productos.',
+    conceptoEn:
+        'Legal protections related to formulas, processes, or technologies that support the differentiation of certain products.',
+  ),
+  EntradaDiccionario4Life(
+    termino: 'Certificación 4Life',
+    conceptoEs:
+        'Proceso de formacion o reconocimiento que valida conocimiento sobre productos, cultura, herramientas y buenas practicas de 4Life.',
+    conceptoEn:
+        'A training or recognition process that validates knowledge about 4Life products, culture, tools, and good practices.',
+  ),
+  EntradaDiccionario4Life(
+    termino: 'Consejo de Ciencias Médicas (HSAB)',
+    conceptoEs:
+        'Grupo asesor de ciencias de la salud asociado a la revision, orientacion y respaldo cientifico de 4Life.',
+    conceptoEn:
+        'A health sciences advisory group associated with scientific review, guidance, and support for 4Life.',
+  ),
+  EntradaDiccionario4Life(
+    termino: 'Cordyvant',
+    conceptoEs:
+        'Tecnologia o concepto de formulacion usado por 4Life para apoyar la absorcion, biodisponibilidad o entrega de ciertos componentes.',
+    conceptoEn:
+        'A 4Life formulation technology or concept used to support absorption, bioavailability, or delivery of certain components.',
+  ),
 ];
 
 class _CategoriaDiccionario {
@@ -310,6 +373,12 @@ const List<_CategoriaDiccionario> _categoriasDiccionario = [
     etiquetaEs: 'Bienestar',
     etiquetaEn: 'Wellness',
     icono: Icons.favorite_border_rounded,
+  ),
+  _CategoriaDiccionario(
+    clave: 'negocio',
+    etiquetaEs: 'Negocio',
+    etiquetaEn: 'Business',
+    icono: Icons.workspace_premium_outlined,
   ),
 ];
 
@@ -646,6 +715,7 @@ class _PaginaDiccionario4LifeState extends State<PaginaDiccionario4Life> {
     bool ingles,
   ) {
     final terminoVisible = _terminoVisible(entrada, ingles);
+    final animado = _esEntradaAnimada(entrada);
     return InkWell(
       borderRadius: BorderRadius.circular(16),
       onTap: () => _mostrarConcepto(context, entrada, ingles),
@@ -667,8 +737,9 @@ class _PaginaDiccionario4LifeState extends State<PaginaDiccionario4Life> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
-              _iconoEntrada(entrada),
-              color: const Color(0xFF2839C7),
+              animado ? Icons.play_circle_fill_rounded : _iconoEntrada(entrada),
+              color:
+                  animado ? const Color(0xFF10A884) : const Color(0xFF2839C7),
               size: 22,
             ),
             const SizedBox(width: 11),
@@ -680,6 +751,14 @@ class _PaginaDiccionario4LifeState extends State<PaginaDiccionario4Life> {
                 fontWeight: FontWeight.w900,
               ),
             ),
+            if (animado) ...[
+              const SizedBox(width: 8),
+              const Icon(
+                Icons.auto_awesome_rounded,
+                color: Color(0xFF10A884),
+                size: 18,
+              ),
+            ],
           ],
         ),
       ),
@@ -853,6 +932,10 @@ class _PaginaDiccionario4LifeState extends State<PaginaDiccionario4Life> {
                 ],
               ),
               const SizedBox(height: 18),
+              if (_esEntradaAnimada(entrada)) ...[
+                _animacionComponente(entrada, ingles),
+                const SizedBox(height: 18),
+              ],
               Text(
                 ingles ? entrada.conceptoEn : entrada.conceptoEs,
                 style: const TextStyle(
@@ -915,6 +998,20 @@ class _PaginaDiccionario4LifeState extends State<PaginaDiccionario4Life> {
         texto.contains('dosis')) {
       categorias.add('bienestar');
     }
+    if (texto.contains('bbb') ||
+        texto.contains('pdr') ||
+        texto.contains('cliente preferente') ||
+        texto.contains('lealtad') ||
+        texto.contains('life points') ||
+        texto.contains('lp') ||
+        texto.contains('patente') ||
+        texto.contains('certificacion') ||
+        texto.contains('hsab') ||
+        texto.contains('cordyvant') ||
+        texto.contains('comercial') ||
+        texto.contains('negocio')) {
+      categorias.add('negocio');
+    }
     return categorias.isEmpty ? const ['bienestar'] : categorias.toList();
   }
 
@@ -947,12 +1044,123 @@ class _PaginaDiccionario4LifeState extends State<PaginaDiccionario4Life> {
       'NutriciÃ³n avanzada' || 'Nutrición avanzada' => 'Advanced nutrition',
       'Salud celular' => 'Cellular health',
       'Vitalidad' => 'Vitality',
+      'Cliente Preferente' => 'Preferred Customer',
+      'Programa de Lealtad' => 'Loyalty Program',
+      'Patentes' => 'Patents',
+      'Certificación 4Life' => '4Life Certification',
+      'Consejo de Ciencias Médicas (HSAB)' =>
+        'Health Sciences Advisory Board (HSAB)',
       _ => entrada.termino,
     };
   }
 
+  bool _esEntradaAnimada(EntradaDiccionario4Life entrada) => true;
+
+  String _assetAnimacion(EntradaDiccionario4Life entrada) {
+    final texto = _normalizar(
+      '${entrada.termino} ${entrada.conceptoEs} ${entrada.conceptoEn}',
+    );
+    final categorias = _categoriaEntrada(entrada);
+    if (texto.contains('calostro bovino') ||
+        texto.contains('bovine colostrum') ||
+        categorias.contains('nutricion') ||
+        categorias.contains('bienestar')) {
+      return 'assets/lottie/bovine_colostrum_cells.json';
+    }
+    return 'assets/lottie/transfer_factor_cells.json';
+  }
+
+  String _tituloAnimacion(EntradaDiccionario4Life entrada, bool ingles) {
+    final texto = _normalizar(
+      '${entrada.termino} ${entrada.conceptoEs} ${entrada.conceptoEn}',
+    );
+    if (texto.contains('calostro bovino') ||
+        texto.contains('bovine colostrum')) {
+      return ingles
+          ? 'Bovine colostrum supporting cellular activity'
+          : 'Calostro bovino apoyando la actividad celular';
+    }
+    if (texto.contains('factor de transferencia') ||
+        texto.contains('factores de transferencia') ||
+        texto.contains('transfer factor')) {
+      return ingles
+          ? 'Transfer factors interacting with immune cells'
+          : 'Factores de transferencia interactuando con celulas inmunes';
+    }
+    if (_categoriaEntrada(entrada).contains('negocio')) {
+      return ingles
+          ? 'Business concept mapped into a quick visual loop'
+          : 'Concepto de negocio explicado en un bucle visual rapido';
+    }
+    if (_categoriaEntrada(entrada).contains('nutricion')) {
+      return ingles
+          ? 'Nutritional component supporting cellular wellness'
+          : 'Componente nutricional apoyando el bienestar celular';
+    }
+    return ingles
+        ? 'Wellness concept shown as cellular support'
+        : 'Concepto de bienestar mostrado como apoyo celular';
+  }
+
+  Widget _animacionComponente(EntradaDiccionario4Life entrada, bool ingles) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF2F6FF),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: const Color(0xFFDDE5FF), width: 1.3),
+      ),
+      child: Column(
+        children: [
+          SizedBox(
+            height: 190,
+            child: Lottie.asset(
+              _assetAnimacion(entrada),
+              repeat: true,
+              animate: true,
+              fit: BoxFit.contain,
+              errorBuilder: (context, error, stackTrace) => const Icon(
+                Icons.bubble_chart_rounded,
+                color: Color(0xFF172394),
+                size: 96,
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            _tituloAnimacion(entrada, ingles),
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: Color(0xFF12248B),
+              fontSize: 15,
+              height: 1.25,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            ingles
+                ? 'Three-second visual loop for quick explanation.'
+                : 'Bucle visual de tres segundos para explicarlo rapido.',
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: Color(0xFF46527E),
+              fontSize: 13,
+              height: 1.25,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   IconData _iconoEntrada(EntradaDiccionario4Life entrada) {
     final categorias = _categoriaEntrada(entrada);
+    if (categorias.contains('negocio')) {
+      return Icons.workspace_premium_outlined;
+    }
     if (categorias.contains('productos')) return Icons.medication_outlined;
     if (categorias.contains('inmunidad')) return Icons.shield_outlined;
     if (categorias.contains('nutricion')) return Icons.eco_outlined;
@@ -962,6 +1170,12 @@ class _PaginaDiccionario4LifeState extends State<PaginaDiccionario4Life> {
   String _normalizar(String texto) {
     return texto
         .toLowerCase()
+        .replaceAll(RegExp(r'[áàäâ]'), 'a')
+        .replaceAll(RegExp(r'[éèëê]'), 'e')
+        .replaceAll(RegExp(r'[íìïî]'), 'i')
+        .replaceAll(RegExp(r'[óòöô]'), 'o')
+        .replaceAll(RegExp(r'[úùüû]'), 'u')
+        .replaceAll('ñ', 'n')
         .replaceAll(RegExp(r'[áàäâ]'), 'a')
         .replaceAll(RegExp(r'[éèëê]'), 'e')
         .replaceAll(RegExp(r'[íìïî]'), 'i')

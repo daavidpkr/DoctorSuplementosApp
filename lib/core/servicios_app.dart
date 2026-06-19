@@ -154,6 +154,30 @@ class IdiomaService {
       'es': 'Calcula precios, LP y totales para uno o varios productos.',
       'en': 'Calculate prices, LP, and totals for one or more products.',
     },
+    'consumption_optimizer': {
+      'es': 'Optimizador de consumo',
+      'en': 'Consumption Block Optimizer',
+    },
+    'consumption_optimizer_desc': {
+      'es': 'Genera paquetes maestros desde una meta minima de LP.',
+      'en': 'Build master packs from a minimum LP target.',
+    },
+    'local_inventory': {
+      'es': 'My Local Inventory',
+      'en': 'My Local Inventory',
+    },
+    'local_inventory_desc': {
+      'es': 'Track physical stock available for immediate delivery.',
+      'en': 'Track physical stock available for immediate delivery.',
+    },
+    'ab_comparator': {
+      'es': 'A/B Comparator',
+      'en': 'A/B Comparator',
+    },
+    'ab_comparator_desc': {
+      'es': 'Compare two supplements side by side for client needs.',
+      'en': 'Compare two supplements side by side for client needs.',
+    },
     'diagnosis': {'es': 'Diagnostico', 'en': 'Diagnosis'},
     'diagnosis_desc': {
       'es': 'Evalua y conoce las necesidades de tus clientes.',

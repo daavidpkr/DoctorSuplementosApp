@@ -63,6 +63,31 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
                     ),
                     _tarjetaMenu(
                       context,
+                      titulo: IdiomaService.texto('consumption_optimizer'),
+                      descripcion:
+                          IdiomaService.texto('consumption_optimizer_desc'),
+                      icono: Icons.view_module_rounded,
+                      colores: const [Color(0xFF172394), Color(0xFF07125E)],
+                      destino: const PaginaOptimizadorConsumo(),
+                    ),
+                    _tarjetaMenu(
+                      context,
+                      titulo: IdiomaService.texto('local_inventory'),
+                      descripcion: IdiomaService.texto('local_inventory_desc'),
+                      icono: Icons.inventory_2_rounded,
+                      colores: const [Color(0xFF3047CC), Color(0xFF172394)],
+                      destino: const PaginaInventarioLocal(),
+                    ),
+                    _tarjetaMenu(
+                      context,
+                      titulo: IdiomaService.texto('ab_comparator'),
+                      descripcion: IdiomaService.texto('ab_comparator_desc'),
+                      icono: Icons.compare_arrows_rounded,
+                      colores: const [Color(0xFF1487A8), Color(0xFF172394)],
+                      destino: const PaginaComparadorAB(),
+                    ),
+                    _tarjetaMenu(
+                      context,
                       titulo: IdiomaService.texto('diagnosis'),
                       descripcion: IdiomaService.texto('diagnosis_desc'),
                       icono: Icons.medical_services_rounded,
