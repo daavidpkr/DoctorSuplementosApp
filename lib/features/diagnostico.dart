@@ -404,37 +404,37 @@ class _FormularioPacienteState extends State<FormularioPaciente> {
                   _tarjetaProgreso(),
                   const SizedBox(height: 22),
                   _tarjetaCampoDiagnostico(
-                    titulo: "Nombre completo",
+                    titulo: txtApp("Nombre completo", "Full name"),
                     icono: Icons.person_outline_rounded,
                     child: _campoTextoDiagnostico(
                       controller: nombreController,
-                      hint: "Ingresa tu nombre",
+                      hint: txtApp("Ingresa tu nombre", "Enter your name"),
                       prefixIcon: Icons.person_outline_rounded,
                       textInputAction: TextInputAction.next,
                     ),
                   ),
                   const SizedBox(height: 16),
                   _tarjetaCampoDiagnostico(
-                    titulo: "Edad",
+                    titulo: txtApp("Edad", "Age"),
                     icono: Icons.calendar_month_rounded,
                     child: _campoTextoDiagnostico(
                       controller: edadController,
-                      hint: "Ingresa tu edad",
+                      hint: txtApp("Ingresa tu edad", "Enter your age"),
                       prefixIcon: Icons.calendar_month_outlined,
                       keyboardType: TextInputType.number,
-                      suffixText: "Años",
+                      suffixText: txtApp("Anos", "Years"),
                       textInputAction: TextInputAction.next,
                     ),
                   ),
                   const SizedBox(height: 16),
                   _tarjetaCampoDiagnostico(
-                    titulo: "Genero",
+                    titulo: txtApp("Genero", "Gender"),
                     icono: Icons.transgender_rounded,
                     child: _selectorGeneroDiagnostico(),
                   ),
                   const SizedBox(height: 16),
                   _tarjetaCampoDiagnostico(
-                    titulo: "Sintomas actuales",
+                    titulo: txtApp("Sintomas actuales", "Current symptoms"),
                     icono: Icons.medical_services_outlined,
                     child: _campoSintomasDiagnostico(),
                   ),
@@ -465,23 +465,26 @@ class _FormularioPacienteState extends State<FormularioPaciente> {
           constraints: const BoxConstraints.tightFor(width: 44, height: 44),
         ),
         const SizedBox(width: 12),
-        const Expanded(
+        Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                "Formulario de Diagnostico",
-                style: TextStyle(
+                txtApp("Formulario de Diagnostico", "Diagnosis Form"),
+                style: const TextStyle(
                   color: Colors.white,
                   fontSize: 30,
                   height: 1.1,
                   fontWeight: FontWeight.w700,
                 ),
               ),
-              SizedBox(height: 10),
+              const SizedBox(height: 10),
               Text(
-                "Completa los datos para un diagnostico preciso",
-                style: TextStyle(
+                txtApp(
+                  "Completa los datos para un diagnostico preciso",
+                  "Complete the details for an accurate diagnosis",
+                ),
+                style: const TextStyle(
                   color: Color(0xFFD9DFFF),
                   fontSize: 18,
                   height: 1.25,
@@ -502,14 +505,15 @@ class _FormularioPacienteState extends State<FormularioPaciente> {
               color: Colors.white.withValues(alpha: 0.10),
               shape: BoxShape.circle,
             ),
-            child: const Column(
+            child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.help_outline_rounded, color: Colors.white, size: 34),
-                SizedBox(height: 3),
+                const Icon(Icons.help_outline_rounded,
+                    color: Colors.white, size: 34),
+                const SizedBox(height: 3),
                 Text(
-                  "Ayuda",
-                  style: TextStyle(
+                  txtApp("Ayuda", "Help"),
+                  style: const TextStyle(
                     color: Colors.white,
                     fontSize: 15,
                     fontWeight: FontWeight.w700,
@@ -556,22 +560,25 @@ class _FormularioPacienteState extends State<FormularioPaciente> {
                 ),
               ),
               const SizedBox(width: 22),
-              const Expanded(
+              Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      "Completa el formulario",
-                      style: TextStyle(
+                      txtApp("Completa el formulario", "Complete the form"),
+                      style: const TextStyle(
                         color: Color(0xFF12248B),
                         fontSize: 22,
                         fontWeight: FontWeight.w900,
                       ),
                     ),
-                    SizedBox(height: 14),
+                    const SizedBox(height: 14),
                     Text(
-                      "Proporciona informacion precisa para mejores resultados.",
-                      style: TextStyle(
+                      txtApp(
+                        "Proporciona informacion precisa para mejores resultados.",
+                        "Provide accurate information for better results.",
+                      ),
+                      style: const TextStyle(
                         color: Color(0xFF3F4A82),
                         fontSize: 18,
                         height: 1.35,
@@ -590,7 +597,10 @@ class _FormularioPacienteState extends State<FormularioPaciente> {
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
-                  "$_camposCompletosFormulario de 4",
+                  txtApp(
+                    "$_camposCompletosFormulario de 4",
+                    "$_camposCompletosFormulario of 4",
+                  ),
                   style: const TextStyle(
                     color: Color(0xFF4565F0),
                     fontSize: 16,
@@ -695,10 +705,12 @@ class _FormularioPacienteState extends State<FormularioPaciente> {
       initialValue: _generoSeleccionado,
       icon: const Icon(Icons.keyboard_arrow_down_rounded,
           color: Color(0xFF12248B), size: 32),
-      decoration: _inputDecoracionDiagnostico(hint: "Selecciona una opcion"),
-      hint: const Text(
-        "Selecciona una opcion",
-        style: TextStyle(
+      decoration: _inputDecoracionDiagnostico(
+        hint: txtApp("Selecciona una opcion", "Select an option"),
+      ),
+      hint: Text(
+        txtApp("Selecciona una opcion", "Select an option"),
+        style: const TextStyle(
           color: Color(0xFF6B7192),
           fontSize: 17,
           fontWeight: FontWeight.w500,
@@ -727,7 +739,10 @@ class _FormularioPacienteState extends State<FormularioPaciente> {
           maxLength: 500,
           textInputAction: TextInputAction.newline,
           decoration: _inputDecoracionDiagnostico(
-            hint: "Describe tus sintomas actuales...",
+            hint: txtApp(
+              "Describe tus sintomas actuales...",
+              "Describe your current symptoms...",
+            ),
             alignLabelWithHint: true,
           ).copyWith(counterText: ""),
         ),
@@ -749,7 +764,7 @@ class _FormularioPacienteState extends State<FormularioPaciente> {
 
   Widget _tarjetaAdjuntoDiagnostico() {
     return _tarjetaCampoDiagnostico(
-      titulo: "Archivo para analizar",
+      titulo: txtApp("Archivo para analizar", "File to analyze"),
       icono: Icons.attach_file_rounded,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -763,7 +778,7 @@ class _FormularioPacienteState extends State<FormularioPaciente> {
                 child: OutlinedButton.icon(
                   onPressed: _tomarFotoDiagnostico,
                   icon: const Icon(Icons.photo_camera_rounded),
-                  label: const Text("Camara"),
+                  label: Text(txtApp("Camara", "Camera")),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: const Color(0xFF12248B),
                     minimumSize: const Size(0, 48),
@@ -779,7 +794,7 @@ class _FormularioPacienteState extends State<FormularioPaciente> {
                 child: OutlinedButton.icon(
                   onPressed: _seleccionarArchivoDiagnostico,
                   icon: const Icon(Icons.attach_file_rounded),
-                  label: const Text("Archivo"),
+                  label: Text(txtApp("Archivo", "File")),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: const Color(0xFF12248B),
                     minimumSize: const Size(0, 48),
@@ -797,7 +812,11 @@ class _FormularioPacienteState extends State<FormularioPaciente> {
                   icon: Icon(_grabandoAudio
                       ? Icons.stop_circle_outlined
                       : Icons.mic_none_rounded),
-                  label: Text(_grabandoAudio ? "Detener" : "Audio"),
+                  label: Text(
+                    _grabandoAudio
+                        ? txtApp("Detener", "Stop")
+                        : txtApp("Audio", "Audio"),
+                  ),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: _grabandoAudio
                         ? const Color(0xFFD33B3B)
@@ -871,7 +890,7 @@ class _FormularioPacienteState extends State<FormularioPaciente> {
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: const Color(0xFFCDEBE2)),
       ),
-      child: const Row(
+      child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Icon(Icons.lock_outline_rounded, color: Color(0xFF08735F), size: 20),
@@ -960,31 +979,37 @@ class _FormularioPacienteState extends State<FormularioPaciente> {
         ),
         borderRadius: BorderRadius.circular(18),
       ),
-      child: const Row(
+      child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          CircleAvatar(
+          const CircleAvatar(
             radius: 24,
             backgroundColor: Color(0xFF5367F2),
             child: Icon(Icons.info_rounded, color: Colors.white, size: 30),
           ),
-          SizedBox(width: 20),
+          const SizedBox(width: 20),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  "Tu informacion es confidencial",
-                  style: TextStyle(
+                  txtApp(
+                    "Tu informacion es confidencial",
+                    "Your information is confidential",
+                  ),
+                  style: const TextStyle(
                     color: Color(0xFF12248B),
                     fontSize: 20,
                     fontWeight: FontWeight.w900,
                   ),
                 ),
-                SizedBox(height: 12),
+                const SizedBox(height: 12),
                 Text(
-                  "Todos los datos ingresados estan protegidos y se utilizan unicamente para generar tu diagnostico personalizado.",
-                  style: TextStyle(
+                  txtApp(
+                    "Todos los datos ingresados estan protegidos y se utilizan unicamente para generar tu diagnostico personalizado.",
+                    "All entered data is protected and used only to generate your personalized diagnosis.",
+                  ),
+                  style: const TextStyle(
                     color: Color(0xFF17246B),
                     fontSize: 17,
                     height: 1.4,
@@ -1029,15 +1054,15 @@ class _FormularioPacienteState extends State<FormularioPaciente> {
                     strokeWidth: 3,
                   ),
                 )
-              : const Row(
+              : Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.fact_check_outlined,
+                    const Icon(Icons.fact_check_outlined,
                         color: Colors.white, size: 34),
-                    SizedBox(width: 18),
+                    const SizedBox(width: 18),
                     Text(
-                      "GENERAR DIAGNOSTICO",
-                      style: TextStyle(
+                      txtApp("GENERAR DIAGNOSTICO", "GENERATE DIAGNOSIS"),
+                      style: const TextStyle(
                         color: Colors.white,
                         fontSize: 20,
                         fontWeight: FontWeight.w900,
@@ -1054,14 +1079,17 @@ class _FormularioPacienteState extends State<FormularioPaciente> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text("Ayuda"),
-        content: const Text(
-          "Completa nombre, edad, genero y sintomas actuales. Mientras mas claro sea el contexto, mas util sera el diagnostico generado.",
+        title: Text(txtApp("Ayuda", "Help")),
+        content: Text(
+          txtApp(
+            "Completa nombre, edad, genero y sintomas actuales. Mientras mas claro sea el contexto, mas util sera el diagnostico generado.",
+            "Complete name, age, gender, and current symptoms. The clearer the context, the more useful the generated diagnosis will be.",
+          ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text("Entendido"),
+            child: Text(txtApp("Entendido", "Got it")),
           ),
         ],
       ),

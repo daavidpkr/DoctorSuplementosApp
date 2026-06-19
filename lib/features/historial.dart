@@ -451,9 +451,9 @@ class _PaginaHistorialState extends State<PaginaHistorial> {
                     onPressed: () => Navigator.maybePop(context),
                   ),
                   const SizedBox(width: 24),
-                  const Expanded(
+                  Expanded(
                     child: Text(
-                      'Historial de Pacientes',
+                      txtApp('Historial de Pacientes', 'Patient History'),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
@@ -464,7 +464,7 @@ class _PaginaHistorialState extends State<PaginaHistorial> {
                     ),
                   ),
                   IconButton(
-                    tooltip: 'Filtros',
+                    tooltip: txtApp('Filtros', 'Filters'),
                     icon: const Icon(Icons.filter_list_rounded, size: 34),
                     color: Colors.white,
                     onPressed: () {},
@@ -501,19 +501,22 @@ class _PaginaHistorialState extends State<PaginaHistorial> {
                             color: Color(0xFF0D1430),
                             fontSize: 16,
                           ),
-                          decoration: const InputDecoration(
+                          decoration: InputDecoration(
                             border: InputBorder.none,
-                            hintText: 'Buscar paciente, fecha o registro...',
-                            hintStyle: TextStyle(
+                            hintText: txtApp(
+                              'Buscar paciente, fecha o registro...',
+                              'Search patient, date, or record...',
+                            ),
+                            hintStyle: const TextStyle(
                               color: Color(0xFF747A9E),
                               fontSize: 16,
                             ),
-                            icon: Icon(
+                            icon: const Icon(
                               Icons.search,
                               color: Color(0xFF68709D),
                               size: 34,
                             ),
-                            suffixIcon: Icon(
+                            suffixIcon: const Icon(
                               Icons.calendar_today_outlined,
                               color: azul,
                               size: 30,
@@ -529,8 +532,8 @@ class _PaginaHistorialState extends State<PaginaHistorial> {
                           Expanded(
                             child: Text(
                               _tipoSeleccionado == 'cambio_fisico'
-                                  ? 'Cambios fisicos'
-                                  : 'Diagnosticos',
+                                  ? txtApp('Cambios fisicos', 'Body changes')
+                                  : txtApp('Diagnosticos', 'Diagnoses'),
                               style: const TextStyle(
                                 color: Color(0xFF646B88),
                                 fontSize: 20,
@@ -539,7 +542,10 @@ class _PaginaHistorialState extends State<PaginaHistorial> {
                             ),
                           ),
                           Text(
-                            '$cantidad ${cantidad == 1 ? 'resultado' : 'resultados'}',
+                            txtApp(
+                              '$cantidad ${cantidad == 1 ? 'resultado' : 'resultados'}',
+                              '$cantidad ${cantidad == 1 ? 'result' : 'results'}',
+                            ),
                             style: const TextStyle(
                               color: azul,
                               fontSize: 18,
@@ -550,8 +556,11 @@ class _PaginaHistorialState extends State<PaginaHistorial> {
                       ),
                       const SizedBox(height: 22),
                       if (_historialFiltrado.isEmpty)
-                        const _EstadoHistorialVacio(
-                          texto: 'No se encontraron registros',
+                        _EstadoHistorialVacio(
+                          texto: txtApp(
+                            'No se encontraron registros',
+                            'No records found',
+                          ),
                         )
                       else
                         ..._historialFiltrado.map((item) {
@@ -594,8 +603,8 @@ class _PaginaHistorialState extends State<PaginaHistorial> {
                         const SizedBox(height: 8),
                         Text(
                           _tipoSeleccionado == 'cambio_fisico'
-                              ? 'Nuevo cambio'
-                              : 'Nuevo diagnostico',
+                              ? txtApp('Nuevo cambio', 'New change')
+                              : txtApp('Nuevo diagnostico', 'New diagnosis'),
                           style: TextStyle(
                             color: azul,
                             fontSize: 13,
@@ -629,17 +638,17 @@ class _PaginaHistorialState extends State<PaginaHistorial> {
           ),
           child: Row(
             children: [
-              const Expanded(
+              Expanded(
                 child: _ItemNavegacionHistorial(
                   icono: Icons.history,
-                  texto: 'Historial',
+                  texto: txtApp('Historial', 'History'),
                   activo: true,
                 ),
               ),
               Expanded(
                 child: _ItemNavegacionHistorial(
                   icono: Icons.people_outline,
-                  texto: 'Pacientes',
+                  texto: txtApp('Pacientes', 'Patients'),
                   onTap: () => Navigator.push(
                     context,
                     MaterialPageRoute(
@@ -651,7 +660,7 @@ class _PaginaHistorialState extends State<PaginaHistorial> {
               Expanded(
                 child: _ItemNavegacionHistorial(
                   icono: Icons.bar_chart,
-                  texto: 'Estadísticas',
+                  texto: txtApp('Estadisticas', 'Statistics'),
                   onTap: () => Navigator.push(
                     context,
                     MaterialPageRoute(
@@ -1330,7 +1339,7 @@ class _PaginaHistorialChatbotState extends State<PaginaHistorialChatbot> {
               Expanded(
                 child: _ItemNavegacionHistorial(
                   icono: Icons.people_outline,
-                  texto: 'Pacientes',
+                  texto: txtApp('Pacientes', 'Patients'),
                   onTap: () => Navigator.push(
                     context,
                     MaterialPageRoute(
@@ -1342,7 +1351,7 @@ class _PaginaHistorialChatbotState extends State<PaginaHistorialChatbot> {
               Expanded(
                 child: _ItemNavegacionHistorial(
                   icono: Icons.bar_chart,
-                  texto: 'Estadísticas',
+                  texto: txtApp('Estadisticas', 'Statistics'),
                   onTap: () => Navigator.push(
                     context,
                     MaterialPageRoute(

@@ -77,8 +77,14 @@ class _PaginaChatbotState extends State<PaginaChatbot> {
   bool _grabandoAudio = false;
   bool _iniciandoGrabacionVoz = false;
   bool _presionandoMicrofono = false;
+  bool _botHablando = false;
   String _estadoLlamada = "Conectando...";
+  String _ultimaRespuestaBot = "";
   late String _conversacionId;
+
+  bool get _ingles => IdiomaService.actual.value == IdiomaApp.ingles;
+
+  String _txt(String es, String en) => _ingles ? en : es;
 
   @override
   void initState() {
@@ -99,7 +105,8 @@ class _PaginaChatbotState extends State<PaginaChatbot> {
   Future<void> _iniciarLlamada() async {
     if (!mounted) return;
     setState(
-      () => _estadoLlamada = "Mantén pulsado el micrófono para hablar",
+      () => _estadoLlamada = _txt("Manten pulsado el microfono para hablar",
+          "Hold the microphone to talk"),
     );
   }
 
@@ -183,16 +190,25 @@ class _PaginaChatbotState extends State<PaginaChatbot> {
         mensajes.add({"rol": "ia", "texto": respuestaIA});
         _adjunto = null;
         if (widget.modoLlamada) {
-          _estadoLlamada = "DoctorSuplementos esta respondiendo...";
+          _estadoLlamada = _txt(
+            "DoctorSuplementos esta respondiendo...",
+            "DoctorSuplementos is answering...",
+          );
+          _ultimaRespuestaBot = respuestaIA;
+          _botHablando = true;
         }
       });
       await ChatHistoryService.guardarConversacion(_conversacionId, mensajes);
       if (widget.modoLlamada) {
         await ServicioTextoVoz.reproducir(respuestaIA);
         if (mounted) {
-          setState(
-            () => _estadoLlamada = "Mantén pulsado el micrófono para hablar",
-          );
+          setState(() {
+            _botHablando = false;
+            _estadoLlamada = _txt(
+              "Manten pulsado el microfono para hablar",
+              "Hold the microphone to talk",
+            );
+          });
         }
       }
     } catch (e) {
@@ -203,7 +219,11 @@ class _PaginaChatbotState extends State<PaginaChatbot> {
           "texto": "No se pudo conectar con la IA. Intenta nuevamente."
         });
         if (widget.modoLlamada) {
-          _estadoLlamada = "No pude responder. Intenta nuevamente";
+          _estadoLlamada = _txt(
+            "No pude responder. Intenta nuevamente",
+            "I could not answer. Try again",
+          );
+          _botHablando = false;
         }
       });
       await ChatHistoryService.guardarConversacion(_conversacionId, mensajes);
@@ -381,7 +401,8 @@ class _PaginaChatbotState extends State<PaginaChatbot> {
     });
     if (path == null) {
       setState(
-        () => _estadoLlamada = "Mantén pulsado el micrófono para hablar",
+        () => _estadoLlamada = _txt("Manten pulsado el microfono para hablar",
+            "Hold the microphone to talk"),
       );
       return;
     }
@@ -392,7 +413,8 @@ class _PaginaChatbotState extends State<PaginaChatbot> {
     if (bytes.isEmpty || !mounted) {
       if (mounted) {
         setState(
-          () => _estadoLlamada = "Mantén pulsado el micrófono para hablar",
+          () => _estadoLlamada = _txt("Manten pulsado el microfono para hablar",
+              "Hold the microphone to talk"),
         );
       }
       return;
@@ -579,7 +601,7 @@ extension _PaginaChatbotUi on _PaginaChatbotState {
                     ],
                   ),
                 ),
-                const Spacer(),
+                const SizedBox(height: 72),
                 Container(
                   width: 174,
                   height: 174,
@@ -649,10 +671,46 @@ extension _PaginaChatbotUi on _PaginaChatbotState {
                     ),
                   ),
                 ],
+                const SizedBox(height: 24),
+                AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 250),
+                  child: _botHablando && _ultimaRespuestaBot.trim().isNotEmpty
+                      ? Container(
+                          key: const ValueKey('respuesta_bot_live'),
+                          width: double.infinity,
+                          margin: const EdgeInsets.symmetric(horizontal: 24),
+                          padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
+                          constraints: const BoxConstraints(maxHeight: 168),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(18),
+                            border: Border.all(
+                              color: Colors.white.withValues(alpha: 0.22),
+                            ),
+                          ),
+                          child: SingleChildScrollView(
+                            child: Text(
+                              _ultimaRespuestaBot,
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 16,
+                                height: 1.35,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        )
+                      : SizedBox(
+                          key: const ValueKey('respuesta_bot_live_vacia'),
+                          height: _ultimaRespuestaBot.trim().isEmpty ? 0 : 18,
+                        ),
+                ),
                 const Spacer(),
                 Semantics(
                   button: true,
-                  label: "Mantén pulsado para hablar y suelta para enviar",
+                  label: _txt("Manten pulsado para hablar y suelta para enviar",
+                      "Hold to talk and release to send"),
                   child: GestureDetector(
                     onLongPressStart: ocupado
                         ? null
@@ -707,8 +765,9 @@ extension _PaginaChatbotUi on _PaginaChatbotState {
                 const SizedBox(height: 20),
                 Text(
                   escuchando
-                      ? "Toca para enviar tu pregunta"
-                      : "Toca para hablar",
+                      ? _txt("Suelta para enviar tu pregunta",
+                          "Release to send your question")
+                      : _txt("Manten pulsado para hablar", "Hold to talk"),
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 16,
@@ -791,8 +850,11 @@ extension _PaginaChatbotUi on _PaginaChatbotState {
                 ),
                 SizedBox(height: 8),
                 Text(
-                  "Tu asistente inteligente de suplementos",
-                  style: TextStyle(
+                  txtApp(
+                    "Tu asistente inteligente de suplementos",
+                    "Your intelligent supplement assistant",
+                  ),
+                  style: const TextStyle(
                     color: Color(0xFFD9DFFF),
                     fontSize: 18,
                     height: 1.2,
@@ -827,20 +889,23 @@ extension _PaginaChatbotUi on _PaginaChatbotState {
           const SizedBox(height: 82),
           _ilustracionConversacion(),
           const SizedBox(height: 30),
-          const Text(
-            "En que puedo ayudarte hoy?",
+          Text(
+            txtApp("En que puedo ayudarte hoy?", "How can I help you today?"),
             textAlign: TextAlign.center,
-            style: TextStyle(
+            style: const TextStyle(
               color: Color(0xFF12248B),
               fontSize: 24,
               fontWeight: FontWeight.w900,
             ),
           ),
           const SizedBox(height: 18),
-          const Text(
-            "Haz una pregunta para iniciar la conversacion.\nEstoy aqui para ayudarte.",
+          Text(
+            txtApp(
+              "Haz una pregunta para iniciar la conversacion.\nEstoy aqui para ayudarte.",
+              "Ask a question to start the conversation.\nI am here to help you.",
+            ),
             textAlign: TextAlign.center,
-            style: TextStyle(
+            style: const TextStyle(
               color: Color(0xFF4D5689),
               fontSize: 17,
               height: 1.35,
@@ -886,23 +951,29 @@ extension _PaginaChatbotUi on _PaginaChatbotState {
                 ),
               ),
               const SizedBox(width: 26),
-              const Expanded(
+              Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      "Hola, soy tu Asesor IA 4Life",
-                      style: TextStyle(
+                      txtApp(
+                        "Hola, soy tu Asesor IA 4Life",
+                        "Hi, I am your 4Life AI Adviser",
+                      ),
+                      style: const TextStyle(
                         color: Color(0xFF12248B),
                         fontSize: 22,
                         height: 1.18,
                         fontWeight: FontWeight.w900,
                       ),
                     ),
-                    SizedBox(height: 18),
+                    const SizedBox(height: 18),
                     Text(
-                      "Estoy aqui para ayudarte con informacion sobre productos, beneficios, dosis y recomendaciones personalizadas.",
-                      style: TextStyle(
+                      txtApp(
+                        "Estoy aqui para ayudarte con informacion sobre productos, beneficios, dosis y recomendaciones personalizadas.",
+                        "I am here to help with product information, benefits, doses, and personalized recommendations.",
+                      ),
+                      style: const TextStyle(
                         color: Color(0xFF4D5689),
                         fontSize: 17,
                         height: 1.45,
@@ -920,21 +991,30 @@ extension _PaginaChatbotUi on _PaginaChatbotState {
               Expanded(
                 child: _preguntaRapida(
                   icono: Icons.medication_liquid_outlined,
-                  texto: "Recomiendame un suplemento para tener mas energia",
+                  texto: txtApp(
+                    "Recomiendame un suplemento para tener mas energia",
+                    "Recommend a supplement for more energy",
+                  ),
                 ),
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: _preguntaRapida(
                   icono: Icons.shield_outlined,
-                  texto: "Cual es la funcion del Transfer Factor 4Life?",
+                  texto: txtApp(
+                    "Cual es la funcion del Transfer Factor 4Life?",
+                    "What is the role of Transfer Factor 4Life?",
+                  ),
                 ),
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: _preguntaRapida(
                   icono: Icons.favorite_border_rounded,
-                  texto: "Que productos apoyan el sistema inmunologico?",
+                  texto: txtApp(
+                    "Que productos apoyan el sistema inmunologico?",
+                    "Which products support the immune system?",
+                  ),
                 ),
               ),
             ],
@@ -1266,9 +1346,12 @@ extension _PaginaChatbotUi on _PaginaChatbotState {
                     maxLines: 4,
                     textInputAction: TextInputAction.send,
                     onSubmitted: (_) => enviarMensaje(),
-                    decoration: const InputDecoration(
-                      hintText: "Pregunta lo que sea...",
-                      hintStyle: TextStyle(
+                    decoration: InputDecoration(
+                      hintText: txtApp(
+                        "Pregunta lo que sea...",
+                        "Ask anything...",
+                      ),
+                      hintStyle: const TextStyle(
                         color: Color(0xFF8C91A8),
                         fontSize: 17,
                         fontWeight: FontWeight.w500,
@@ -1301,17 +1384,20 @@ extension _PaginaChatbotUi on _PaginaChatbotState {
             ),
           ),
           const SizedBox(height: 18),
-          const Row(
+          Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.health_and_safety_outlined,
+              const Icon(Icons.health_and_safety_outlined,
                   color: Color(0xFF5C6592), size: 22),
-              SizedBox(width: 12),
+              const SizedBox(width: 12),
               Flexible(
                 child: Text(
-                  "La informacion proporcionada por la IA no sustituye el consejo de un profesional de la salud.",
+                  txtApp(
+                    "La informacion proporcionada por la IA no sustituye el consejo de un profesional de la salud.",
+                    "Information provided by AI does not replace advice from a health professional.",
+                  ),
                   textAlign: TextAlign.left,
-                  style: TextStyle(
+                  style: const TextStyle(
                     color: Color(0xFF5C6592),
                     fontSize: 13.5,
                     height: 1.35,
@@ -1322,17 +1408,20 @@ extension _PaginaChatbotUi on _PaginaChatbotState {
             ],
           ),
           const SizedBox(height: 8),
-          const Row(
+          Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.lock_outline_rounded,
+              const Icon(Icons.lock_outline_rounded,
                   color: Color(0xFF08735F), size: 18),
-              SizedBox(width: 8),
+              const SizedBox(width: 8),
               Flexible(
                 child: Text(
-                  "Este documento, foto o audio no se guarda dentro de la app.",
+                  txtApp(
+                    "Este documento, foto o audio no se guarda dentro de la app.",
+                    "This document, photo, or audio is not saved inside the app.",
+                  ),
                   textAlign: TextAlign.left,
-                  style: TextStyle(
+                  style: const TextStyle(
                     color: Color(0xFF175B50),
                     fontSize: 12.5,
                     height: 1.25,

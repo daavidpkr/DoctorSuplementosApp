@@ -221,37 +221,37 @@ class _FormularioCambioFisicoState extends State<FormularioCambioFisico> {
                   _tarjetaProgreso(),
                   const SizedBox(height: 22),
                   _tarjetaCampo(
-                    titulo: "Nombre completo",
+                    titulo: txtApp("Nombre completo", "Full name"),
                     icono: Icons.person_outline_rounded,
                     child: _campoTexto(
                       controller: nombreController,
-                      hint: "Ingresa tu nombre",
+                      hint: txtApp("Ingresa tu nombre", "Enter your name"),
                       prefixIcon: Icons.person_outline_rounded,
                       textInputAction: TextInputAction.next,
                     ),
                   ),
                   const SizedBox(height: 16),
                   _tarjetaCampo(
-                    titulo: "Edad",
+                    titulo: txtApp("Edad", "Age"),
                     icono: Icons.calendar_month_rounded,
                     child: _campoTexto(
                       controller: edadController,
-                      hint: "Ingresa tu edad",
+                      hint: txtApp("Ingresa tu edad", "Enter your age"),
                       prefixIcon: Icons.calendar_month_outlined,
                       keyboardType: TextInputType.number,
-                      suffixText: "Años",
+                      suffixText: txtApp("Anos", "Years"),
                       textInputAction: TextInputAction.next,
                     ),
                   ),
                   const SizedBox(height: 16),
                   _tarjetaCampo(
-                    titulo: "Genero",
+                    titulo: txtApp("Genero", "Gender"),
                     icono: Icons.transgender_rounded,
                     child: _selectorGenero(),
                   ),
                   const SizedBox(height: 16),
                   _tarjetaCampo(
-                    titulo: "Peso en kilogramos",
+                    titulo: txtApp("Peso en kilogramos", "Weight in kilograms"),
                     icono: Icons.monitor_weight_outlined,
                     child: _campoTexto(
                       controller: pesoController,
@@ -265,7 +265,7 @@ class _FormularioCambioFisicoState extends State<FormularioCambioFisico> {
                   ),
                   const SizedBox(height: 16),
                   _tarjetaCampo(
-                    titulo: "Altura en metros",
+                    titulo: txtApp("Altura en metros", "Height in meters"),
                     icono: Icons.height_rounded,
                     child: _campoTexto(
                       controller: alturaController,
@@ -279,13 +279,13 @@ class _FormularioCambioFisicoState extends State<FormularioCambioFisico> {
                   ),
                   const SizedBox(height: 16),
                   _tarjetaCampo(
-                    titulo: "Contextura",
+                    titulo: txtApp("Contextura", "Body frame"),
                     icono: Icons.accessibility_new_rounded,
                     child: _selectorContextura(),
                   ),
                   const SizedBox(height: 16),
                   _tarjetaCampo(
-                    titulo: "Objetivo fisico",
+                    titulo: txtApp("Objetivo fisico", "Body goal"),
                     icono: Icons.flag_outlined,
                     child: _campoObjetivo(),
                   ),
@@ -314,23 +314,26 @@ class _FormularioCambioFisicoState extends State<FormularioCambioFisico> {
           constraints: const BoxConstraints.tightFor(width: 44, height: 44),
         ),
         const SizedBox(width: 12),
-        const Expanded(
+        Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                "Ficha de Cambio Fisico",
-                style: TextStyle(
+                txtApp("Ficha de Cambio Fisico", "Body Transformation Form"),
+                style: const TextStyle(
                   color: Colors.white,
                   fontSize: 30,
                   height: 1.1,
                   fontWeight: FontWeight.w700,
                 ),
               ),
-              SizedBox(height: 10),
+              const SizedBox(height: 10),
               Text(
-                "Completa los datos para una guia corporal personalizada",
-                style: TextStyle(
+                txtApp(
+                  "Completa los datos para una guia corporal personalizada",
+                  "Complete the details for a personalized body guide",
+                ),
+                style: const TextStyle(
                   color: Color(0xFFD9DFFF),
                   fontSize: 18,
                   height: 1.25,
@@ -377,22 +380,25 @@ class _FormularioCambioFisicoState extends State<FormularioCambioFisico> {
                 ),
               ),
               const SizedBox(width: 22),
-              const Expanded(
+              Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      "Completa la ficha",
-                      style: TextStyle(
+                      txtApp("Completa la ficha", "Complete the form"),
+                      style: const TextStyle(
                         color: Color(0xFF12248B),
                         fontSize: 22,
                         fontWeight: FontWeight.w900,
                       ),
                     ),
-                    SizedBox(height: 14),
+                    const SizedBox(height: 14),
                     Text(
-                      "La guia se adapta al perfil fisico y objetivo.",
-                      style: TextStyle(
+                      txtApp(
+                        "La guia se adapta al perfil fisico y objetivo.",
+                        "The guide adapts to the body profile and goal.",
+                      ),
+                      style: const TextStyle(
                         color: Color(0xFF3F4A82),
                         fontSize: 18,
                         height: 1.35,
@@ -410,7 +416,7 @@ class _FormularioCambioFisicoState extends State<FormularioCambioFisico> {
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
-                  "$_camposCompletos de 7",
+                  txtApp("$_camposCompletos de 7", "$_camposCompletos of 7"),
                   style: const TextStyle(
                     color: Color(0xFF4565F0),
                     fontSize: 16,
@@ -515,7 +521,9 @@ class _FormularioCambioFisicoState extends State<FormularioCambioFisico> {
       initialValue: _generoSeleccionado,
       icon: const Icon(Icons.keyboard_arrow_down_rounded,
           color: Color(0xFF12248B), size: 32),
-      decoration: _inputDecoracion(hint: "Selecciona una opcion"),
+      decoration: _inputDecoracion(
+        hint: txtApp("Selecciona una opcion", "Select an option"),
+      ),
       items: const [
         DropdownMenuItem(value: 'Masculino', child: Text('Masculino')),
         DropdownMenuItem(value: 'Femenino', child: Text('Femenino')),
@@ -533,7 +541,9 @@ class _FormularioCambioFisicoState extends State<FormularioCambioFisico> {
           initialValue: _contexturaSeleccionada,
           icon: const Icon(Icons.keyboard_arrow_down_rounded,
               color: Color(0xFF12248B), size: 32),
-          decoration: _inputDecoracion(hint: "Selecciona una contextura"),
+          decoration: _inputDecoracion(
+            hint: txtApp("Selecciona una contextura", "Select a body frame"),
+          ),
           items: _contexturas.keys
               .map((tipo) => DropdownMenuItem(value: tipo, child: Text(tipo)))
               .toList(),
@@ -566,7 +576,10 @@ class _FormularioCambioFisicoState extends State<FormularioCambioFisico> {
           maxLength: 500,
           textInputAction: TextInputAction.newline,
           decoration: _inputDecoracion(
-            hint: "Describe el objetivo fisico...",
+            hint: txtApp(
+              "Describe el objetivo fisico...",
+              "Describe the body goal...",
+            ),
             alignLabelWithHint: true,
           ).copyWith(counterText: ""),
         ),
@@ -646,19 +659,22 @@ class _FormularioCambioFisicoState extends State<FormularioCambioFisico> {
         ),
         borderRadius: BorderRadius.circular(18),
       ),
-      child: const Row(
+      child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          CircleAvatar(
+          const CircleAvatar(
             radius: 24,
             backgroundColor: Color(0xFF5367F2),
             child: Icon(Icons.info_rounded, color: Colors.white, size: 30),
           ),
-          SizedBox(width: 20),
+          const SizedBox(width: 20),
           Expanded(
             child: Text(
-              "La recomendacion se genera solo con los datos corporales ingresados y productos permitidos para cambio fisico.",
-              style: TextStyle(
+              txtApp(
+                "La recomendacion se genera solo con los datos corporales ingresados y productos permitidos para cambio fisico.",
+                "The recommendation is generated only with the entered body data and products allowed for body transformation.",
+              ),
+              style: const TextStyle(
                 color: Color(0xFF17246B),
                 fontSize: 17,
                 height: 1.4,
@@ -701,15 +717,15 @@ class _FormularioCambioFisicoState extends State<FormularioCambioFisico> {
                     strokeWidth: 3,
                   ),
                 )
-              : const Row(
+              : Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.fitness_center_rounded,
+                    const Icon(Icons.fitness_center_rounded,
                         color: Colors.white, size: 34),
-                    SizedBox(width: 18),
+                    const SizedBox(width: 18),
                     Text(
-                      "GENERAR GUIA",
-                      style: TextStyle(
+                      txtApp("GENERAR GUIA", "GENERATE GUIDE"),
+                      style: const TextStyle(
                         color: Colors.white,
                         fontSize: 20,
                         fontWeight: FontWeight.w900,

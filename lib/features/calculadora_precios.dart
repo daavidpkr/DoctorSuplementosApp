@@ -512,23 +512,23 @@ class _PaginaCalculadoraPreciosState extends State<PaginaCalculadoraPrecios> {
           constraints: const BoxConstraints.tightFor(width: 42, height: 42),
         ),
         const SizedBox(width: 10),
-        const Expanded(
+        Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                "Consultora y calculadora",
-                style: TextStyle(
+                txtApp("Consultora y calculadora", "Consultant and calculator"),
+                style: const TextStyle(
                   color: Colors.white,
                   fontSize: 32,
                   height: 1.08,
                   fontWeight: FontWeight.w900,
                 ),
               ),
-              SizedBox(height: 8),
+              const SizedBox(height: 8),
               Text(
-                "Consulta precios y LP",
-                style: TextStyle(
+                txtApp("Consulta precios y LP", "Check prices and LP"),
+                style: const TextStyle(
                   color: Color(0xFFDCE2FF),
                   fontSize: 20,
                   height: 1.2,
@@ -545,14 +545,15 @@ class _PaginaCalculadoraPreciosState extends State<PaginaCalculadoraPrecios> {
             color: Colors.white.withValues(alpha: 0.10),
             shape: BoxShape.circle,
           ),
-          child: const Column(
+          child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.help_outline_rounded, color: Colors.white, size: 32),
-              SizedBox(height: 3),
+              const Icon(Icons.help_outline_rounded,
+                  color: Colors.white, size: 32),
+              const SizedBox(height: 3),
               Text(
-                "Ayuda",
-                style: TextStyle(
+                txtApp("Ayuda", "Help"),
+                style: const TextStyle(
                   color: Colors.white,
                   fontSize: 15,
                   fontWeight: FontWeight.w600,
@@ -573,22 +574,25 @@ class _PaginaCalculadoraPreciosState extends State<PaginaCalculadoraPrecios> {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Expanded(
+              Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      "Selecciona producto(s)",
-                      style: TextStyle(
+                      txtApp("Selecciona producto(s)", "Select product(s)"),
+                      style: const TextStyle(
                         color: Color(0xFF11258B),
                         fontSize: 24,
                         fontWeight: FontWeight.w900,
                       ),
                     ),
-                    SizedBox(height: 14),
+                    const SizedBox(height: 14),
                     Text(
-                      "Busca y anade uno o varios productos para consultar precios y LP.",
-                      style: TextStyle(
+                      txtApp(
+                        "Busca y anade uno o varios productos para consultar precios y LP.",
+                        "Search and add one or more products to check prices and LP.",
+                      ),
+                      style: const TextStyle(
                         color: Color(0xFF47527E),
                         fontSize: 18,
                         height: 1.38,
@@ -609,7 +613,7 @@ class _PaginaCalculadoraPreciosState extends State<PaginaCalculadoraPrecios> {
             textInputAction: TextInputAction.done,
             onSubmitted: (_) => _agregarDesdeTexto(),
             decoration: InputDecoration(
-              hintText: "Buscar producto(s)",
+              hintText: txtApp("Buscar producto(s)", "Search product(s)"),
               hintStyle: const TextStyle(
                 color: Color(0xFF858AA5),
                 fontSize: 19,
@@ -654,22 +658,22 @@ class _PaginaCalculadoraPreciosState extends State<PaginaCalculadoraPrecios> {
                 borderRadius: BorderRadius.circular(10),
                 border: Border.all(color: const Color(0xFFD1D5E3), width: 1.4),
               ),
-              child: const Row(
+              child: Row(
                 children: [
-                  Icon(Icons.format_list_bulleted_rounded,
+                  const Icon(Icons.format_list_bulleted_rounded,
                       color: Color(0xFF12248B), size: 34),
-                  SizedBox(width: 18),
+                  const SizedBox(width: 18),
                   Expanded(
                     child: Text(
-                      "Explorar catalogo",
-                      style: TextStyle(
+                      txtApp("Explorar catalogo", "Browse catalog"),
+                      style: const TextStyle(
                         color: Color(0xFF12248B),
                         fontSize: 18,
                         fontWeight: FontWeight.w900,
                       ),
                     ),
                   ),
-                  Icon(Icons.chevron_right_rounded,
+                  const Icon(Icons.chevron_right_rounded,
                       color: Color(0xFF12248B), size: 34),
                 ],
               ),
@@ -760,10 +764,10 @@ class _PaginaCalculadoraPreciosState extends State<PaginaCalculadoraPrecios> {
         children: [
           Row(
             children: [
-              const Expanded(
+              Expanded(
                 child: Text(
-                  "Productos seleccionados",
-                  style: TextStyle(
+                  txtApp("Productos seleccionados", "Selected products"),
+                  style: const TextStyle(
                     color: Color(0xFF11258B),
                     fontSize: 22,
                     fontWeight: FontWeight.w900,
@@ -778,7 +782,10 @@ class _PaginaCalculadoraPreciosState extends State<PaginaCalculadoraPrecios> {
                   borderRadius: BorderRadius.circular(18),
                 ),
                 child: Text(
-                  "$_cantidadTotalProductos productos",
+                  txtApp(
+                    "$_cantidadTotalProductos productos",
+                    "$_cantidadTotalProductos products",
+                  ),
                   style: const TextStyle(
                     color: Color(0xFF2832A1),
                     fontSize: 15,
@@ -796,12 +803,12 @@ class _PaginaCalculadoraPreciosState extends State<PaginaCalculadoraPrecios> {
   }
 
   Widget _estadoVacio() {
-    return const Center(
+    return Center(
       child: Padding(
-        padding: EdgeInsets.fromLTRB(18, 4, 18, 22),
+        padding: const EdgeInsets.fromLTRB(18, 4, 18, 22),
         child: Column(
           children: [
-            CircleAvatar(
+            const CircleAvatar(
               radius: 46,
               backgroundColor: Color(0xFFECEEFF),
               child: Icon(
@@ -810,21 +817,27 @@ class _PaginaCalculadoraPreciosState extends State<PaginaCalculadoraPrecios> {
                 size: 46,
               ),
             ),
-            SizedBox(height: 24),
+            const SizedBox(height: 24),
             Text(
-              "Aun no has agregado productos",
+              txtApp(
+                "Aun no has agregado productos",
+                "You have not added products yet",
+              ),
               textAlign: TextAlign.center,
-              style: TextStyle(
+              style: const TextStyle(
                 color: Color(0xFF3B467A),
                 fontSize: 18,
                 fontWeight: FontWeight.w900,
               ),
             ),
-            SizedBox(height: 12),
+            const SizedBox(height: 12),
             Text(
-              "Busca y selecciona los productos que deseas consultar.",
+              txtApp(
+                "Busca y selecciona los productos que deseas consultar.",
+                "Search and select the products you want to consult.",
+              ),
               textAlign: TextAlign.center,
-              style: TextStyle(
+              style: const TextStyle(
                 color: Color(0xFF58618C),
                 fontSize: 17,
                 height: 1.35,
@@ -960,27 +973,27 @@ class _PaginaCalculadoraPreciosState extends State<PaginaCalculadoraPrecios> {
             ),
           ],
         ),
-        child: const Row(
+        child: Row(
           children: [
-            Icon(Icons.calculate_outlined, color: Colors.white, size: 38),
-            SizedBox(width: 24),
+            const Icon(Icons.calculate_outlined, color: Colors.white, size: 38),
+            const SizedBox(width: 24),
             Expanded(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    "Calcular",
-                    style: TextStyle(
+                    txtApp("Calcular", "Calculate"),
+                    style: const TextStyle(
                       color: Colors.white,
                       fontSize: 22,
                       fontWeight: FontWeight.w900,
                     ),
                   ),
-                  SizedBox(height: 7),
+                  const SizedBox(height: 7),
                   Text(
-                    "Consulta precios y LP",
-                    style: TextStyle(
+                    txtApp("Consulta precios y LP", "Check prices and LP"),
+                    style: const TextStyle(
                       color: Color(0xFFDDE3FF),
                       fontSize: 17,
                       fontWeight: FontWeight.w500,
@@ -989,7 +1002,8 @@ class _PaginaCalculadoraPreciosState extends State<PaginaCalculadoraPrecios> {
                 ],
               ),
             ),
-            Icon(Icons.chevron_right_rounded, color: Colors.white, size: 42),
+            const Icon(Icons.chevron_right_rounded,
+                color: Colors.white, size: 42),
           ],
         ),
       ),

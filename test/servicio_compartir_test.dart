@@ -28,7 +28,8 @@ void main() {
         productos: const [
           ProductoDocumento(
             nombre: 'Transfer factor plus',
-            imagenAsset: 'assets/productos/trasnfer_factor_plus.png',
+            imagenAsset:
+                'assets/productos/productos-ec/trasnfer_factor_plus.png',
             indicaciones: ['Dosis mañana: 1 cápsula'],
             detalle: 'Apoyo general para el sistema inmunitario.',
           ),

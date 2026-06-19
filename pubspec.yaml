@@ -70,4 +70,5 @@ flutter:
     - .env
     - assets/icon.png
     - assets/fonts/
-    - assets/productos/
+    - assets/productos/productos-ec/
+    - assets/productos/productos-eu/

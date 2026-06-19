@@ -627,6 +627,7 @@ class _PaginaDiccionario4LifeState extends State<PaginaDiccionario4Life> {
     EntradaDiccionario4Life entrada,
     bool ingles,
   ) {
+    final terminoVisible = _terminoVisible(entrada, ingles);
     return InkWell(
       borderRadius: BorderRadius.circular(16),
       onTap: () => _mostrarConcepto(context, entrada, ingles),
@@ -654,7 +655,7 @@ class _PaginaDiccionario4LifeState extends State<PaginaDiccionario4Life> {
             ),
             const SizedBox(width: 11),
             Text(
-              entrada.termino,
+              terminoVisible,
               style: const TextStyle(
                 color: Color(0xFF17204B),
                 fontSize: 14.5,
@@ -791,7 +792,7 @@ class _PaginaDiccionario4LifeState extends State<PaginaDiccionario4Life> {
                   const SizedBox(width: 14),
                   Expanded(
                     child: Text(
-                      entrada.termino,
+                      _terminoVisible(entrada, ingles),
                       style: const TextStyle(
                         color: Color(0xFF12248B),
                         fontSize: 22,
@@ -865,6 +866,39 @@ class _PaginaDiccionario4LifeState extends State<PaginaDiccionario4Life> {
       categorias.add('bienestar');
     }
     return categorias.isEmpty ? const ['bienestar'] : categorias.toList();
+  }
+
+  String _terminoVisible(EntradaDiccionario4Life entrada, bool ingles) {
+    if (!ingles) return entrada.termino;
+    return switch (entrada.termino) {
+      'Factor de transferencia' => 'Transfer factor',
+      'Calostro bovino' => 'Bovine colostrum',
+      'Yema de huevo' => 'Egg yolk',
+      'PÃ©ptidos bioactivos' || 'Péptidos bioactivos' => 'Bioactive peptides',
+      'Sistema inmunolÃ³gico' || 'Sistema inmunológico' => 'Immune system',
+      'Respaldo inmunolÃ³gico' || 'Respaldo inmunológico' => 'Immune support',
+      'Defensas naturales' => 'Natural defenses',
+      'CÃ©lulas NK' || 'Células NK' => 'NK cells',
+      'Antioxidantes' => 'Antioxidants',
+      'Bioflavonoides' => 'Bioflavonoids',
+      'Superfrutas' => 'Superfruits',
+      'AÃ§aÃ­' || 'Açaí' => 'Acai',
+      'Granada' => 'Pomegranate',
+      'ArÃ¡ndano' || 'Arándano' => 'Blueberry',
+      'Baya de saÃºco' || 'Baya de saúco' => 'Elderberry',
+      'Vitamina C' => 'Vitamin C',
+      'Mezcla de hongos' => 'Mushroom blend',
+      'Dosis diaria' => 'Daily dose',
+      'Suplemento alimenticio' => 'Dietary supplement',
+      'PrebiÃ³ticos' || 'Prebióticos' => 'Prebiotics',
+      'Salud digestiva' => 'Digestive health',
+      'ColÃ¡geno' || 'Colágeno' => 'Collagen',
+      'Bienestar general' => 'General wellness',
+      'NutriciÃ³n avanzada' || 'Nutrición avanzada' => 'Advanced nutrition',
+      'Salud celular' => 'Cellular health',
+      'Vitalidad' => 'Vitality',
+      _ => entrada.termino,
+    };
   }
 
   IconData _iconoEntrada(EntradaDiccionario4Life entrada) {

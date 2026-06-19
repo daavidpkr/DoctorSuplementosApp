@@ -230,14 +230,18 @@ class IdiomaService {
   static Future<String> instruccionIa() async {
     final idioma = await cargar();
     return idioma == IdiomaApp.ingles
-        ? 'Respond in English. Translate all headings, explanations, notes, diagnoses, product descriptions, doses, recommendations and share-ready content into English. Keep official 4Life product names unchanged.'
-        : 'Responde en español. Mantén todo el contenido, encabezados, notas, diagnósticos, productos, dosis, recomendaciones y fichas en español.';
+        ? 'Respond only in English, even if the user writes or speaks in Spanish. Translate all headings, explanations, notes, diagnoses, product descriptions, doses, recommendations and share-ready content into English. Keep official 4Life product names unchanged.'
+        : 'Responde solo en espanol, incluso si el usuario escribe o habla en ingles. Manten todo el contenido, encabezados, notas, diagnosticos, productos, dosis, recomendaciones y fichas en espanol.';
   }
 
   static Future<String> etiquetaContenido() async {
     final idioma = await cargar();
     return idioma == IdiomaApp.ingles ? 'English' : 'español';
   }
+}
+
+String txtApp(String espanol, String ingles) {
+  return IdiomaService.actual.value == IdiomaApp.ingles ? ingles : espanol;
 }
 
 class ImpactoService {

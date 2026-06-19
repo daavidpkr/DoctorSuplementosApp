@@ -228,23 +228,26 @@ class _ConsultaProductoPaginaState extends State<ConsultaProductoPagina> {
           constraints: const BoxConstraints.tightFor(width: 44, height: 44),
         ),
         const SizedBox(width: 12),
-        const Expanded(
+        Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                "Consultar Productos",
-                style: TextStyle(
+                txtApp("Consultar Productos", "Product Consultation"),
+                style: const TextStyle(
                   color: Colors.white,
                   fontSize: 31,
                   height: 1.1,
                   fontWeight: FontWeight.w500,
                 ),
               ),
-              SizedBox(height: 9),
+              const SizedBox(height: 9),
               Text(
-                "Busca informacion de suplementos",
-                style: TextStyle(
+                txtApp(
+                  "Busca informacion de suplementos",
+                  "Search supplement information",
+                ),
+                style: const TextStyle(
                   color: Color(0xFFD9DFFF),
                   fontSize: 19,
                   height: 1.2,
@@ -279,23 +282,29 @@ class _ConsultaProductoPaginaState extends State<ConsultaProductoPagina> {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Expanded(
+              Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      "Busca el producto que necesitas",
-                      style: TextStyle(
+                      txtApp(
+                        "Busca el producto que necesitas",
+                        "Find the product you need",
+                      ),
+                      style: const TextStyle(
                         color: Color(0xFF12248B),
                         fontSize: 24,
                         height: 1.15,
                         fontWeight: FontWeight.w900,
                       ),
                     ),
-                    SizedBox(height: 16),
+                    const SizedBox(height: 16),
                     Text(
-                      "Encuentra informacion detallada, precios y LP.",
-                      style: TextStyle(
+                      txtApp(
+                        "Encuentra informacion detallada, precios y LP.",
+                        "Find detailed information, prices, and LP.",
+                      ),
+                      style: const TextStyle(
                         color: Color(0xFF293573),
                         fontSize: 18,
                         height: 1.42,
@@ -317,7 +326,10 @@ class _ConsultaProductoPaginaState extends State<ConsultaProductoPagina> {
             textInputAction: TextInputAction.search,
             onSubmitted: (_) => consultar(),
             decoration: InputDecoration(
-              hintText: "Escribe el nombre del producto",
+              hintText: txtApp(
+                "Escribe el nombre del producto",
+                "Enter the product name",
+              ),
               hintStyle: const TextStyle(
                 color: Color(0xFF858AA5),
                 fontSize: 18,
@@ -354,9 +366,9 @@ class _ConsultaProductoPaginaState extends State<ConsultaProductoPagina> {
             onChanged: (_) => setState(() {}),
           ),
           const SizedBox(height: 24),
-          const Text(
-            "Ejemplos populares:",
-            style: TextStyle(
+          Text(
+            txtApp("Ejemplos populares:", "Popular examples:"),
+            style: const TextStyle(
               color: Color(0xFF12248B),
               fontSize: 17,
               fontWeight: FontWeight.w900,
@@ -487,31 +499,34 @@ class _ConsultaProductoPaginaState extends State<ConsultaProductoPagina> {
         ),
         borderRadius: BorderRadius.circular(18),
       ),
-      child: const Row(
+      child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          CircleAvatar(
+          const CircleAvatar(
             radius: 25,
             backgroundColor: Color(0xFF5367F2),
             child: Icon(Icons.info_rounded, color: Colors.white, size: 31),
           ),
-          SizedBox(width: 20),
+          const SizedBox(width: 20),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  "Consejo",
-                  style: TextStyle(
+                  txtApp("Consejo", "Tip"),
+                  style: const TextStyle(
                     color: Color(0xFF12248B),
                     fontSize: 21,
                     fontWeight: FontWeight.w900,
                   ),
                 ),
-                SizedBox(height: 10),
+                const SizedBox(height: 10),
                 Text(
-                  "Escribe el nombre exacto o parte del producto para obtener mejores resultados.",
-                  style: TextStyle(
+                  txtApp(
+                    "Escribe el nombre exacto o parte del producto para obtener mejores resultados.",
+                    "Enter the exact name or part of the product for better results.",
+                  ),
+                  style: const TextStyle(
                     color: Color(0xFF09196B),
                     fontSize: 18,
                     height: 1.35,
@@ -556,14 +571,15 @@ class _ConsultaProductoPaginaState extends State<ConsultaProductoPagina> {
                     strokeWidth: 3,
                   ),
                 )
-              : const Row(
+              : Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.search_rounded, color: Colors.white, size: 34),
-                    SizedBox(width: 16),
+                    const Icon(Icons.search_rounded,
+                        color: Colors.white, size: 34),
+                    const SizedBox(width: 16),
                     Text(
-                      "Consultar",
-                      style: TextStyle(
+                      txtApp("Consultar", "Search"),
+                      style: const TextStyle(
                         color: Colors.white,
                         fontSize: 22,
                         fontWeight: FontWeight.w900,
@@ -614,9 +630,9 @@ class _ConsultaProductoPaginaState extends State<ConsultaProductoPagina> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    "Busquedas recientes",
-                    style: TextStyle(
+                  Text(
+                    txtApp("Busquedas recientes", "Recent searches"),
+                    style: const TextStyle(
                       color: Color(0xFF12248B),
                       fontSize: 19,
                       fontWeight: FontWeight.w900,
@@ -625,8 +641,14 @@ class _ConsultaProductoPaginaState extends State<ConsultaProductoPagina> {
                   const SizedBox(height: 6),
                   Text(
                     _busquedasRecientes.isEmpty
-                        ? "Aun no tienes consultas recientes"
-                        : "Ver productos consultados recientemente",
+                        ? txtApp(
+                            "Aun no tienes consultas recientes",
+                            "You do not have recent searches yet",
+                          )
+                        : txtApp(
+                            "Ver productos consultados recientemente",
+                            "View recently searched products",
+                          ),
                     style: const TextStyle(
                       color: Color(0xFF2F3C7D),
                       fontSize: 16,
