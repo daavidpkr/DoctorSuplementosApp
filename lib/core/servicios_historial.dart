@@ -61,8 +61,9 @@ class ChatHistoryService {
 
   static Future<void> guardarConversacion(
     String id,
-    List<Map<String, String>> mensajes,
-  ) async {
+    List<Map<String, String>> mensajes, {
+    String tipo = 'asesor_4life',
+  }) async {
     if (mensajes.isEmpty) return;
 
     final prefs = await SharedPreferences.getInstance();
@@ -73,10 +74,17 @@ class ChatHistoryService {
     )['texto'];
 
     final titulo = primeraPregunta ?? 'Chat 4Life';
+    final tituloNormalizado = tipo == 'chat_live_voz' &&
+            normalizarTexto(titulo).contains('analiza esta nota de voz')
+        ? 'Nota de voz Chat Live'
+        : titulo;
     final registro = {
       'id': id,
       'fecha': DateTime.now().toString().substring(0, 16),
-      'titulo': titulo.length > 45 ? '${titulo.substring(0, 45)}...' : titulo,
+      'titulo': tituloNormalizado.length > 45
+          ? '${tituloNormalizado.substring(0, 45)}...'
+          : tituloNormalizado,
+      'tipo': tipo,
       'mensajes': mensajes,
     };
 

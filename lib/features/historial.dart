@@ -982,6 +982,7 @@ class _PaginaHistorialChatbotState extends State<PaginaHistorialChatbot> {
   List<Map<String, dynamic>> _conversaciones = [];
   List<Map<String, dynamic>> _conversacionesFiltradas = [];
   final TextEditingController _busquedaController = TextEditingController();
+  String _tipoSeleccionado = 'asesor_4life';
   bool _cargando = true;
 
   @override
@@ -1005,8 +1006,12 @@ class _PaginaHistorialChatbotState extends State<PaginaHistorialChatbot> {
     String query,
   ) {
     final texto = query.trim().toLowerCase();
-    if (texto.isEmpty) return conversaciones;
-    return conversaciones.where((chat) {
+    final porTipo = conversaciones.where((chat) {
+      final tipo = chat['tipo']?.toString() ?? 'asesor_4life';
+      return tipo == _tipoSeleccionado;
+    });
+    if (texto.isEmpty) return porTipo.toList();
+    return porTipo.where((chat) {
       final titulo = chat['titulo']?.toString().toLowerCase() ?? '';
       final fecha = chat['fecha']?.toString().toLowerCase() ?? '';
       final mensajes =
@@ -1020,6 +1025,14 @@ class _PaginaHistorialChatbotState extends State<PaginaHistorialChatbot> {
   void _buscar(String query) {
     setState(() {
       _conversacionesFiltradas = _filtrar(_conversaciones, query);
+    });
+  }
+
+  void _cambiarTipoHistorialChat(String tipo) {
+    setState(() {
+      _tipoSeleccionado = tipo;
+      _conversacionesFiltradas =
+          _filtrar(_conversaciones, _busquedaController.text);
     });
   }
 
@@ -1041,10 +1054,13 @@ class _PaginaHistorialChatbotState extends State<PaginaHistorialChatbot> {
   }
 
   void _abrirChat(Map<String, dynamic> chat) {
+    final esChatLive = chat['tipo']?.toString() == 'chat_live_voz';
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => PaginaChatbot(
+          titulo: esChatLive ? 'Chat Live 4Life' : 'Asesor IA 4Life',
+          modoLlamada: esChatLive,
           conversacionId: chat['id']?.toString(),
           mensajesIniciales: _mensajes(chat),
         ),
@@ -1150,8 +1166,96 @@ class _PaginaHistorialChatbotState extends State<PaginaHistorialChatbot> {
   void _nuevoChat() {
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (context) => const PaginaChatbot()),
+      MaterialPageRoute(
+        builder: (context) => _tipoSeleccionado == 'chat_live_voz'
+            ? const PaginaChatbot(
+                titulo: 'Chat Live 4Life',
+                modoLlamada: true,
+              )
+            : const PaginaChatbot(),
+      ),
     ).then((_) => _cargar());
+  }
+
+  Widget _selectorTipoChat() {
+    return Container(
+      height: 58,
+      padding: const EdgeInsets.all(6),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.06),
+            blurRadius: 16,
+            offset: const Offset(0, 7),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: _opcionTipoChat(
+              texto: txtApp('Asesor 4Life', '4Life adviser'),
+              icono: Icons.chat_rounded,
+              tipo: 'asesor_4life',
+            ),
+          ),
+          Expanded(
+            child: _opcionTipoChat(
+              texto: txtApp('Notas Chat Live', 'Chat Live notes'),
+              icono: Icons.mic_rounded,
+              tipo: 'chat_live_voz',
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _opcionTipoChat({
+    required String texto,
+    required IconData icono,
+    required String tipo,
+  }) {
+    final activo = _tipoSeleccionado == tipo;
+    return InkWell(
+      borderRadius: BorderRadius.circular(14),
+      onTap: () => _cambiarTipoHistorialChat(tipo),
+      child: Container(
+        height: double.infinity,
+        decoration: BoxDecoration(
+          color: activo ? const Color(0xFFEDEEFF) : Colors.transparent,
+          borderRadius: BorderRadius.circular(14),
+        ),
+        alignment: Alignment.center,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icono,
+              color: activo ? const Color(0xFF2839C7) : const Color(0xFF68708C),
+              size: 22,
+            ),
+            const SizedBox(width: 8),
+            Flexible(
+              child: Text(
+                texto,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: activo
+                      ? const Color(0xFF2839C7)
+                      : const Color(0xFF68708C),
+                  fontSize: 14,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
@@ -1276,13 +1380,19 @@ class _PaginaHistorialChatbotState extends State<PaginaHistorialChatbot> {
                               ),
                             ),
                             const SizedBox(height: 26),
+                            _selectorTipoChat(),
+                            const SizedBox(height: 24),
                             Row(
                               children: [
                                 Expanded(
                                   child: Text(
                                     txtApp(
-                                      'Conversaciones recientes',
-                                      'Recent conversations',
+                                      _tipoSeleccionado == 'chat_live_voz'
+                                          ? 'Notas de voz del Chat Live'
+                                          : 'Chats del Asesor 4Life',
+                                      _tipoSeleccionado == 'chat_live_voz'
+                                          ? 'Chat Live voice notes'
+                                          : '4Life adviser chats',
                                     ),
                                     style: const TextStyle(
                                       color: Color(0xFF646B88),
@@ -1293,8 +1403,12 @@ class _PaginaHistorialChatbotState extends State<PaginaHistorialChatbot> {
                                 ),
                                 Text(
                                   txtApp(
-                                    '$cantidad ${cantidad == 1 ? 'conversacion' : 'conversaciones'}',
-                                    '$cantidad ${cantidad == 1 ? 'conversation' : 'conversations'}',
+                                    _tipoSeleccionado == 'chat_live_voz'
+                                        ? '$cantidad ${cantidad == 1 ? 'nota' : 'notas'}'
+                                        : '$cantidad ${cantidad == 1 ? 'chat' : 'chats'}',
+                                    _tipoSeleccionado == 'chat_live_voz'
+                                        ? '$cantidad ${cantidad == 1 ? 'note' : 'notes'}'
+                                        : '$cantidad ${cantidad == 1 ? 'chat' : 'chats'}',
                                   ),
                                   style: const TextStyle(
                                     color: azul,
@@ -1305,11 +1419,16 @@ class _PaginaHistorialChatbotState extends State<PaginaHistorialChatbot> {
                               ],
                             ),
                             const SizedBox(height: 22),
-                            if (_conversaciones.isEmpty)
+                            if (_conversacionesFiltradas.isEmpty &&
+                                _filtrar(_conversaciones, '').isEmpty)
                               _EstadoHistorialVacio(
                                 texto: txtApp(
-                                  'No hay conversaciones guardadas',
-                                  'No saved conversations',
+                                  _tipoSeleccionado == 'chat_live_voz'
+                                      ? 'No hay notas de voz guardadas'
+                                      : 'No hay chats guardados',
+                                  _tipoSeleccionado == 'chat_live_voz'
+                                      ? 'No saved voice notes'
+                                      : 'No saved chats',
                                 ),
                               )
                             else if (_conversacionesFiltradas.isEmpty)

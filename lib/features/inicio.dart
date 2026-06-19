@@ -106,19 +106,19 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
                     ),
                     _tarjetaMenu(
                       context,
-                      titulo: IdiomaService.texto('profile'),
-                      descripcion: IdiomaService.texto('profile_desc'),
-                      icono: Icons.person_rounded,
-                      colores: const [Color(0xFF455A64), Color(0xFF263238)],
-                      destino: PaginaPerfil(onPerfilGuardado: _recargarPerfil),
-                    ),
-                    _tarjetaMenu(
-                      context,
                       titulo: IdiomaService.texto('dictionary'),
                       descripcion: IdiomaService.texto('dictionary_desc'),
                       icono: Icons.menu_book_rounded,
                       colores: const [Color(0xFF3047CC), Color(0xFF172394)],
                       destino: const PaginaDiccionario4Life(),
+                    ),
+                    _tarjetaMenu(
+                      context,
+                      titulo: IdiomaService.texto('profile'),
+                      descripcion: IdiomaService.texto('profile_desc'),
+                      icono: Icons.person_rounded,
+                      colores: const [Color(0xFF455A64), Color(0xFF263238)],
+                      destino: PaginaPerfil(onPerfilGuardado: _recargarPerfil),
                     ),
                     const SizedBox(height: 8),
                     Padding(

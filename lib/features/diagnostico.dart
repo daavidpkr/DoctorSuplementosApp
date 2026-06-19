@@ -97,6 +97,13 @@ class _FormularioPacienteState extends State<FormularioPaciente> {
     4. DOSIFICACIÓN EXACTA Y DETALLADA: Para cada producto recomendado, debes dar la dosis exacta en una lista independiente, clara y legible. Queda estrictamente prohibido agrupar o mezclar las dosis en un solo párrafo de texto corrido.
     5. TONO Y SEGURIDAD: Mantén un tono científico pero accesible. No uses lenguaje de ventas exagerado ni prometas "curas milagrosas". Incluye siempre de forma sutil que los suplementos respaldan las funciones fisiológicas y el sistema inmunitario, y que no sustituyen ningún tratamiento médico.
 
+    REGLA ADICIONAL DE CANTIDAD DE PRODUCTOS:
+    Recomienda normalmente un maximo de 3 o 4 productos. Solo en casos extremos,
+    complejos o especiales donde el contexto realmente lo justifique puedes usar
+    mas de 4 productos; si lo haces, explica brevemente por que el caso necesita
+    un protocolo ampliado. En casos comunes, moderados o poco detallados, manten
+    3 o 4 productos como limite.
+
     Estructura requerida para la respuesta:
 
     *SALUDO Y ANÁLISIS DEL CASO*

@@ -83,12 +83,57 @@ class _PaginaChatbotState extends State<PaginaChatbot> {
   String _ultimaRespuestaBot = "";
   List<String> _lineasRespuestaBot = [];
   int _lineaRespuestaActiva = 0;
+  String _textoVozRespuestaBot = "";
   Timer? _temporizadorRespuestaBot;
   late String _conversacionId;
 
   bool get _ingles => IdiomaService.actual.value == IdiomaApp.ingles;
 
   String _txt(String es, String en) => _ingles ? en : es;
+
+  static const List<String> _terminosComponentesBienestar = [
+    'factores de transferencia',
+    'factor de transferencia',
+    'transfer factor',
+    'calostro',
+    'peptidos',
+    'aminoacidos',
+    'glutamina',
+    'colageno',
+    'acido hialuronico',
+    'omega 3',
+    'dha',
+    'epa',
+    'cla',
+    'probioticos',
+    'prebioticos',
+    'fibra',
+    'vitamina c',
+    'vitamina d',
+    'zinc',
+    'magnesio',
+    'selenio',
+    'antioxidantes',
+    'polifenoles',
+    'flavonoides',
+    'enzimas digestivas',
+    'electrolitos',
+    'proteina',
+    'creatina',
+    'carbohidratos',
+    'adaptogenos',
+    'fitonutrientes',
+    'resveratrol',
+    'coenzima q10',
+    'biotina',
+  ];
+
+  bool _consultaEsSobreComponente(String texto) {
+    final normalizado = normalizarTexto(texto);
+    return _terminosComponentesBienestar
+        .map(normalizarTexto)
+        .any(normalizado.contains);
+  }
 
   List<String> _dividirRespuestaBot(String texto) {
     final limpio = texto.replaceAll(RegExp(r'\s+'), ' ').trim();
@@ -114,11 +159,14 @@ class _PaginaChatbotState extends State<PaginaChatbot> {
 
   void _iniciarAnimacionRespuestaBot(String texto) {
     _temporizadorRespuestaBot?.cancel();
-    final lineas = _dividirRespuestaBot(texto);
+    final idioma = _ingles ? 'en' : 'es';
+    final textoVoz = ServicioTextoVoz.prepararTexto(texto, idioma: idioma);
+    final lineas = _dividirRespuestaBot(textoVoz.isEmpty ? texto : textoVoz);
     setState(() {
       _ultimaRespuestaBot = texto;
       _lineasRespuestaBot = lineas;
       _lineaRespuestaActiva = 0;
+      _textoVozRespuestaBot = textoVoz;
       _botHablando = lineas.isNotEmpty;
     });
     if (lineas.isEmpty) return;
@@ -129,9 +177,9 @@ class _PaginaChatbotState extends State<PaginaChatbot> {
       }
     });
 
-    final totalPalabras = texto.trim().split(RegExp(r'\s+')).length;
-    final duracionEstimada = Duration(
-      milliseconds: (totalPalabras * (_ingles ? 430 : 470)).clamp(4500, 28000),
+    final duracionEstimada = ServicioTextoVoz.estimarDuracion(
+      texto,
+      idioma: idioma,
     );
     final intervalo = Duration(
       milliseconds:
@@ -162,6 +210,33 @@ class _PaginaChatbotState extends State<PaginaChatbot> {
           curve: Curves.easeOutCubic,
         );
       });
+    });
+  }
+
+  void _sincronizarProgresoVoz(
+    String text,
+    int startOffset,
+    int endOffset,
+    String word,
+  ) {
+    if (!mounted || !_botHablando || _lineasRespuestaBot.isEmpty) return;
+    final base = text.isNotEmpty ? text : _textoVozRespuestaBot;
+    if (base.isEmpty) return;
+    final progreso = (endOffset <= 0 ? startOffset : endOffset) / base.length;
+    final indice =
+        (progreso.clamp(0.0, 1.0) * _lineasRespuestaBot.length).floor();
+    final linea = indice.clamp(0, _lineasRespuestaBot.length - 1);
+    if (linea == _lineaRespuestaActiva) return;
+    setState(() => _lineaRespuestaActiva = linea);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!_scrollRespuestaBot.hasClients) return;
+      final maximo = _scrollRespuestaBot.position.maxScrollExtent;
+      final destino = (linea * 44.0).clamp(0.0, maximo);
+      _scrollRespuestaBot.animateTo(
+        destino,
+        duration: const Duration(milliseconds: 320),
+        curve: Curves.easeOutCubic,
+      );
     });
   }
 
@@ -222,12 +297,17 @@ class _PaginaChatbotState extends State<PaginaChatbot> {
         .map((mensaje) =>
             "${mensaje['rol'] == 'ia' ? 'Asesor IA' : 'Socio'}: ${mensaje['texto']}")
         .join("\n");
-    final productoCoincidente = buscarProductoPermitido(textoVisible);
+    final consultaSobreComponente = _consultaEsSobreComponente(textoVisible);
+    final productoCoincidente =
+        consultaSobreComponente ? null : buscarProductoPermitido(textoVisible);
     final instruccionProducto = productoCoincidente == null
         ? ""
         : "Si la consulta menciona un producto mal escrito, responde directamente sobre $productoCoincidente. No digas que fue una coincidencia ni que estaba mal escrito.";
     final instruccionVoz = widget.modoLlamada
-        ? "Esta es una llamada de voz. Responde de forma natural, breve y directa, sin listas extensas ni formatos visuales. No saludes de nuevo en cada respuesta."
+        ? "Esta es una llamada de voz. Responde de forma natural, explicativa y suficientemente completa para evitar confusiones. No seas demasiado corto si la pregunta necesita contexto, pasos o advertencias. Puedes usar ejemplos sencillos, pero no saludes de nuevo en cada respuesta."
+        : "";
+    final instruccionComponente = consultaSobreComponente
+        ? "La consulta parece ser sobre un componente, ingrediente o concepto de bienestar, no sobre un producto especifico. Explica que es, para que sirve, como se interpreta y que precauciones generales considerar. No conviertas la respuesta en una recomendacion de producto y no metas un producto 4Life si el usuario no pidio un producto."
         : "";
     final instruccionIdioma = await IdiomaService.instruccionIa();
 
@@ -240,12 +320,20 @@ class _PaginaChatbotState extends State<PaginaChatbot> {
     IMPORTANTE: No uses asteriscos (*), no uses almohadillas (#), ni guiones extraños para dar formato.
     Usa saltos de línea normales y texto limpio.
     Responde preguntas libres sobre suplementos, productos 4Life, hábitos saludables, ventas y seguimiento de clientes.
+    Prioriza respuestas explicativas y completas cuando eso evite confusiones; no respondas demasiado corto si la pregunta requiere contexto.
     REGLA OBLIGATORIA DE PRODUCTOS: Cuando recomiendes, compares, armes rutinas o sugieras productos,
     usa UNICAMENTE estos nombres del catalogo autorizado: $catalogoPermitido4Life.
     Si el socio pide algo que requiera un producto fuera de esa lista, explica que solo puedes recomendar
     productos del catalogo autorizado y ofrece alternativas dentro de esa lista.
     No inventes nombres, presentaciones ni productos adicionales.
+    REGLA OBLIGATORIA SOBRE COMPONENTES O INGREDIENTES: Si el usuario pregunta por un componente, ingrediente,
+    nutriente o concepto general, explica el componente en si y NO lo conviertas automaticamente en un producto.
+    Ejemplos de componentes/conceptos: ${_terminosComponentesBienestar.join(', ')}.
+    Ejemplo clave: si pregunta por factores de transferencia, explica que son los factores de transferencia,
+    su rol general y sus precauciones; no recomiendes Transfer factor plus, Transfer factor tri factor ni otro producto
+    salvo que el usuario pida explicitamente un producto, una rutina o una recomendacion de compra.
     $instruccionProducto
+    $instruccionComponente
     $instruccionVoz
     Mantén un tono claro, práctico y responsable. Si la pregunta parece médica, recomienda consultar a un profesional de salud.
 
@@ -283,10 +371,17 @@ class _PaginaChatbotState extends State<PaginaChatbot> {
           );
         }
       });
-      await ChatHistoryService.guardarConversacion(_conversacionId, mensajes);
+      await ChatHistoryService.guardarConversacion(
+        _conversacionId,
+        mensajes,
+        tipo: widget.modoLlamada ? 'chat_live_voz' : 'asesor_4life',
+      );
       if (widget.modoLlamada) {
         _iniciarAnimacionRespuestaBot(respuestaIA);
-        await ServicioTextoVoz.reproducir(respuestaIA);
+        await ServicioTextoVoz.reproducir(
+          respuestaIA,
+          onProgreso: _sincronizarProgresoVoz,
+        );
         if (mounted) {
           setState(() {
             _estadoLlamada = _txt(
@@ -314,7 +409,11 @@ class _PaginaChatbotState extends State<PaginaChatbot> {
       if (widget.modoLlamada) {
         _detenerAnimacionRespuestaBot();
       }
-      await ChatHistoryService.guardarConversacion(_conversacionId, mensajes);
+      await ChatHistoryService.guardarConversacion(
+        _conversacionId,
+        mensajes,
+        tipo: widget.modoLlamada ? 'chat_live_voz' : 'asesor_4life',
+      );
     } finally {
       if (mounted) {
         setState(() => enviando = false);

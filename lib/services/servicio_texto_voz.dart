@@ -6,6 +6,8 @@ class ServicioTextoVoz {
 
   static final FlutterTts _tts = FlutterTts();
   static String? _idiomaConfigurado;
+  static const double _palabrasPorSegundoEs = 2.25;
+  static const double _palabrasPorSegundoEn = 2.45;
 
   static Future<String> _idiomaActual() async {
     final prefs = await SharedPreferences.getInstance();
@@ -17,9 +19,9 @@ class ServicioTextoVoz {
 
     await _tts.setLanguage(idioma == 'en' ? 'en-US' : 'es-US');
     await _seleccionarMejorVoz(idioma);
-    await _tts.setSpeechRate(idioma == 'en' ? 0.44 : 0.43);
+    await _tts.setSpeechRate(idioma == 'en' ? 0.42 : 0.40);
     await _tts.setVolume(1.0);
-    await _tts.setPitch(idioma == 'en' ? 1.0 : 0.96);
+    await _tts.setPitch(idioma == 'en' ? 1.02 : 1.0);
     await _tts.awaitSpeakCompletion(true);
     _idiomaConfigurado = idioma;
   }
@@ -47,12 +49,19 @@ class ServicioTextoVoz {
             break;
           }
         }
-        if (nombre.contains('neural') ||
-            nombre.contains('premium') ||
+        if (nombre.contains('neural')) {
+          puntaje += 18;
+        }
+        if (nombre.contains('premium') ||
             nombre.contains('enhanced') ||
             nombre.contains('network') ||
             nombre.contains('natural')) {
-          puntaje += 12;
+          puntaje += 14;
+        }
+        if (nombre.contains('google') ||
+            nombre.contains('microsoft') ||
+            nombre.contains('samsung')) {
+          puntaje += 4;
         }
         if (nombre.contains('female') || nombre.contains('woman')) {
           puntaje += 2;
@@ -75,17 +84,36 @@ class ServicioTextoVoz {
     }
   }
 
-  static Future<void> reproducir(String texto) async {
+  static Future<void> reproducir(
+    String texto, {
+    void Function(String text, int startOffset, int endOffset, String word)?
+        onProgreso,
+  }) async {
     final idioma = await _idiomaActual();
     final contenido = prepararTexto(texto, idioma: idioma);
     if (contenido.isEmpty) return;
 
     await _configurar(idioma);
+    _tts.setProgressHandler(
+      (text, startOffset, endOffset, word) {
+        onProgreso?.call(text, startOffset, endOffset, word);
+      },
+    );
     await _tts.stop();
     await _tts.speak(contenido);
   }
 
   static Future<void> detener() => _tts.stop();
+
+  static Duration estimarDuracion(String texto, {String idioma = 'es'}) {
+    final contenido = prepararTexto(texto, idioma: idioma);
+    if (contenido.isEmpty) return Duration.zero;
+    final palabras = contenido.split(RegExp(r'\s+')).length;
+    final palabrasPorSegundo =
+        idioma == 'en' ? _palabrasPorSegundoEn : _palabrasPorSegundoEs;
+    final segundos = (palabras / palabrasPorSegundo).clamp(3.5, 120.0);
+    return Duration(milliseconds: (segundos * 1000).round());
+  }
 
   static String prepararTexto(String texto, {String idioma = 'es'}) {
     var contenido = texto.trim();

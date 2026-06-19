@@ -98,7 +98,8 @@ class _FormularioCambioFisicoState extends State<FormularioCambioFisico> {
 
     REGLA CRITICA DE PRODUCTOS:
     - Debes recomendar UNICAMENTE productos de esta lista: $catalogoCambioFisico4Life.
-    - Recomienda maximo 3 o 4 productos.
+    - Recomienda normalmente maximo 3 o 4 productos.
+    - Solo en casos extremos, complejos o especiales donde el objetivo y el contexto realmente lo justifiquen puedes usar mas de 4 productos; si lo haces, explica brevemente por que el plan necesita un protocolo ampliado. En casos comunes, moderados o poco detallados, manten 3 o 4 productos como limite.
     - No inventes productos, no uses medicamentos, no recomiendes marcas externas y no menciones productos fuera de la lista.
 
     Instrucciones:
@@ -113,7 +114,7 @@ class _FormularioCambioFisicoState extends State<FormularioCambioFisico> {
     *SALUDO Y ANALISIS FISICO*
     [Analisis breve del perfil y objetivo]
 
-    *PLAN DE APOYO 4LIFE (Max. 3-4 productos)*
+    *PLAN DE APOYO 4LIFE (Max. 3-4 productos; mas solo si el caso es extremo/especial)*
 
     *1. [Nombre exacto del producto]*
     - *Dosis manana:* [Cantidad]

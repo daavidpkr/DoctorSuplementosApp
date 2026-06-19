@@ -331,6 +331,24 @@ class _PaginaDiccionario4LifeState extends State<PaginaDiccionario4Life> {
     super.dispose();
   }
 
+  Future<void> _abrirSugerenciaWhatsApp() async {
+    final uri = Uri.parse(
+      'https://wa.me/593959848545?text=Hola!%20puedes%20a%C3%B1adir%20esta%20palabra%20al%20diccionario',
+    );
+    final abierto = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!abierto && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            IdiomaService.actual.value == IdiomaApp.ingles
+                ? 'Could not open WhatsApp.'
+                : 'No se pudo abrir WhatsApp.',
+          ),
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final ingles = IdiomaService.actual.value == IdiomaApp.ingles;
@@ -736,6 +754,38 @@ class _PaginaDiccionario4LifeState extends State<PaginaDiccionario4Life> {
                     height: 1.25,
                     fontWeight: FontWeight.w500,
                   ),
+                ),
+                const SizedBox(height: 8),
+                Wrap(
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    Text(
+                      ingles
+                          ? 'You can suggest a word here: '
+                          : 'Puedes sugerir una palabra aqui: ',
+                      style: const TextStyle(
+                        color: Color(0xFF2F3A78),
+                        fontSize: 14,
+                        height: 1.25,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    InkWell(
+                      borderRadius: BorderRadius.circular(6),
+                      onTap: _abrirSugerenciaWhatsApp,
+                      child: Text(
+                        ingles ? 'click here' : 'click aqui',
+                        style: const TextStyle(
+                          color: Color(0xFF1457E8),
+                          fontSize: 14,
+                          height: 1.25,
+                          fontWeight: FontWeight.w900,
+                          decoration: TextDecoration.underline,
+                          decorationColor: Color(0xFF1457E8),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
