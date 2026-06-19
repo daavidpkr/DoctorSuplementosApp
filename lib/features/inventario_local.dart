@@ -87,27 +87,27 @@ class _PaginaInventarioLocalState extends State<PaginaInventarioLocal> {
     final cantidad = await showDialog<int>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Update stock'),
+        title: Text(_t('Actualizar stock', 'Update stock')),
         content: TextField(
           controller: controller,
           keyboardType: TextInputType.number,
           autofocus: true,
           decoration: InputDecoration(
             labelText: producto.nombre,
-            suffixText: 'units',
+            suffixText: _t('unidades', 'units'),
           ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            child: Text(_t('Cancelar', 'Cancel')),
           ),
           ElevatedButton(
             onPressed: () {
               final valor = int.tryParse(controller.text.trim()) ?? 0;
               Navigator.pop(context, valor);
             },
-            child: const Text('Save'),
+            child: Text(_t('Guardar', 'Save')),
           ),
         ],
       ),
@@ -122,7 +122,7 @@ class _PaginaInventarioLocalState extends State<PaginaInventarioLocal> {
     await Clipboard.setData(ClipboardData(text: _textoInventario()));
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Inventory copied')),
+      SnackBar(content: Text(_t('Inventario copiado', 'Inventory copied'))),
     );
   }
 
@@ -135,17 +135,18 @@ class _PaginaInventarioLocalState extends State<PaginaInventarioLocal> {
     return ServicioCompartir.mostrarOpciones(
       context,
       DocumentoCompartible(
-        titulo: '4LIFE LOCAL INVENTORY',
-        nombreArchivo: '4LIFE LOCAL INVENTORY',
+        titulo: _t('INVENTARIO LOCAL 4LIFE', '4LIFE LOCAL INVENTORY'),
+        nombreArchivo: _t('INVENTARIO LOCAL 4LIFE', '4LIFE LOCAL INVENTORY'),
         texto: _textoInventario(),
         fecha: fecha,
         secciones: [
           SeccionDocumento(
-            titulo: 'Inventory summary',
-            contenido: 'Products in stock: $_productosActivos\n'
-                'Total units: $_unidadesTotales\n'
-                'Estimated member value: ${_precio(_valorAfiliado)}\n'
-                'Estimated retail value: ${_precio(_valorPublico)}',
+            titulo: _t('Resumen de inventario', 'Inventory summary'),
+            contenido:
+                '${_t('Productos con stock', 'Products in stock')}: $_productosActivos\n'
+                '${_t('Unidades totales', 'Total units')}: $_unidadesTotales\n'
+                '${_t('Valor afiliado estimado', 'Estimated member value')}: ${_precio(_valorAfiliado)}\n'
+                '${_t('Valor publico estimado', 'Estimated retail value')}: ${_precio(_valorPublico)}',
           ),
         ],
         productos: productosConStock
@@ -154,14 +155,15 @@ class _PaginaInventarioLocalState extends State<PaginaInventarioLocal> {
                 nombre: '${_stock[producto.nombre] ?? 0} x ${producto.nombre}',
                 imagenAsset: imagenesProducto4Life[producto.nombre],
                 indicaciones: [
-                  'LP per unit: ${producto.lp ?? 0}',
-                  'Member per unit: ${_precio(producto.afiliado)}',
-                  'Retail per unit: ${_precio(producto.publico)}',
+                  '${_t('LP por unidad', 'LP per unit')}: ${producto.lp ?? 0}',
+                  '${_t('Afiliado por unidad', 'Member per unit')}: ${_precio(producto.afiliado)}',
+                  '${_t('Publico por unidad', 'Retail per unit')}: ${_precio(producto.publico)}',
                 ],
               ),
             )
             .toList(),
       ),
+      ingles: IdiomaService.actual.value == IdiomaApp.ingles,
     );
   }
 
@@ -177,7 +179,8 @@ class _PaginaInventarioLocalState extends State<PaginaInventarioLocal> {
     if (busqueda.isEmpty) return productos;
     return productos
         .where(
-            (producto) => normalizarTexto(producto.nombre).contains(busqueda))
+          (producto) => normalizarTexto(producto.nombre).contains(busqueda),
+        )
         .toList();
   }
 
@@ -206,26 +209,44 @@ class _PaginaInventarioLocalState extends State<PaginaInventarioLocal> {
       );
 
   String _precio(double valor) => '\$${valor.toStringAsFixed(2)}';
+  String _t(String es, String en) => txtApp(es, en);
 
   String _textoInventario() {
-    final buffer = StringBuffer('4Life Local Inventory\n\n');
-    buffer.writeln('Products in stock: $_productosActivos');
-    buffer.writeln('Total units: $_unidadesTotales');
-    buffer.writeln('Available LP: $_lpDisponible');
-    buffer.writeln('Estimated member value: ${_precio(_valorAfiliado)}');
-    buffer.writeln('Estimated retail value: ${_precio(_valorPublico)}\n');
+    final buffer = StringBuffer(
+      '${_t('Inventario local 4Life', '4Life Local Inventory')}\n\n',
+    );
+    buffer.writeln(
+      '${_t('Productos con stock', 'Products in stock')}: $_productosActivos',
+    );
+    buffer.writeln(
+      '${_t('Unidades totales', 'Total units')}: $_unidadesTotales',
+    );
+    buffer.writeln('${_t('LP disponible', 'Available LP')}: $_lpDisponible');
+    buffer.writeln(
+      '${_t('Valor afiliado estimado', 'Estimated member value')}: ${_precio(_valorAfiliado)}',
+    );
+    buffer.writeln(
+      '${_t('Valor publico estimado', 'Estimated retail value')}: ${_precio(_valorPublico)}\n',
+    );
 
     for (final producto in productosConPrecio4Life) {
       final cantidad = _stock[producto.nombre] ?? 0;
       if (cantidad <= 0) continue;
       buffer.writeln('$cantidad x ${producto.nombre}');
       buffer.writeln('LP: ${(producto.lp ?? 0) * cantidad}');
-      buffer.writeln('Member value: ${_precio(producto.afiliado * cantidad)}');
-      buffer.writeln('Retail value: ${_precio(producto.publico * cantidad)}\n');
+      buffer.writeln(
+        '${_t('Valor afiliado', 'Member value')}: ${_precio(producto.afiliado * cantidad)}',
+      );
+      buffer.writeln(
+        '${_t('Valor publico', 'Retail value')}: ${_precio(producto.publico * cantidad)}\n',
+      );
     }
 
     if (_productosActivos == 0) {
-      buffer.writeln('No products are currently marked as available.');
+      buffer.writeln(_t(
+        'No hay productos marcados como disponibles.',
+        'No products are currently marked as available.',
+      ));
     }
 
     return buffer.toString();
@@ -287,23 +308,26 @@ class _PaginaInventarioLocalState extends State<PaginaInventarioLocal> {
           constraints: const BoxConstraints.tightFor(width: 44, height: 44),
         ),
         const SizedBox(width: 12),
-        const Expanded(
+        Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'My Local Inventory',
-                style: TextStyle(
+                _t('Inventario local', 'My Local Inventory'),
+                style: const TextStyle(
                   color: Colors.white,
                   fontSize: 31,
                   height: 1.08,
                   fontWeight: FontWeight.w900,
                 ),
               ),
-              SizedBox(height: 9),
+              const SizedBox(height: 9),
               Text(
-                'Private stock control for immediate delivery',
-                style: TextStyle(
+                _t(
+                  'Control privado de stock para entrega inmediata',
+                  'Private stock control for immediate delivery',
+                ),
+                style: const TextStyle(
                   color: Color(0xFFD9DFFF),
                   fontSize: 18,
                   height: 1.22,
@@ -339,23 +363,26 @@ class _PaginaInventarioLocalState extends State<PaginaInventarioLocal> {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Expanded(
+              Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Available now',
-                      style: TextStyle(
+                      _t('Disponible ahora', 'Available now'),
+                      style: const TextStyle(
                         color: _azul,
                         fontSize: 24,
                         height: 1.12,
                         fontWeight: FontWeight.w900,
                       ),
                     ),
-                    SizedBox(height: 12),
+                    const SizedBox(height: 12),
                     Text(
-                      'Know exactly how many bottles are ready for delivery without leaving the app.',
-                      style: TextStyle(
+                      _t(
+                        'Conoce exactamente cuantos productos tienes listos para entregar sin salir de la app.',
+                        'Know exactly how many bottles are ready for delivery without leaving the app.',
+                      ),
+                      style: const TextStyle(
                         color: _texto,
                         fontSize: 17,
                         height: 1.36,
@@ -374,10 +401,12 @@ class _PaginaInventarioLocalState extends State<PaginaInventarioLocal> {
             spacing: 10,
             runSpacing: 10,
             children: [
-              _datoResumen('Products', '$_productosActivos'),
-              _datoResumen('Units', '$_unidadesTotales'),
+              _datoResumen(_t('Productos', 'Products'), '$_productosActivos'),
+              _datoResumen(_t('Unidades', 'Units'), '$_unidadesTotales'),
               _datoResumen('LP', '$_lpDisponible'),
-              _datoResumen('Member', _precio(_valorAfiliado)),
+              _datoResumen(_t('Afiliado', 'Member'), _precio(_valorAfiliado)),
+              _datoResumen(_t('Disponible', 'Available'), '$_productosActivos'),
+              _datoResumen(_t('Publico', 'Retail'), _precio(_valorPublico)),
             ],
           ),
         ],
@@ -406,9 +435,9 @@ class _PaginaInventarioLocalState extends State<PaginaInventarioLocal> {
             ),
           ),
           const SizedBox(height: 5),
-          const Text(
-            'UNITS',
-            style: TextStyle(
+          Text(
+            _t('UNID.', 'UNITS'),
+            style: const TextStyle(
               color: _texto,
               fontSize: 11,
               fontWeight: FontWeight.w900,
@@ -446,7 +475,7 @@ class _PaginaInventarioLocalState extends State<PaginaInventarioLocal> {
         textInputAction: TextInputAction.search,
         onChanged: (_) => setState(() {}),
         decoration: InputDecoration(
-          hintText: 'Search inventory',
+          hintText: _t('Buscar inventario', 'Search inventory'),
           hintStyle: const TextStyle(
             color: Color(0xFF858AA5),
             fontSize: 18,
@@ -460,7 +489,7 @@ class _PaginaInventarioLocalState extends State<PaginaInventarioLocal> {
           suffixIcon: _busquedaController.text.isEmpty
               ? null
               : IconButton(
-                  tooltip: 'Clear',
+                  tooltip: _t('Limpiar', 'Clear'),
                   onPressed: () {
                     _busquedaController.clear();
                     setState(() {});
@@ -505,7 +534,7 @@ class _PaginaInventarioLocalState extends State<PaginaInventarioLocal> {
           Expanded(
             child: _accionInventario(
               icono: Icons.copy_rounded,
-              texto: 'Copy',
+              texto: _t('Copiar', 'Copy'),
               onTap: _copiarInventario,
             ),
           ),
@@ -513,7 +542,7 @@ class _PaginaInventarioLocalState extends State<PaginaInventarioLocal> {
           Expanded(
             child: _accionInventario(
               icono: Icons.share_rounded,
-              texto: 'Share',
+              texto: _t('Compartir', 'Share'),
               onTap: _compartirInventario,
             ),
           ),
@@ -557,10 +586,10 @@ class _PaginaInventarioLocalState extends State<PaginaInventarioLocal> {
         children: [
           Row(
             children: [
-              const Expanded(
+              Expanded(
                 child: Text(
-                  'Physical stock',
-                  style: TextStyle(
+                  _t('Stock fisico', 'Physical stock'),
+                  style: const TextStyle(
                     color: _azul,
                     fontSize: 22,
                     fontWeight: FontWeight.w900,
@@ -575,7 +604,7 @@ class _PaginaInventarioLocalState extends State<PaginaInventarioLocal> {
                   borderRadius: BorderRadius.circular(18),
                 ),
                 child: Text(
-                  '${productos.length} items',
+                  '${productos.length} ${_t('items', 'items')}',
                   style: const TextStyle(
                     color: _azul,
                     fontSize: 13,
@@ -587,12 +616,15 @@ class _PaginaInventarioLocalState extends State<PaginaInventarioLocal> {
           ),
           const SizedBox(height: 16),
           if (productos.isEmpty)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 24),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 24),
               child: Center(
                 child: Text(
-                  'No products match this search.',
-                  style: TextStyle(
+                  _t(
+                    'No hay productos para esta busqueda.',
+                    'No products match this search.',
+                  ),
+                  style: const TextStyle(
                     color: _texto,
                     fontSize: 16,
                     fontWeight: FontWeight.w700,
@@ -654,7 +686,7 @@ class _PaginaInventarioLocalState extends State<PaginaInventarioLocal> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'LP ${producto.lp ?? 0}  |  ${_precio(producto.afiliado)} member',
+                      'LP ${producto.lp ?? 0}  |  ${_precio(producto.afiliado)} ${_t('afiliado', 'member')}',
                       style: const TextStyle(
                         color: _texto,
                         fontSize: 13,
@@ -686,7 +718,7 @@ class _PaginaInventarioLocalState extends State<PaginaInventarioLocal> {
         mainAxisSize: MainAxisSize.min,
         children: [
           IconButton(
-            tooltip: 'Remove one',
+            tooltip: _t('Quitar uno', 'Remove one'),
             visualDensity: VisualDensity.compact,
             onPressed: cantidad <= 0 ? null : () => _ajustarStock(producto, -1),
             icon: const Icon(Icons.remove_rounded, size: 18),
@@ -708,7 +740,7 @@ class _PaginaInventarioLocalState extends State<PaginaInventarioLocal> {
             ),
           ),
           IconButton(
-            tooltip: 'Add one',
+            tooltip: _t('Agregar uno', 'Add one'),
             visualDensity: VisualDensity.compact,
             onPressed: () => _ajustarStock(producto, 1),
             icon: const Icon(Icons.add_rounded, size: 18),

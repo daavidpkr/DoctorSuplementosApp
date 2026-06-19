@@ -171,7 +171,9 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
 
   Widget _heroAsesor(BuildContext context, PerfilAsesor? perfil) {
     final nombre = perfil?.nombre.trim() ?? '';
-    final saludo = nombre.isEmpty ? "¡Hola, Asesor!" : "¡Hola, $nombre!";
+    final saludo = nombre.isEmpty
+        ? IdiomaService.texto('hello_adviser')
+        : txtApp("¡Hola, $nombre!", "Hello, $nombre!");
     return Container(
       height: 158,
       width: double.infinity,
@@ -235,9 +237,9 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
                   ),
                 ),
                 const SizedBox(height: 8),
-                const Text(
-                  "Gestiona, asesora y mejora la vida de mas personas.",
-                  style: TextStyle(
+                Text(
+                  IdiomaService.texto('hero_subtitle'),
+                  style: const TextStyle(
                     color: Color(0xFF25315F),
                     fontSize: 12,
                     height: 1.25,
@@ -258,22 +260,22 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
                       color: const Color(0xFF101A70),
                       borderRadius: BorderRadius.circular(18),
                     ),
-                    child: const Row(
+                    child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.track_changes_rounded,
+                        const Icon(Icons.track_changes_rounded,
                             color: Colors.white, size: 15),
-                        SizedBox(width: 7),
+                        const SizedBox(width: 7),
                         Text(
-                          "Tu impacto 4Life",
-                          style: TextStyle(
+                          IdiomaService.texto('impact'),
+                          style: const TextStyle(
                             color: Colors.white,
                             fontSize: 11,
                             fontWeight: FontWeight.w800,
                           ),
                         ),
-                        SizedBox(width: 4),
-                        Icon(Icons.chevron_right_rounded,
+                        const SizedBox(width: 4),
+                        const Icon(Icons.chevron_right_rounded,
                             color: Colors.white, size: 16),
                       ],
                     ),

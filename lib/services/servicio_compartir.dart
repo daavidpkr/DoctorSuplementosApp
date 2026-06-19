@@ -103,9 +103,9 @@ class ServicioCompartir {
                 ),
               ),
               const SizedBox(height: 20),
-              const Text(
-                '¿Cómo deseas compartir?',
-                style: TextStyle(
+              Text(
+                ingles ? 'How do you want to share?' : '¿Cómo deseas compartir?',
+                style: const TextStyle(
                   color: Color(0xFF12248B),
                   fontSize: 22,
                   fontWeight: FontWeight.w900,
@@ -114,8 +114,12 @@ class ServicioCompartir {
               const SizedBox(height: 6),
               Text(
                 tieneInformativo
-                    ? 'Elige con precios o solo informativo.'
-                    : 'Elige un PDF o un mensaje de texto.',
+                    ? (ingles
+                        ? 'Choose with prices or informational only.'
+                        : 'Elige con precios o solo informativo.')
+                    : (ingles
+                        ? 'Choose a PDF or a text message.'
+                        : 'Elige un PDF o un mensaje de texto.'),
                 style: const TextStyle(
                   color: Color(0xFF596284),
                   fontSize: 15,
@@ -133,7 +137,9 @@ class ServicioCompartir {
                 titulo: tieneInformativo
                     ? (ingles ? 'PDF with prices' : 'PDF con precios')
                     : 'PDF',
-                descripcion: 'Documento profesional, ordenado y con imágenes.',
+                descripcion: ingles
+                    ? 'Professional, organized document with images.'
+                    : 'Documento profesional, ordenado y con imágenes.',
                 color: const Color(0xFFC62828),
               ),
               const SizedBox(height: 10),
@@ -197,7 +203,7 @@ class ServicioCompartir {
       return;
     }
 
-    _mostrarProcesando(context);
+    _mostrarProcesando(context, ingles: ingles);
     try {
       final bytes = await generarPdf(documentoElegido);
       if (!context.mounted) return;
@@ -218,8 +224,12 @@ class ServicioCompartir {
       if (!context.mounted) return;
       Navigator.of(context, rootNavigator: true).pop();
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('No se pudo generar el PDF. Inténtalo nuevamente.'),
+        SnackBar(
+          content: Text(
+            ingles
+                ? 'The PDF could not be generated. Try again.'
+                : 'No se pudo generar el PDF. Inténtalo nuevamente.',
+          ),
         ),
       );
     }
@@ -329,26 +339,26 @@ class ServicioCompartir {
     }
   }
 
-  static void _mostrarProcesando(BuildContext context) {
+  static void _mostrarProcesando(BuildContext context, {required bool ingles}) {
     showDialog<void>(
       context: context,
       barrierDismissible: false,
-      builder: (_) => const Center(
+      builder: (_) => Center(
         child: Card(
           child: Padding(
-            padding: EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                SizedBox(
+                const SizedBox(
                   width: 24,
                   height: 24,
                   child: CircularProgressIndicator(strokeWidth: 3),
                 ),
-                SizedBox(width: 16),
+                const SizedBox(width: 16),
                 Text(
-                  'Preparando PDF...',
-                  style: TextStyle(fontWeight: FontWeight.w800),
+                  ingles ? 'Preparing PDF...' : 'Preparando PDF...',
+                  style: const TextStyle(fontWeight: FontWeight.w800),
                 ),
               ],
             ),

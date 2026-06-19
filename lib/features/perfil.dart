@@ -94,7 +94,7 @@ class _PaginaPerfilState extends State<PaginaPerfil> {
     if (!mounted) return;
     setState(() => _guardando = false);
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("Perfil guardado")),
+      SnackBar(content: Text(txtApp("Perfil guardado", "Profile saved"))),
     );
   }
 

@@ -15,10 +15,10 @@ void main() {
 
     expect(find.textContaining('Hola, Socio'), findsOneWidget);
     expect(find.text('Consultar producto(s)'), findsOneWidget);
-    expect(find.text('Diagnostico'), findsOneWidget);
+    expect(find.text('Diagnóstico'), findsOneWidget);
     expect(find.text('Historial'), findsOneWidget);
     expect(find.text('Asesor IA 4Life'), findsOneWidget);
-    expect(find.text('Accesos rapidos'), findsOneWidget);
+    expect(find.text('Accesos rápidos'), findsOneWidget);
   });
 
   testWidgets('fresh install starts on adviser profile', (tester) async {

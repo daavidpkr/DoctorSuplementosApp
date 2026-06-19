@@ -350,10 +350,10 @@ class _PaginaCalculadoraPreciosState extends State<PaginaCalculadoraPrecios> {
                 padding: const EdgeInsets.fromLTRB(20, 18, 12, 10),
                 child: Row(
                   children: [
-                    const Expanded(
+                    Expanded(
                       child: Text(
-                        "Catalogo",
-                        style: TextStyle(
+                        txtApp("Catálogo", "Catalog"),
+                        style: const TextStyle(
                           color: Color(0xFF11258B),
                           fontSize: 24,
                           fontWeight: FontWeight.w900,
@@ -361,7 +361,7 @@ class _PaginaCalculadoraPreciosState extends State<PaginaCalculadoraPrecios> {
                       ),
                     ),
                     IconButton(
-                      tooltip: "Cerrar",
+                      tooltip: txtApp("Cerrar", "Close"),
                       onPressed: () => Navigator.pop(context),
                       icon: const Icon(Icons.close_rounded),
                     ),
@@ -632,7 +632,7 @@ class _PaginaCalculadoraPreciosState extends State<PaginaCalculadoraPrecios> {
                 size: 34,
               ),
               suffixIcon: IconButton(
-                tooltip: "Agregar",
+                tooltip: txtApp("Agregar", "Add"),
                 onPressed: _agregarDesdeTexto,
                 icon: const Icon(Icons.add_circle_rounded),
                 color: const Color(0xFF17218D),
@@ -1037,7 +1037,7 @@ class _PaginaCalculadoraPreciosState extends State<PaginaCalculadoraPrecios> {
           Expanded(
             child: _accionSecundaria(
               icono: Icons.copy_rounded,
-              texto: "Limpiar seleccion",
+              texto: txtApp("Limpiar selección", "Clear selection"),
               onTap: _limpiarSeleccion,
             ),
           ),
@@ -1045,7 +1045,7 @@ class _PaginaCalculadoraPreciosState extends State<PaginaCalculadoraPrecios> {
           Expanded(
             child: _accionSecundaria(
               icono: Icons.share_rounded,
-              texto: "Compartir lista",
+              texto: txtApp("Compartir lista", "Share list"),
               onTap: _productos.isEmpty ? null : _compartirResultado,
             ),
           ),

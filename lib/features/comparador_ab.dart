@@ -57,7 +57,7 @@ class _PaginaComparadorABState extends State<PaginaComparadorAB> {
     await Clipboard.setData(ClipboardData(text: _textoComparacion()));
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Comparison copied')),
+      SnackBar(content: Text(_t('Comparación copiada', 'Comparison copied'))),
     );
   }
 
@@ -66,13 +66,19 @@ class _PaginaComparadorABState extends State<PaginaComparadorAB> {
     return ServicioCompartir.mostrarOpciones(
       context,
       DocumentoCompartible(
-        titulo: '4LIFE A/B SUPPLEMENT COMPARISON',
-        nombreArchivo: '4LIFE A B COMPARISON',
+        titulo: _t(
+          'COMPARACIÓN A/B DE SUPLEMENTOS 4LIFE',
+          '4LIFE A/B SUPPLEMENT COMPARISON',
+        ),
+        nombreArchivo: _t(
+          'COMPARACIÓN A B 4LIFE',
+          '4LIFE A B COMPARISON',
+        ),
         texto: _textoComparacion(),
         fecha: fecha,
         secciones: [
           SeccionDocumento(
-            titulo: 'Quick decision',
+            titulo: _t('Decisión rápida', 'Quick decision'),
             contenido: _decisionRapida(),
           ),
         ],
@@ -82,90 +88,136 @@ class _PaginaComparadorABState extends State<PaginaComparadorAB> {
                 nombre: producto.nombre,
                 imagenAsset: imagenesProducto4Life[producto.nombre],
                 indicaciones: [
-                  'Focus: ${_enfoqueProducto(producto)}',
-                  'Member: ${_precio(producto.afiliado)}',
-                  'Retail: ${_precio(producto.publico)}',
+                  '${_t('Enfoque', 'Focus')}: ${_enfoqueProducto(producto)}',
+                  '${_t('Afiliado', 'Member')}: ${_precio(producto.afiliado)}',
+                  '${_t('Público', 'Retail')}: ${_precio(producto.publico)}',
                   'LP: ${producto.lp ?? 0}',
                 ],
               ),
             )
             .toList(),
       ),
+      ingles: IdiomaService.actual.value == IdiomaApp.ingles,
     );
   }
 
   String _textoComparacion() {
-    final buffer = StringBuffer('4Life A/B Supplement Comparison\n\n');
-    buffer.writeln('Product A: ${_productoA.nombre}');
-    buffer.writeln('Focus: ${_enfoqueProducto(_productoA)}');
-    buffer.writeln('Member: ${_precio(_productoA.afiliado)}');
-    buffer.writeln('Retail: ${_precio(_productoA.publico)}');
+    final buffer = StringBuffer(
+      '${_t('Comparación A/B de suplementos 4Life', '4Life A/B Supplement Comparison')}\n\n',
+    );
+    buffer.writeln('${_t('Producto A', 'Product A')}: ${_productoA.nombre}');
+    buffer
+        .writeln('${_t('Enfoque', 'Focus')}: ${_enfoqueProducto(_productoA)}');
+    buffer.writeln(
+        '${_t('Afiliado', 'Member')}: ${_precio(_productoA.afiliado)}');
+    buffer
+        .writeln('${_t('Público', 'Retail')}: ${_precio(_productoA.publico)}');
     buffer.writeln('LP: ${_productoA.lp ?? 0}\n');
-    buffer.writeln('Product B: ${_productoB.nombre}');
-    buffer.writeln('Focus: ${_enfoqueProducto(_productoB)}');
-    buffer.writeln('Member: ${_precio(_productoB.afiliado)}');
-    buffer.writeln('Retail: ${_precio(_productoB.publico)}');
+    buffer.writeln('${_t('Producto B', 'Product B')}: ${_productoB.nombre}');
+    buffer
+        .writeln('${_t('Enfoque', 'Focus')}: ${_enfoqueProducto(_productoB)}');
+    buffer.writeln(
+        '${_t('Afiliado', 'Member')}: ${_precio(_productoB.afiliado)}');
+    buffer
+        .writeln('${_t('Público', 'Retail')}: ${_precio(_productoB.publico)}');
     buffer.writeln('LP: ${_productoB.lp ?? 0}\n');
-    buffer.writeln('Quick decision: ${_decisionRapida()}');
+    buffer.writeln(
+        '${_t('Decisión rápida', 'Quick decision')}: ${_decisionRapida()}');
     return buffer.toString();
   }
 
   String _precio(double valor) => '\$${valor.toStringAsFixed(2)}';
+  bool get _ingles => IdiomaService.actual.value == IdiomaApp.ingles;
+  String _t(String es, String en) => txtApp(es, en);
 
-  String _lpPorDolar(ProductoPrecio producto) {
-    if (producto.afiliado <= 0) return '0.00';
-    return ((producto.lp ?? 0) / producto.afiliado).toStringAsFixed(2);
+  String _gananciaPorProducto(ProductoPrecio producto) {
+    final ganancia = (producto.lp ?? 0) * 0.25;
+    final texto = ganancia.toStringAsFixed(2);
+    return _ingles ? texto : texto.replaceAll('.', ',');
   }
 
   String _decisionRapida() {
     final lpA = _productoA.lp ?? 0;
     final lpB = _productoB.lp ?? 0;
-    final valorA = _productoA.afiliado <= 0 ? 0 : lpA / _productoA.afiliado;
-    final valorB = _productoB.afiliado <= 0 ? 0 : lpB / _productoB.afiliado;
+    final valorA = lpA * 0.25;
+    final valorB = lpB * 0.25;
 
     if (_enfoqueProducto(_productoA) != _enfoqueProducto(_productoB)) {
-      return 'Choose ${_productoA.nombre} for ${_enfoqueProducto(_productoA).toLowerCase()} needs, or ${_productoB.nombre} for ${_enfoqueProducto(_productoB).toLowerCase()} needs.';
+      return _t(
+        'Elige ${_productoA.nombre} para necesidades de ${_enfoqueProducto(_productoA).toLowerCase()}, o ${_productoB.nombre} para necesidades de ${_enfoqueProducto(_productoB).toLowerCase()}.',
+        'Choose ${_productoA.nombre} for ${_enfoqueProducto(_productoA).toLowerCase()} needs, or ${_productoB.nombre} for ${_enfoqueProducto(_productoB).toLowerCase()} needs.',
+      );
     }
     if (valorA > valorB) {
-      return '${_productoA.nombre} gives more LP per member dollar.';
+      return _t(
+        '${_productoA.nombre} deja mayor ganancia por producto.',
+        '${_productoA.nombre} gives a higher gain per product.',
+      );
     }
     if (valorB > valorA) {
-      return '${_productoB.nombre} gives more LP per member dollar.';
+      return _t(
+        '${_productoB.nombre} deja mayor ganancia por producto.',
+        '${_productoB.nombre} gives a higher gain per product.',
+      );
     }
-    return 'Both products are close; decide by client preference, format, and wellness goal.';
+    return _t(
+      'Ambos productos están cercanos; decide según preferencia del cliente, formato y objetivo de bienestar.',
+      'Both products are close; decide by client preference, format, and wellness goal.',
+    );
   }
 
   String _enfoqueProducto(ProductoPrecio producto) {
     final nombre = normalizarTexto(producto.nombre);
-    if (nombre.contains('energy')) return 'Energy and daily performance';
-    if (nombre.contains('riovida')) return 'Antioxidant nutrition';
+    if (nombre.contains('energy')) {
+      return _t('Energía y rendimiento diario', 'Energy and daily performance');
+    }
+    if (nombre.contains('riovida')) {
+      return _t('Nutrición antioxidante', 'Antioxidant nutrition');
+    }
     if (nombre.contains('protf') || nombre.contains('nutrastart')) {
-      return 'Protein and nutrition';
+      return _t('Proteína y nutrición', 'Protein and nutrition');
     }
-    if (nombre.contains('glucoach')) return 'Glucose metabolism support';
-    if (nombre.contains('bcv')) return 'Cardiovascular wellness';
-    if (nombre.contains('malepro')) return 'Men wellness';
+    if (nombre.contains('glucoach')) {
+      return _t(
+          'Apoyo al metabolismo de la glucosa', 'Glucose metabolism support');
+    }
+    if (nombre.contains('bcv')) {
+      return _t('Bienestar cardiovascular', 'Cardiovascular wellness');
+    }
+    if (nombre.contains('malepro')) {
+      return _t('Bienestar masculino', 'Men wellness');
+    }
     if (nombre.contains('colageno') || nombre.contains('belle vie')) {
-      return 'Beauty and connective tissue support';
+      return _t('Belleza y apoyo al tejido conectivo',
+          'Beauty and connective tissue support');
     }
-    if (nombre.contains('bioefa')) return 'Essential fatty acid support';
+    if (nombre.contains('bioefa')) {
+      return _t(
+          'Apoyo de ácidos grasos esenciales', 'Essential fatty acid support');
+    }
     if (nombre.contains('fibre') || nombre.contains('preo')) {
-      return 'Digestive wellness';
+      return _t('Bienestar digestivo', 'Digestive wellness');
     }
-    if (nombre.contains('kbu')) return 'Kidney and urinary wellness';
-    if (nombre.contains('vistari')) return 'Vision support';
-    if (nombre.contains('renuvo')) return 'Healthy aging support';
-    if (nombre.contains('tf boost')) return 'Targeted immune support';
+    if (nombre.contains('kbu')) {
+      return _t('Bienestar renal y urinario', 'Kidney and urinary wellness');
+    }
+    if (nombre.contains('vistari')) return _t('Apoyo visual', 'Vision support');
+    if (nombre.contains('renuvo')) {
+      return _t('Apoyo al envejecimiento saludable', 'Healthy aging support');
+    }
+    if (nombre.contains('tf boost')) {
+      return _t('Apoyo inmune específico', 'Targeted immune support');
+    }
     if (nombre.contains('transfer factor') || nombre.contains('agpro')) {
-      return 'Immune system support';
+      return _t('Apoyo al sistema inmune', 'Immune system support');
     }
     if (nombre.contains('crema') ||
         nombre.contains('tonico') ||
         nombre.contains('limpiador') ||
         nombre.contains('suero')) {
-      return 'Personal care';
+      return _t('Cuidado personal', 'Personal care');
     }
-    return 'General wellness';
+    return _t('Bienestar general', 'General wellness');
   }
 
   @override
@@ -222,23 +274,26 @@ class _PaginaComparadorABState extends State<PaginaComparadorAB> {
           constraints: const BoxConstraints.tightFor(width: 44, height: 44),
         ),
         const SizedBox(width: 12),
-        const Expanded(
+        Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'A/B Comparator',
-                style: TextStyle(
+                _t('Comparador A/B', 'A/B Comparator'),
+                style: const TextStyle(
                   color: Colors.white,
                   fontSize: 31,
                   height: 1.08,
                   fontWeight: FontWeight.w900,
                 ),
               ),
-              SizedBox(height: 9),
+              const SizedBox(height: 9),
               Text(
-                'Put two supplements face to face',
-                style: TextStyle(
+                _t(
+                  'Compara dos suplementos frente a frente',
+                  'Put two supplements face to face',
+                ),
+                style: const TextStyle(
                   color: Color(0xFFD9DFFF),
                   fontSize: 18,
                   height: 1.22,
@@ -271,9 +326,9 @@ class _PaginaComparadorABState extends State<PaginaComparadorAB> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Select two products',
-            style: TextStyle(
+          Text(
+            _t('Selecciona dos productos', 'Select two products'),
+            style: const TextStyle(
               color: _azul,
               fontSize: 24,
               height: 1.12,
@@ -281,9 +336,12 @@ class _PaginaComparadorABState extends State<PaginaComparadorAB> {
             ),
           ),
           const SizedBox(height: 10),
-          const Text(
-            'Compare focus, LP, member price, retail price, and decision signals side by side.',
-            style: TextStyle(
+          Text(
+            _t(
+              'Compara enfoque, LP, precio afiliado, precio público y señales de decisión lado a lado.',
+              'Compare focus, LP, member price, retail price, and decision signals side by side.',
+            ),
+            style: const TextStyle(
               color: _texto,
               fontSize: 16,
               height: 1.35,
@@ -295,7 +353,7 @@ class _PaginaComparadorABState extends State<PaginaComparadorAB> {
             children: [
               Expanded(
                 child: _selectorProducto(
-                  etiqueta: 'Product A',
+                  etiqueta: _t('Producto A', 'Product A'),
                   producto: _productoA,
                   onTap: () => _seleccionarProducto(true),
                 ),
@@ -303,7 +361,7 @@ class _PaginaComparadorABState extends State<PaginaComparadorAB> {
               const SizedBox(width: 12),
               Expanded(
                 child: _selectorProducto(
-                  etiqueta: 'Product B',
+                  etiqueta: _t('Producto B', 'Product B'),
                   producto: _productoB,
                   onTap: () => _seleccionarProducto(false),
                 ),
@@ -355,18 +413,18 @@ class _PaginaComparadorABState extends State<PaginaComparadorAB> {
               ),
             ),
             const SizedBox(height: 6),
-            const Row(
+            Row(
               children: [
                 Text(
-                  'Change',
-                  style: TextStyle(
+                  _t('Cambiar', 'Change'),
+                  style: const TextStyle(
                     color: _texto,
                     fontSize: 12,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
-                SizedBox(width: 3),
-                Icon(Icons.keyboard_arrow_down_rounded,
+                const SizedBox(width: 3),
+                const Icon(Icons.keyboard_arrow_down_rounded,
                     color: _texto, size: 18),
               ],
             ),
@@ -401,7 +459,7 @@ class _PaginaComparadorABState extends State<PaginaComparadorAB> {
                 borderRadius: BorderRadius.circular(14),
               ),
               child: Text(
-                'Product $etiqueta',
+                _t('Producto $etiqueta', 'Product $etiqueta'),
                 style: const TextStyle(
                   color: _azul,
                   fontSize: 12,
@@ -456,24 +514,27 @@ class _PaginaComparadorABState extends State<PaginaComparadorAB> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Side-by-side table',
-            style: TextStyle(
+          Text(
+            _t('Tabla comparativa', 'Side-by-side table'),
+            style: const TextStyle(
               color: _azul,
               fontSize: 22,
               fontWeight: FontWeight.w900,
             ),
           ),
           const SizedBox(height: 16),
-          _filaMetrica('Wellness focus', _enfoqueProducto(_productoA),
-              _enfoqueProducto(_productoB)),
-          _filaMetrica('Member price', _precio(_productoA.afiliado),
-              _precio(_productoB.afiliado)),
-          _filaMetrica('Retail price', _precio(_productoA.publico),
-              _precio(_productoB.publico)),
+          _filaMetrica(_t('Enfoque de bienestar', 'Wellness focus'),
+              _enfoqueProducto(_productoA), _enfoqueProducto(_productoB)),
+          _filaMetrica(_t('Precio afiliado', 'Member price'),
+              _precio(_productoA.afiliado), _precio(_productoB.afiliado)),
+          _filaMetrica(_t('Precio público', 'Retail price'),
+              _precio(_productoA.publico), _precio(_productoB.publico)),
           _filaMetrica('LP', '${_productoA.lp ?? 0}', '${_productoB.lp ?? 0}'),
-          _filaMetrica('LP per member dollar', _lpPorDolar(_productoA),
-              _lpPorDolar(_productoB)),
+          _filaMetrica(
+            _t('Ganancia por producto', 'Gain per product'),
+            _gananciaPorProducto(_productoA),
+            _gananciaPorProducto(_productoB),
+          ),
         ],
       ),
     );
@@ -572,9 +633,9 @@ class _PaginaComparadorABState extends State<PaginaComparadorAB> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Quick decision',
-                  style: TextStyle(
+                Text(
+                  _t('Decisión rápida', 'Quick decision'),
+                  style: const TextStyle(
                     color: _azul,
                     fontSize: 17,
                     fontWeight: FontWeight.w900,
@@ -618,7 +679,7 @@ class _PaginaComparadorABState extends State<PaginaComparadorAB> {
           Expanded(
             child: _accion(
               icono: Icons.copy_rounded,
-              texto: 'Copy',
+              texto: _t('Copiar', 'Copy'),
               onTap: _copiarComparacion,
             ),
           ),
@@ -626,7 +687,7 @@ class _PaginaComparadorABState extends State<PaginaComparadorAB> {
           Expanded(
             child: _accion(
               icono: Icons.share_rounded,
-              texto: 'Share',
+              texto: _t('Compartir', 'Share'),
               onTap: _compartirComparacion,
             ),
           ),
@@ -736,11 +797,11 @@ class _SelectorProductoABState extends State<_SelectorProductoAB> {
               ),
             ),
             const SizedBox(height: 18),
-            const Align(
+            Align(
               alignment: Alignment.centerLeft,
               child: Text(
-                'Choose supplement',
-                style: TextStyle(
+                txtApp('Elegir suplemento', 'Choose supplement'),
+                style: const TextStyle(
                   color: Color(0xFF172394),
                   fontSize: 22,
                   fontWeight: FontWeight.w900,
@@ -752,7 +813,7 @@ class _SelectorProductoABState extends State<_SelectorProductoAB> {
               controller: _controller,
               onChanged: (valor) => setState(() => _busqueda = valor),
               decoration: InputDecoration(
-                hintText: 'Search product',
+                hintText: txtApp('Buscar producto', 'Search product'),
                 prefixIcon: const Icon(Icons.search_rounded),
                 suffixIcon: _busqueda.isEmpty
                     ? null
@@ -806,7 +867,7 @@ class _SelectorProductoABState extends State<_SelectorProductoAB> {
                       ),
                     ),
                     subtitle: Text(
-                      'Member \$${producto.afiliado.toStringAsFixed(2)} | LP ${producto.lp ?? 0}',
+                      '${txtApp('Afiliado', 'Member')} \$${producto.afiliado.toStringAsFixed(2)} | LP ${producto.lp ?? 0}',
                     ),
                     trailing: seleccionado
                         ? const Icon(Icons.check_circle_rounded,

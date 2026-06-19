@@ -1,4 +1,4 @@
-part of '../main.dart';
+﻿part of '../main.dart';
 
 class PaginaImpacto4LifeNueva extends StatefulWidget {
   const PaginaImpacto4LifeNueva({super.key});
@@ -1625,16 +1625,19 @@ class _PaginaImpacto4LifeState extends State<PaginaImpacto4Life> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Tu impacto 4Life"),
+        title: Text(txtApp("Tu impacto 4Life", "Your 4Life Impact")),
         backgroundColor: const Color(0xFF1A237E),
         foregroundColor: Colors.white,
       ),
       body: _cargando
           ? const Center(child: CircularProgressIndicator())
           : claves.isEmpty
-              ? const Center(
+              ? Center(
                   child: Text(
-                    "Aun no hay diagnósticos ni consultas registradas.",
+                    txtApp(
+                      "Aún no hay diagnósticos ni consultas registradas.",
+                      "There are no diagnoses or consultations registered yet.",
+                    ),
                     textAlign: TextAlign.center,
                   ),
                 )
@@ -1756,7 +1759,7 @@ class _TarjetaImpactoGrafica extends StatelessWidget {
                 child: Column(
                   children: [
                     _BarraImpacto(
-                      etiqueta: 'Diagnósticos',
+                      etiqueta: txtApp('Diagnósticos', 'Diagnoses'),
                       valor: resumen.diagnosticos,
                       maximo: maximo,
                       color: const Color(0xFF14983E),

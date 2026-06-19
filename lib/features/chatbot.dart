@@ -20,7 +20,7 @@ Future<void> _compartirRespuestaChat(
       .toList();
   final secciones = <SeccionDocumento>[
     SeccionDocumento(
-      titulo: productos.isEmpty ? 'Respuesta del asesor' : 'Análisis',
+      titulo: productos.isEmpty ? 'Respuesta del asesor' : 'An\u00e1lisis',
       contenido: contenido.analisis.isEmpty ? texto : contenido.analisis,
     ),
     if (contenido.objetivo.isNotEmpty)
@@ -46,6 +46,18 @@ Future<void> _compartirRespuestaChat(
       nota: contenido.nota,
     ),
   );
+}
+
+class _SegmentoRespuestaVoz {
+  final String texto;
+  final int inicio;
+  final int fin;
+
+  const _SegmentoRespuestaVoz({
+    required this.texto,
+    required this.inicio,
+    required this.fin,
+  });
 }
 
 class PaginaChatbot extends StatefulWidget {
@@ -82,8 +94,10 @@ class _PaginaChatbotState extends State<PaginaChatbot> {
   String _estadoLlamada = "Conectando...";
   String _ultimaRespuestaBot = "";
   List<String> _lineasRespuestaBot = [];
+  List<_SegmentoRespuestaVoz> _segmentosRespuestaBot = [];
   int _lineaRespuestaActiva = 0;
   String _textoVozRespuestaBot = "";
+  bool _progresoVozRecibido = false;
   Timer? _temporizadorRespuestaBot;
   late String _conversacionId;
 
@@ -135,41 +149,70 @@ class _PaginaChatbotState extends State<PaginaChatbot> {
         .any(normalizado.contains);
   }
 
-  List<String> _dividirRespuestaBot(String texto) {
+  List<_SegmentoRespuestaVoz> _segmentarRespuestaBot(String texto) {
     final limpio = texto.replaceAll(RegExp(r'\s+'), ' ').trim();
     if (limpio.isEmpty) return const [];
     final partes = RegExp(r'[^.!?;:]+[.!?;:]?')
         .allMatches(limpio)
-        .map((match) => match.group(0)?.trim() ?? '')
-        .where((linea) => linea.isNotEmpty)
+        .where(
+          (match) => (match.group(0)?.trim() ?? '').isNotEmpty,
+        )
         .toList();
     if (partes.length <= 1) {
-      return limpio.split(RegExp(r'(?<=\S)\s+(?=\S)')).fold<List<String>>([],
-          (lineas, palabra) {
-        if (lineas.isEmpty || '${lineas.last} $palabra'.length > 52) {
-          lineas.add(palabra);
+      final segmentos = <_SegmentoRespuestaVoz>[];
+      var inicioLinea = 0;
+      var textoLinea = '';
+      for (final match in RegExp(r'\S+').allMatches(limpio)) {
+        final palabra = match.group(0) ?? '';
+        final candidato = textoLinea.isEmpty ? palabra : '$textoLinea $palabra';
+        if (textoLinea.isNotEmpty && candidato.length > 52) {
+          segmentos.add(_SegmentoRespuestaVoz(
+            texto: textoLinea,
+            inicio: inicioLinea,
+            fin: match.start,
+          ));
+          inicioLinea = match.start;
+          textoLinea = palabra;
         } else {
-          lineas[lineas.length - 1] = '${lineas.last} $palabra';
+          if (textoLinea.isEmpty) inicioLinea = match.start;
+          textoLinea = candidato;
         }
-        return lineas;
-      });
+      }
+      if (textoLinea.isNotEmpty) {
+        segmentos.add(_SegmentoRespuestaVoz(
+          texto: textoLinea,
+          inicio: inicioLinea,
+          fin: limpio.length,
+        ));
+      }
+      return segmentos;
     }
-    return partes;
+    return partes
+        .map((match) => _SegmentoRespuestaVoz(
+              texto: (match.group(0) ?? '').trim(),
+              inicio: match.start,
+              fin: match.end,
+            ))
+        .toList();
   }
 
   void _iniciarAnimacionRespuestaBot(String texto) {
     _temporizadorRespuestaBot?.cancel();
     final idioma = _ingles ? 'en' : 'es';
     final textoVoz = ServicioTextoVoz.prepararTexto(texto, idioma: idioma);
-    final lineas = _dividirRespuestaBot(textoVoz.isEmpty ? texto : textoVoz);
+    final segmentos =
+        _segmentarRespuestaBot(textoVoz.isEmpty ? texto : textoVoz);
     setState(() {
       _ultimaRespuestaBot = texto;
-      _lineasRespuestaBot = lineas;
+      _lineasRespuestaBot =
+          segmentos.map((segmento) => segmento.texto).toList();
+      _segmentosRespuestaBot = segmentos;
       _lineaRespuestaActiva = 0;
       _textoVozRespuestaBot = textoVoz;
-      _botHablando = lineas.isNotEmpty;
+      _progresoVozRecibido = false;
+      _botHablando = segmentos.isNotEmpty;
     });
-    if (lineas.isEmpty) return;
+    if (segmentos.isEmpty) return;
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scrollRespuestaBot.hasClients) {
@@ -183,14 +226,17 @@ class _PaginaChatbotState extends State<PaginaChatbot> {
     );
     final intervalo = Duration(
       milliseconds:
-          (duracionEstimada.inMilliseconds / lineas.length).round().clamp(
+          (duracionEstimada.inMilliseconds / segmentos.length).round().clamp(
                 900,
                 2600,
               ),
     );
 
     _temporizadorRespuestaBot = Timer.periodic(intervalo, (timer) {
-      if (!mounted || !_botHablando || _lineasRespuestaBot.isEmpty) {
+      if (!mounted ||
+          !_botHablando ||
+          _progresoVozRecibido ||
+          _lineasRespuestaBot.isEmpty) {
         timer.cancel();
         return;
       }
@@ -219,13 +265,20 @@ class _PaginaChatbotState extends State<PaginaChatbot> {
     int endOffset,
     String word,
   ) {
-    if (!mounted || !_botHablando || _lineasRespuestaBot.isEmpty) return;
+    if (!mounted || !_botHablando || _segmentosRespuestaBot.isEmpty) return;
+    _progresoVozRecibido = true;
+    _temporizadorRespuestaBot?.cancel();
+    _temporizadorRespuestaBot = null;
     final base = text.isNotEmpty ? text : _textoVozRespuestaBot;
     if (base.isEmpty) return;
-    final progreso = (endOffset <= 0 ? startOffset : endOffset) / base.length;
-    final indice =
-        (progreso.clamp(0.0, 1.0) * _lineasRespuestaBot.length).floor();
-    final linea = indice.clamp(0, _lineasRespuestaBot.length - 1);
+    final offset = (endOffset <= 0 ? startOffset : endOffset)
+        .clamp(0, base.length)
+        .toInt();
+    final indice = _segmentosRespuestaBot.indexWhere(
+      (segmento) => offset >= segmento.inicio && offset <= segmento.fin,
+    );
+    final linea = (indice < 0 ? _segmentosRespuestaBot.length - 1 : indice)
+        .clamp(0, _segmentosRespuestaBot.length - 1);
     if (linea == _lineaRespuestaActiva) return;
     setState(() => _lineaRespuestaActiva = linea);
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -244,7 +297,10 @@ class _PaginaChatbotState extends State<PaginaChatbot> {
     _temporizadorRespuestaBot?.cancel();
     _temporizadorRespuestaBot = null;
     if (mounted) {
-      setState(() => _botHablando = false);
+      setState(() {
+        _botHablando = false;
+        _progresoVozRecibido = false;
+      });
     }
   }
 
@@ -317,9 +373,9 @@ class _PaginaChatbotState extends State<PaginaChatbot> {
 
     Eres un asesor IA para socios de 4Life.
     Responde de manera clara, conversacional, sumamente ordenada y amigable.
-    IMPORTANTE: No uses asteriscos (*), no uses almohadillas (#), ni guiones extraños para dar formato.
-    Usa saltos de línea normales y texto limpio.
-    Responde preguntas libres sobre suplementos, productos 4Life, hábitos saludables, ventas y seguimiento de clientes.
+    IMPORTANTE: No uses asteriscos (*), no uses almohadillas (#), ni guiones extranos para dar formato.
+    Usa saltos de linea normales y texto limpio.
+    Responde preguntas libres sobre suplementos, productos 4Life, habitos saludables, ventas y seguimiento de clientes.
     Prioriza respuestas explicativas y completas cuando eso evite confusiones; no respondas demasiado corto si la pregunta requiere contexto.
     REGLA OBLIGATORIA DE PRODUCTOS: Cuando recomiendes, compares, armes rutinas o sugieras productos,
     usa UNICAMENTE estos nombres del catalogo autorizado: $catalogoPermitido4Life.
@@ -335,9 +391,9 @@ class _PaginaChatbotState extends State<PaginaChatbot> {
     $instruccionProducto
     $instruccionComponente
     $instruccionVoz
-    Mantén un tono claro, práctico y responsable. Si la pregunta parece médica, recomienda consultar a un profesional de salud.
+    Manten un tono claro, practico y responsable. Si la pregunta parece medica, recomienda consultar a un profesional de salud.
 
-    Conversación actual:
+    Conversacion actual:
     $historialPrevio
 
     Consulta actual:
@@ -544,7 +600,7 @@ class _PaginaChatbotState extends State<PaginaChatbot> {
       if (!await _audioRecorder.hasPermission()) {
         if (!mounted) return;
         _presionandoMicrofono = false;
-        setState(() => _estadoLlamada = "Se necesita acceso al micrófono");
+        setState(() => _estadoLlamada = "Se necesita acceso al micr\u00f3fono");
         showDialog(
           context: context,
           builder: (context) => AlertDialog(
@@ -661,7 +717,7 @@ class _PaginaChatbotState extends State<PaginaChatbot> {
             child: mensajes.isEmpty
                 ? const Center(
                     child: Text(
-                      "Haz una pregunta para iniciar la conversación.",
+                      "Haz una pregunta para iniciar la conversaci\u00f3n.",
                       style: TextStyle(fontSize: 16, color: Colors.grey),
                       textAlign: TextAlign.center,
                     ),
@@ -674,7 +730,7 @@ class _PaginaChatbotState extends State<PaginaChatbot> {
                       final texto = mensajes[i]["texto"] ?? "";
                       return ListTile(
                         leading: Icon(esIA ? Icons.smart_toy : Icons.person),
-                        title: Text(esIA ? "Gemini 4Life" : "Tú"),
+                        title: Text(esIA ? "Gemini 4Life" : "T\u00fa"),
                         subtitle: Text(texto),
                         trailing: esIA
                             ? Row(
@@ -1126,7 +1182,8 @@ extension _PaginaChatbotUi on _PaginaChatbotState {
           _ilustracionConversacion(),
           const SizedBox(height: 30),
           Text(
-            txtApp("En que puedo ayudarte hoy?", "How can I help you today?"),
+            txtApp("\u00bfEn qu\u00e9 puedo ayudarte hoy?",
+                "How can I help you today?"),
             textAlign: TextAlign.center,
             style: const TextStyle(
               color: Color(0xFF12248B),
@@ -1137,7 +1194,7 @@ extension _PaginaChatbotUi on _PaginaChatbotState {
           const SizedBox(height: 18),
           Text(
             txtApp(
-              "Haz una pregunta para iniciar la conversacion.\nEstoy aqui para ayudarte.",
+              "Haz una pregunta para iniciar la conversaci\u00f3n.\\nEstoy aqu\u00ed para ayudarte.",
               "Ask a question to start the conversation.\nI am here to help you.",
             ),
             textAlign: TextAlign.center,
@@ -1168,94 +1225,119 @@ extension _PaginaChatbotUi on _PaginaChatbotState {
           ),
         ],
       ),
-      child: Column(
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final compacto = constraints.maxWidth < 430;
+          final avatar = Container(
+            width: compacto ? 96 : 128,
+            height: compacto ? 96 : 128,
+            decoration: const BoxDecoration(
+              color: Color(0xFFEFF1FF),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              Icons.smart_toy_outlined,
+              color: const Color(0xFF4D66F2),
+              size: compacto ? 58 : 76,
+            ),
+          );
+          final texto = Column(
+            crossAxisAlignment:
+                compacto ? CrossAxisAlignment.center : CrossAxisAlignment.start,
             children: [
-              Container(
-                width: 128,
-                height: 128,
-                decoration: const BoxDecoration(
-                  color: Color(0xFFEFF1FF),
-                  shape: BoxShape.circle,
+              Text(
+                txtApp(
+                  "Hola, soy tu Asesor IA 4Life",
+                  "Hi, I am your 4Life AI Adviser",
                 ),
-                child: const Icon(
-                  Icons.smart_toy_outlined,
-                  color: Color(0xFF4D66F2),
-                  size: 76,
+                textAlign: compacto ? TextAlign.center : TextAlign.start,
+                style: TextStyle(
+                  color: const Color(0xFF12248B),
+                  fontSize: compacto ? 20 : 22,
+                  height: 1.18,
+                  fontWeight: FontWeight.w900,
                 ),
               ),
-              const SizedBox(width: 26),
-              Expanded(
-                child: Column(
+              const SizedBox(height: 14),
+              Text(
+                txtApp(
+                  "Estoy aqu\u00ed para ayudarte con informaci\u00f3n sobre productos, beneficios, dosis y recomendaciones personalizadas.",
+                  "I am here to help with product information, benefits, doses, and personalized recommendations.",
+                ),
+                textAlign: compacto ? TextAlign.center : TextAlign.start,
+                style: TextStyle(
+                  color: const Color(0xFF4D5689),
+                  fontSize: compacto ? 15.5 : 17,
+                  height: 1.42,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          );
+          final preguntas = [
+            _preguntaRapida(
+              icono: Icons.medication_liquid_outlined,
+              texto: txtApp(
+                "Recomi\u00e9ndame un suplemento para tener m\u00e1s energ\u00eda",
+                "Recommend a supplement for more energy",
+              ),
+              compacto: compacto,
+            ),
+            _preguntaRapida(
+              icono: Icons.shield_outlined,
+              texto: txtApp(
+                "\u00bfCu\u00e1l es la funci\u00f3n del Transfer Factor 4Life?",
+                "What is the role of Transfer Factor 4Life?",
+              ),
+              compacto: compacto,
+            ),
+            _preguntaRapida(
+              icono: Icons.favorite_border_rounded,
+              texto: txtApp(
+                "\u00bfQu\u00e9 productos apoyan el sistema inmunol\u00f3gico?",
+                "Which products support the immune system?",
+              ),
+              compacto: compacto,
+            ),
+          ];
+
+          return Column(
+            children: [
+              if (compacto) ...[
+                avatar,
+                const SizedBox(height: 18),
+                texto,
+              ] else
+                Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      txtApp(
-                        "Hola, soy tu Asesor IA 4Life",
-                        "Hi, I am your 4Life AI Adviser",
-                      ),
-                      style: const TextStyle(
-                        color: Color(0xFF12248B),
-                        fontSize: 22,
-                        height: 1.18,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                    const SizedBox(height: 18),
-                    Text(
-                      txtApp(
-                        "Estoy aqui para ayudarte con informacion sobre productos, beneficios, dosis y recomendaciones personalizadas.",
-                        "I am here to help with product information, benefits, doses, and personalized recommendations.",
-                      ),
-                      style: const TextStyle(
-                        color: Color(0xFF4D5689),
-                        fontSize: 17,
-                        height: 1.45,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
+                    avatar,
+                    const SizedBox(width: 26),
+                    Expanded(child: texto),
                   ],
                 ),
-              ),
+              const SizedBox(height: 24),
+              if (compacto)
+                Column(
+                  children: [
+                    for (var i = 0; i < preguntas.length; i++) ...[
+                      preguntas[i],
+                      if (i != preguntas.length - 1) const SizedBox(height: 10),
+                    ],
+                  ],
+                )
+              else
+                Row(
+                  children: [
+                    for (var i = 0; i < preguntas.length; i++) ...[
+                      Expanded(child: preguntas[i]),
+                      if (i != preguntas.length - 1) const SizedBox(width: 12),
+                    ],
+                  ],
+                ),
             ],
-          ),
-          const SizedBox(height: 30),
-          Row(
-            children: [
-              Expanded(
-                child: _preguntaRapida(
-                  icono: Icons.medication_liquid_outlined,
-                  texto: txtApp(
-                    "Recomiendame un suplemento para tener mas energia",
-                    "Recommend a supplement for more energy",
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _preguntaRapida(
-                  icono: Icons.shield_outlined,
-                  texto: txtApp(
-                    "Cual es la funcion del Transfer Factor 4Life?",
-                    "What is the role of Transfer Factor 4Life?",
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _preguntaRapida(
-                  icono: Icons.favorite_border_rounded,
-                  texto: txtApp(
-                    "Que productos apoyan el sistema inmunologico?",
-                    "Which products support the immune system?",
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ],
+          );
+        },
       ),
     );
   }
@@ -1263,6 +1345,7 @@ extension _PaginaChatbotUi on _PaginaChatbotState {
   Widget _preguntaRapida({
     required IconData icono,
     required String texto,
+    bool compacto = false,
   }) {
     return InkWell(
       borderRadius: BorderRadius.circular(10),
@@ -1271,31 +1354,48 @@ extension _PaginaChatbotUi on _PaginaChatbotState {
         enviarMensaje();
       },
       child: Container(
-        height: 112,
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+        height: compacto ? null : 124,
+        constraints: BoxConstraints(minHeight: compacto ? 74 : 124),
+        padding: EdgeInsets.symmetric(
+          horizontal: compacto ? 14 : 12,
+          vertical: compacto ? 12 : 14,
+        ),
         decoration: BoxDecoration(
           color: const Color(0xFFEFF1FF),
           borderRadius: BorderRadius.circular(10),
         ),
-        child: Row(
-          children: [
-            Icon(icono, color: const Color(0xFF4D66F2), size: 32),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                texto,
-                maxLines: 4,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  color: Color(0xFF12248B),
-                  fontSize: 14.5,
-                  height: 1.3,
-                  fontWeight: FontWeight.w600,
-                ),
+        child: compacto
+            ? Row(
+                children: [
+                  Icon(icono, color: const Color(0xFF4D66F2), size: 28),
+                  const SizedBox(width: 12),
+                  Expanded(child: _textoPreguntaRapida(texto, compacto)),
+                ],
+              )
+            : Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(icono, color: const Color(0xFF4D66F2), size: 30),
+                  const SizedBox(height: 10),
+                  _textoPreguntaRapida(texto, compacto),
+                ],
               ),
-            ),
-          ],
-        ),
+      ),
+    );
+  }
+
+  Widget _textoPreguntaRapida(String texto, bool compacto) {
+    return Text(
+      texto,
+      textAlign: compacto ? TextAlign.start : TextAlign.center,
+      maxLines: compacto ? 2 : 4,
+      overflow: TextOverflow.ellipsis,
+      softWrap: true,
+      style: TextStyle(
+        color: const Color(0xFF12248B),
+        fontSize: compacto ? 14 : 13.5,
+        height: 1.22,
+        fontWeight: FontWeight.w700,
       ),
     );
   }
@@ -1416,7 +1516,7 @@ extension _PaginaChatbotUi on _PaginaChatbotState {
               esIA ? CrossAxisAlignment.start : CrossAxisAlignment.end,
           children: [
             Text(
-              esIA ? "Asesor IA" : "Tu",
+              esIA ? "Asesor IA" : "T\u00fa",
               style: TextStyle(
                 color: esIA ? const Color(0xFF12248B) : Colors.white,
                 fontSize: 13,

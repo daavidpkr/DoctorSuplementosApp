@@ -350,7 +350,7 @@ class _ConsultaProductoPaginaState extends State<ConsultaProductoPagina> {
               suffixIcon: controller.text.isEmpty
                   ? null
                   : IconButton(
-                      tooltip: "Limpiar",
+                      tooltip: txtApp("Limpiar", "Clear"),
                       onPressed: () => setState(controller.clear),
                       icon: const Icon(Icons.cancel_rounded),
                       color: const Color(0xFF666C8F),
@@ -701,9 +701,9 @@ class _ConsultaProductoPaginaState extends State<ConsultaProductoPagina> {
                 ),
               ),
               const SizedBox(height: 18),
-              const Text(
-                "Busquedas recientes",
-                style: TextStyle(
+              Text(
+                txtApp("Búsquedas recientes", "Recent searches"),
+                style: const TextStyle(
                   color: Color(0xFF12248B),
                   fontSize: 23,
                   fontWeight: FontWeight.w900,

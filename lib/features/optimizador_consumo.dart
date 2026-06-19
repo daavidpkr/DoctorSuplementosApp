@@ -12,6 +12,7 @@ class _PaginaOptimizadorConsumoState extends State<PaginaOptimizadorConsumo> {
   final TextEditingController _metaController =
       TextEditingController(text: '150');
   List<PaqueteConsumo> _paquetes = [];
+  List<ProductoPrecio> _productosObligatorios = [];
 
   static const Color _azul = Color(0xFF172394);
   static const Color _azulOscuro = Color(0xFF07125E);
@@ -31,18 +32,24 @@ class _PaginaOptimizadorConsumoState extends State<PaginaOptimizadorConsumo> {
   }
 
   int get _metaLp => int.tryParse(_metaController.text.trim()) ?? 150;
+  String _t(String es, String en) => txtApp(es, en);
 
   void _generarPaquetes() {
     final meta = _metaLp.clamp(1, 999).toInt();
-    final paquetes = _OptimizadorConsumo.generar(meta);
+    final paquetes = _OptimizadorConsumo.generar(
+      meta,
+      obligatorios: _productosObligatorios,
+    );
     setState(() => _paquetes = paquetes);
 
     unawaited(ImpactoService.registrar(
       tipo: 'optimizador_consumo',
-      titulo: 'Consumption Block Optimizer',
+      titulo: _t('Optimizador de consumo', 'Consumption Block Optimizer'),
       guardarEnFirebase: false,
       datos: {
         'metaLp': meta,
+        'obligatorios':
+            _productosObligatorios.map((producto) => producto.nombre).toList(),
         'paquetes': paquetes
             .map((paquete) => {
                   'lp': paquete.totalLp,
@@ -64,11 +71,39 @@ class _PaginaOptimizadorConsumoState extends State<PaginaOptimizadorConsumo> {
     _generarPaquetes();
   }
 
+  Future<void> _escogerProductosObligatorios() async {
+    final seleccion = await showModalBottomSheet<List<ProductoPrecio>>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) => _SelectorProductosObligatorios(
+        seleccionados: _productosObligatorios,
+        titulo: _t('Productos obligatorios', 'Required products'),
+        buscar: _t('Buscar producto', 'Search product'),
+        ayuda: _t(
+          'Escoge hasta 2 productos para incluirlos en todos los planes.',
+          'Choose up to 2 products to include in every plan.',
+        ),
+        limpiar: _t('Limpiar', 'Clear'),
+        aplicar: _t('Aplicar', 'Apply'),
+        maximoTexto: _t('Máximo 2 productos', 'Maximum 2 products'),
+        afiliado: _t('Afiliado', 'Member'),
+      ),
+    );
+    if (seleccion == null) return;
+    setState(() => _productosObligatorios = seleccion);
+    _generarPaquetes();
+  }
+
   Future<void> _copiarPaquete(PaqueteConsumo paquete) async {
     await Clipboard.setData(ClipboardData(text: _textoPaquete(paquete)));
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Master pack copied')),
+      SnackBar(
+          content: Text(_t('Paquete maestro copiado', 'Master pack copied'))),
     );
   }
 
@@ -77,18 +112,25 @@ class _PaginaOptimizadorConsumoState extends State<PaginaOptimizadorConsumo> {
     return ServicioCompartir.mostrarOpciones(
       context,
       DocumentoCompartible(
-        titulo: '4LIFE MASTER CONSUMPTION PACK',
-        nombreArchivo: '4LIFE MASTER CONSUMPTION PACK',
+        titulo: _t(
+          'PAQUETE MAESTRO DE CONSUMO 4LIFE',
+          '4LIFE MASTER CONSUMPTION PACK',
+        ),
+        nombreArchivo: _t(
+          'PAQUETE MAESTRO DE CONSUMO 4LIFE',
+          '4LIFE MASTER CONSUMPTION PACK',
+        ),
         texto: _textoPaquete(paquete),
         fecha: fecha,
         secciones: [
           SeccionDocumento(
-            titulo: 'Consumption target',
-            contenido: 'Minimum LP target: ${paquete.metaLp}\n'
-                'Pack LP: ${paquete.totalLp}\n'
-                'LP above target: ${paquete.excedenteLp}\n'
-                'Member total: ${_precio(paquete.totalAfiliado)}\n'
-                'Retail total: ${_precio(paquete.totalPublico)}',
+            titulo: _t('Meta de consumo', 'Consumption goal'),
+            contenido:
+                '${_t('Meta mínima de LP', 'Minimum LP goal')}: ${paquete.metaLp}\n'
+                '${_t('LP del paquete', 'Pack LP')}: ${paquete.totalLp}\n'
+                '${_t('LP sobre la meta', 'LP above goal')}: ${paquete.excedenteLp}\n'
+                '${_t('Total afiliado', 'Member total')}: ${_precio(paquete.totalAfiliado)}\n'
+                '${_t('Total público', 'Retail total')}: ${_precio(paquete.totalPublico)}',
           ),
         ],
         productos: paquete.lineas
@@ -98,31 +140,38 @@ class _PaginaOptimizadorConsumoState extends State<PaginaOptimizadorConsumo> {
                 imagenAsset: imagenesProducto4Life[linea.producto.nombre],
                 indicaciones: [
                   'LP: ${(linea.producto.lp ?? 0) * linea.cantidad}',
-                  'Member: ${_precio(linea.producto.afiliado * linea.cantidad)}',
-                  'Retail: ${_precio(linea.producto.publico * linea.cantidad)}',
+                  '${_t('Afiliado', 'Member')}: ${_precio(linea.producto.afiliado * linea.cantidad)}',
+                  '${_t('Público', 'Retail')}: ${_precio(linea.producto.publico * linea.cantidad)}',
                 ],
               ),
             )
             .toList(),
       ),
+      ingles: IdiomaService.actual.value == IdiomaApp.ingles,
     );
   }
 
   String _textoPaquete(PaqueteConsumo paquete) {
-    final buffer = StringBuffer('4Life Master Consumption Pack\n\n');
-    buffer.writeln('Minimum LP target: ${paquete.metaLp}');
-    buffer.writeln('Pack LP: ${paquete.totalLp}');
-    buffer.writeln('LP above target: ${paquete.excedenteLp}\n');
+    final buffer = StringBuffer(
+      '${_t('Paquete maestro de consumo 4Life', '4Life Master Consumption Pack')}\n\n',
+    );
+    buffer.writeln(
+        '${_t('Meta mínima de LP', 'Minimum LP goal')}: ${paquete.metaLp}');
+    buffer.writeln('${_t('LP del paquete', 'Pack LP')}: ${paquete.totalLp}');
+    buffer.writeln(
+        '${_t('LP sobre la meta', 'LP above goal')}: ${paquete.excedenteLp}\n');
     for (final linea in paquete.lineas) {
       buffer.writeln('${linea.cantidad} x ${linea.producto.nombre}');
       buffer.writeln('LP: ${(linea.producto.lp ?? 0) * linea.cantidad}');
       buffer.writeln(
-          'Member: ${_precio(linea.producto.afiliado * linea.cantidad)}');
+          '${_t('Afiliado', 'Member')}: ${_precio(linea.producto.afiliado * linea.cantidad)}');
       buffer.writeln(
-          'Retail: ${_precio(linea.producto.publico * linea.cantidad)}\n');
+          '${_t('Público', 'Retail')}: ${_precio(linea.producto.publico * linea.cantidad)}\n');
     }
-    buffer.writeln('Member total: ${_precio(paquete.totalAfiliado)}');
-    buffer.writeln('Retail total: ${_precio(paquete.totalPublico)}');
+    buffer.writeln(
+        '${_t('Total afiliado', 'Member total')}: ${_precio(paquete.totalAfiliado)}');
+    buffer.writeln(
+        '${_t('Total público', 'Retail total')}: ${_precio(paquete.totalPublico)}');
     return buffer.toString();
   }
 
@@ -154,6 +203,8 @@ class _PaginaOptimizadorConsumoState extends State<PaginaOptimizadorConsumo> {
                   const SizedBox(height: 30),
                   _tarjetaMeta(),
                   const SizedBox(height: 18),
+                  _tarjetaProductosObligatorios(),
+                  const SizedBox(height: 18),
                   _tarjetaResumen(),
                   const SizedBox(height: 18),
                   for (var i = 0; i < _paquetes.length; i++) ...[
@@ -182,23 +233,26 @@ class _PaginaOptimizadorConsumoState extends State<PaginaOptimizadorConsumo> {
           constraints: const BoxConstraints.tightFor(width: 44, height: 44),
         ),
         const SizedBox(width: 12),
-        const Expanded(
+        Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Consumption Block Optimizer',
-                style: TextStyle(
+                _t('Optimizador de consumo', 'Consumption Block Optimizer'),
+                style: const TextStyle(
                   color: Colors.white,
                   fontSize: 30,
                   height: 1.08,
                   fontWeight: FontWeight.w900,
                 ),
               ),
-              SizedBox(height: 9),
+              const SizedBox(height: 9),
               Text(
-                'Reverse calculator for predictable master packs',
-                style: TextStyle(
+                _t(
+                  'Calculadora inversa para paquetes maestros predecibles',
+                  'Reverse calculator for predictable master packs',
+                ),
+                style: const TextStyle(
                   color: Color(0xFFD9DFFF),
                   fontSize: 18,
                   height: 1.22,
@@ -234,23 +288,26 @@ class _PaginaOptimizadorConsumoState extends State<PaginaOptimizadorConsumo> {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Expanded(
+              Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Set the LP target',
-                      style: TextStyle(
+                      _t('Define la meta de LP', 'Set the LP goal'),
+                      style: const TextStyle(
                         color: _azul,
                         fontSize: 24,
                         height: 1.12,
                         fontWeight: FontWeight.w900,
                       ),
                     ),
-                    SizedBox(height: 12),
+                    const SizedBox(height: 12),
                     Text(
-                      'Enter the minimum volume and generate mathematically aligned packs for duplication.',
-                      style: TextStyle(
+                      _t(
+                        'Ingresa el volumen mínimo y genera paquetes alineados matemáticamente para duplicación.',
+                        'Enter the minimum volume and generate mathematically aligned packs for duplication.',
+                      ),
+                      style: const TextStyle(
                         color: _texto,
                         fontSize: 17,
                         height: 1.36,
@@ -328,22 +385,22 @@ class _PaginaOptimizadorConsumoState extends State<PaginaOptimizadorConsumo> {
                   ),
                 ],
               ),
-              child: const Row(
+              child: Row(
                 children: [
-                  Icon(Icons.auto_awesome_rounded,
+                  const Icon(Icons.auto_awesome_rounded,
                       color: Colors.white, size: 31),
-                  SizedBox(width: 16),
+                  const SizedBox(width: 16),
                   Expanded(
                     child: Text(
-                      'Generate master packs',
-                      style: TextStyle(
+                      _t('Generar paquetes maestros', 'Generate master packs'),
+                      style: const TextStyle(
                         color: Colors.white,
                         fontSize: 18,
                         fontWeight: FontWeight.w900,
                       ),
                     ),
                   ),
-                  Icon(Icons.chevron_right_rounded,
+                  const Icon(Icons.chevron_right_rounded,
                       color: Colors.white, size: 34),
                 ],
               ),
@@ -375,9 +432,9 @@ class _PaginaOptimizadorConsumoState extends State<PaginaOptimizadorConsumo> {
             ),
           ),
           const SizedBox(height: 5),
-          const Text(
-            'LP GOAL',
-            style: TextStyle(
+          Text(
+            _t('META LP', 'LP GOAL'),
+            style: const TextStyle(
               color: _texto,
               fontSize: 11,
               fontWeight: FontWeight.w900,
@@ -404,6 +461,57 @@ class _PaginaOptimizadorConsumoState extends State<PaginaOptimizadorConsumo> {
     );
   }
 
+  Widget _tarjetaProductosObligatorios() {
+    final resumen = _productosObligatorios.isEmpty
+        ? _t('Sin productos fijos: el optimizador elegirá el mejor plan.',
+            'No fixed products: the optimizer will choose the best plan.')
+        : _productosObligatorios.map((producto) => producto.nombre).join(' + ');
+    final lpFijo = _productosObligatorios.fold<int>(
+      0,
+      (total, producto) => total + (producto.lp ?? 0),
+    );
+
+    return _contenedorTarjeta(
+      padding: const EdgeInsets.all(18),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  _t('Productos obligatorios', 'Required products'),
+                  style: const TextStyle(
+                    color: _azul,
+                    fontSize: 21,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+              TextButton.icon(
+                onPressed: _escogerProductosObligatorios,
+                icon: const Icon(Icons.tune_rounded),
+                label: Text(_t('Escoger', 'Choose')),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            resumen,
+            style: const TextStyle(
+              color: _tinta,
+              fontSize: 15,
+              height: 1.3,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 10),
+          _datoPaquete(_t('LP fijo', 'Fixed LP'), '$lpFijo'),
+        ],
+      ),
+    );
+  }
+
   Widget _tarjetaResumen() {
     final mejor = _paquetes.isEmpty ? null : _paquetes.first;
     return Container(
@@ -425,8 +533,14 @@ class _PaginaOptimizadorConsumoState extends State<PaginaOptimizadorConsumo> {
           Expanded(
             child: Text(
               mejor == null
-                  ? 'Enter a valid target to generate packs.'
-                  : 'Best match: ${mejor.totalLp} LP with ${mejor.excedenteLp} LP above target.',
+                  ? _t(
+                      'Ingresa una meta válida para generar paquetes.',
+                      'Enter a valid goal to generate packs.',
+                    )
+                  : _t(
+                      'Mejor opción: ${mejor.totalLp} LP con ${mejor.excedenteLp} LP sobre la meta.',
+                      'Best match: ${mejor.totalLp} LP with ${mejor.excedenteLp} LP above goal.',
+                    ),
               style: const TextStyle(
                 color: _tinta,
                 fontSize: 16,
@@ -454,7 +568,7 @@ class _PaginaOptimizadorConsumoState extends State<PaginaOptimizadorConsumo> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Master Pack $indice',
+                      _t('Paquete maestro $indice', 'Master Pack $indice'),
                       style: const TextStyle(
                         color: _azul,
                         fontSize: 22,
@@ -463,7 +577,10 @@ class _PaginaOptimizadorConsumoState extends State<PaginaOptimizadorConsumo> {
                     ),
                     const SizedBox(height: 6),
                     Text(
-                      '${paquete.lineas.length} products engineered for ${paquete.metaLp}+ LP',
+                      _t(
+                        '${paquete.lineas.length} productos diseñados para ${paquete.metaLp}+ LP',
+                        '${paquete.lineas.length} products engineered for ${paquete.metaLp}+ LP',
+                      ),
                       style: const TextStyle(
                         color: _texto,
                         fontSize: 14,
@@ -481,9 +598,12 @@ class _PaginaOptimizadorConsumoState extends State<PaginaOptimizadorConsumo> {
             spacing: 10,
             runSpacing: 10,
             children: [
-              _datoPaquete('Member', _precio(paquete.totalAfiliado)),
-              _datoPaquete('Retail', _precio(paquete.totalPublico)),
-              _datoPaquete('Extra LP', '${paquete.excedenteLp}'),
+              _datoPaquete(
+                  _t('Afiliado', 'Member'), _precio(paquete.totalAfiliado)),
+              _datoPaquete(
+                  _t('Público', 'Retail'), _precio(paquete.totalPublico)),
+              _datoPaquete(
+                  _t('LP extra', 'Extra LP'), '${paquete.excedenteLp}'),
             ],
           ),
           const SizedBox(height: 16),
@@ -495,7 +615,7 @@ class _PaginaOptimizadorConsumoState extends State<PaginaOptimizadorConsumo> {
                 child: OutlinedButton.icon(
                   onPressed: () => _copiarPaquete(paquete),
                   icon: const Icon(Icons.copy_rounded),
-                  label: const Text('Copy'),
+                  label: Text(_t('Copiar', 'Copy')),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: _azul,
                     side: const BorderSide(color: _azul),
@@ -511,7 +631,7 @@ class _PaginaOptimizadorConsumoState extends State<PaginaOptimizadorConsumo> {
                 child: ElevatedButton.icon(
                   onPressed: () => _compartirPaquete(paquete),
                   icon: const Icon(Icons.share_rounded),
-                  label: const Text('Share'),
+                  label: Text(_t('Compartir', 'Share')),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: _azul,
                     foregroundColor: Colors.white,
@@ -604,7 +724,7 @@ class _PaginaOptimizadorConsumoState extends State<PaginaOptimizadorConsumo> {
                 const SizedBox(height: 4),
                 Text(
                   'LP ${(linea.producto.lp ?? 0) * linea.cantidad}  |  '
-                  'Member ${_precio(linea.producto.afiliado * linea.cantidad)}',
+                  '${_t('Afiliado', 'Member')} ${_precio(linea.producto.afiliado * linea.cantidad)}',
                   style: const TextStyle(
                     color: _texto,
                     fontSize: 13,
@@ -628,15 +748,18 @@ class _PaginaOptimizadorConsumoState extends State<PaginaOptimizadorConsumo> {
         borderRadius: BorderRadius.circular(18),
         border: Border.all(color: const Color(0xFFE4E6EF)),
       ),
-      child: const Row(
+      child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(Icons.info_rounded, color: _azul, size: 28),
-          SizedBox(width: 12),
+          const Icon(Icons.info_rounded, color: _azul, size: 28),
+          const SizedBox(width: 12),
           Expanded(
             child: Text(
-              'These packs are planning references based on the current product list, prices, and LP values in the app.',
-              style: TextStyle(
+              _t(
+                'Estos paquetes son referencias de planificación basadas en la lista actual de productos, precios y valores LP de la app.',
+                'These packs are planning references based on the current product list, prices, and LP values in the app.',
+              ),
+              style: const TextStyle(
                 color: _texto,
                 fontSize: 14,
                 height: 1.35,
@@ -703,13 +826,32 @@ class PaqueteConsumo {
 }
 
 class _OptimizadorConsumo {
-  static List<PaqueteConsumo> generar(int metaLp) {
+  static List<PaqueteConsumo> generar(
+    int metaLp, {
+    List<ProductoPrecio> obligatorios = const [],
+  }) {
     final productos = productosConPrecio4Life
         .where((producto) => (producto.lp ?? 0) > 0)
         .toList()
       ..sort((a, b) => (b.lp ?? 0).compareTo(a.lp ?? 0));
-    final maxLp = (metaLp + 24).clamp(metaLp, 1024).toInt();
-    final mejoresPorLp = <int, List<LineaProductoPrecio>>{0: []};
+    final obligatoriosUnicos = <String, ProductoPrecio>{};
+    for (final producto in obligatorios) {
+      if ((producto.lp ?? 0) > 0) {
+        obligatoriosUnicos[producto.nombre] = producto;
+      }
+    }
+    final baseLineas = obligatoriosUnicos.values
+        .map((producto) => LineaProductoPrecio(producto: producto, cantidad: 1))
+        .toList();
+    final baseLp = baseLineas.fold<int>(
+      0,
+      (total, linea) => total + (linea.producto.lp ?? 0),
+    );
+    final maxLp =
+        (metaLp + 24).clamp(metaLp > baseLp ? metaLp : baseLp, 1024).toInt();
+    final mejoresPorLp = <int, List<LineaProductoPrecio>>{
+      baseLp: baseLineas,
+    };
 
     for (final producto in productos) {
       final lp = producto.lp ?? 0;
@@ -800,5 +942,226 @@ class _OptimizadorConsumo {
     }
 
     return seleccionados;
+  }
+}
+
+class _SelectorProductosObligatorios extends StatefulWidget {
+  final List<ProductoPrecio> seleccionados;
+  final String titulo;
+  final String buscar;
+  final String ayuda;
+  final String limpiar;
+  final String aplicar;
+  final String maximoTexto;
+  final String afiliado;
+
+  const _SelectorProductosObligatorios({
+    required this.seleccionados,
+    required this.titulo,
+    required this.buscar,
+    required this.ayuda,
+    required this.limpiar,
+    required this.aplicar,
+    required this.maximoTexto,
+    required this.afiliado,
+  });
+
+  @override
+  State<_SelectorProductosObligatorios> createState() =>
+      _SelectorProductosObligatoriosState();
+}
+
+class _SelectorProductosObligatoriosState
+    extends State<_SelectorProductosObligatorios> {
+  final TextEditingController _controller = TextEditingController();
+  late final Set<String> _seleccionados =
+      widget.seleccionados.map((producto) => producto.nombre).toSet();
+  String _busqueda = '';
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  List<ProductoPrecio> get _productos {
+    final busqueda = normalizarTexto(_busqueda);
+    final productos = [...productosConPrecio4Life]
+      ..sort((a, b) => a.nombre.compareTo(b.nombre));
+    if (busqueda.isEmpty) return productos;
+    return productos
+        .where(
+          (producto) => normalizarTexto(producto.nombre).contains(busqueda),
+        )
+        .toList();
+  }
+
+  void _alternar(ProductoPrecio producto) {
+    setState(() {
+      if (_seleccionados.contains(producto.nombre)) {
+        _seleccionados.remove(producto.nombre);
+      } else if (_seleccionados.length < 2) {
+        _seleccionados.add(producto.nombre);
+      }
+    });
+  }
+
+  void _aplicar() {
+    final seleccion = productosConPrecio4Life
+        .where((producto) => _seleccionados.contains(producto.nombre))
+        .toList();
+    Navigator.pop(context, seleccion);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Padding(
+        padding: EdgeInsets.only(
+          left: 18,
+          right: 18,
+          top: 12,
+          bottom: MediaQuery.of(context).viewInsets.bottom + 18,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 44,
+              height: 5,
+              decoration: BoxDecoration(
+                color: const Color(0xFFD8DCEB),
+                borderRadius: BorderRadius.circular(99),
+              ),
+            ),
+            const SizedBox(height: 18),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                widget.titulo,
+                style: const TextStyle(
+                  color: Color(0xFF172394),
+                  fontSize: 22,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ),
+            const SizedBox(height: 6),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                widget.ayuda,
+                style: const TextStyle(
+                  color: Color(0xFF465074),
+                  fontSize: 14,
+                  height: 1.25,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            const SizedBox(height: 14),
+            TextField(
+              controller: _controller,
+              onChanged: (valor) => setState(() => _busqueda = valor),
+              decoration: InputDecoration(
+                hintText: widget.buscar,
+                prefixIcon: const Icon(Icons.search_rounded),
+                suffixIcon: _busqueda.isEmpty
+                    ? null
+                    : IconButton(
+                        onPressed: () {
+                          _controller.clear();
+                          setState(() => _busqueda = '');
+                        },
+                        icon: const Icon(Icons.close_rounded),
+                      ),
+                filled: true,
+                fillColor: Colors.white,
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide:
+                      const BorderSide(color: Color(0xFFD6D9E6), width: 1.5),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide:
+                      const BorderSide(color: Color(0xFF172394), width: 1.7),
+                ),
+              ),
+            ),
+            const SizedBox(height: 10),
+            if (_seleccionados.length >= 2)
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  widget.maximoTexto,
+                  style: const TextStyle(
+                    color: Color(0xFF9A5A00),
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+            const SizedBox(height: 8),
+            Flexible(
+              child: ListView.builder(
+                shrinkWrap: true,
+                itemCount: _productos.length,
+                itemBuilder: (context, index) {
+                  final producto = _productos[index];
+                  final seleccionado = _seleccionados.contains(producto.nombre);
+                  return CheckboxListTile(
+                    value: seleccionado,
+                    onChanged: (_) => _alternar(producto),
+                    controlAffinity: ListTileControlAffinity.trailing,
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(
+                      producto.nombre,
+                      style: const TextStyle(
+                        color: Color(0xFF111B59),
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    subtitle: Text(
+                      '${widget.afiliado} \$${producto.afiliado.toStringAsFixed(2)} | LP ${producto.lp ?? 0}',
+                    ),
+                    secondary: SizedBox(
+                      width: 46,
+                      height: 46,
+                      child: Image.asset(
+                        imagenesProducto4Life[producto.nombre] ?? '',
+                        fit: BoxFit.contain,
+                        errorBuilder: (_, __, ___) =>
+                            const Icon(Icons.inventory_2_outlined),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () {
+                      setState(_seleccionados.clear);
+                    },
+                    child: Text(widget.limpiar),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: _aplicar,
+                    child: Text(widget.aplicar),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

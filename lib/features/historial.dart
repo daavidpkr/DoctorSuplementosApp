@@ -1,4 +1,4 @@
-part of '../main.dart';
+﻿part of '../main.dart';
 
 class HistorialPagina extends StatelessWidget {
   const HistorialPagina({super.key});
@@ -6,9 +6,14 @@ class HistorialPagina extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Historial (Local)")),
+      appBar: AppBar(title: Text(txtApp("Historial local", "Local History"))),
       body: HistorialService.registros.isEmpty
-          ? const Center(child: Text("No hay consultas previas"))
+          ? Center(
+              child: Text(txtApp(
+                "No hay consultas previas",
+                "There are no previous consultations",
+              )),
+            )
           : ListView.builder(
               itemCount: HistorialService.registros.length,
               itemBuilder: (context, index) {
@@ -16,7 +21,7 @@ class HistorialPagina extends StatelessWidget {
                 return ListTile(
                   leading: const Icon(Icons.description),
                   title: Text(item['titulo']),
-                  subtitle: Text("Fecha: ${item['fecha']}"),
+                  subtitle: Text("${txtApp("Fecha", "Date")}: ${item['fecha']}"),
                   onTap: () {
                     Navigator.push(
                         context,
@@ -39,17 +44,20 @@ class PaginaConsulta extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Consultar Producto"),
+        title: Text(txtApp("Consultar producto", "Product consultation")),
         backgroundColor: const Color(0xFF1A237E),
         foregroundColor: Colors.white,
       ),
-      body: const Center(
+      body: Center(
         child: Padding(
-          padding: EdgeInsets.all(20.0),
+          padding: const EdgeInsets.all(20.0),
           child: Text(
-            "Aquí podrás consultar información detallada de los productos 4Life.",
+            txtApp(
+              "Aquí podrás consultar información detallada de los productos 4Life.",
+              "Here you can check detailed information about 4Life products.",
+            ),
             textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 16),
+            style: const TextStyle(fontSize: 16),
           ),
         ),
       ),
@@ -1115,7 +1123,7 @@ class _PaginaHistorialChatbotState extends State<PaginaHistorialChatbot> {
         t.contains('insomnio') ||
         t.contains('descanso')) {
       return _CategoriaChat(
-        texto: txtApp('Sueno y descanso', 'Sleep and rest'),
+        texto: txtApp('Sueño y descanso', 'Sleep and rest'),
         icono: Icons.nightlight_round,
         color: Color(0xFF5E46D8),
         fondo: Color(0xFFEAE6FF),

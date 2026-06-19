@@ -134,7 +134,7 @@ class IdiomaService {
   static const Map<String, Map<String, String>> _textos = {
     'hello_adviser': {'es': '¡Hola, Asesor!', 'en': 'Hello, Adviser!'},
     'hero_subtitle': {
-      'es': 'Gestiona, asesora y mejora la vida de mas personas.',
+      'es': 'Gestiona, asesora y mejora la vida de más personas.',
       'en': 'Manage, advise, and improve more lives.',
     },
     'impact': {'es': 'Tu impacto 4Life', 'en': 'Your 4Life impact'},
@@ -143,7 +143,7 @@ class IdiomaService {
       'en': 'Product consultation',
     },
     'consult_products_desc': {
-      'es': 'Explora el catalogo y descubre todos nuestros productos.',
+      'es': 'Explora el catálogo y descubre todos nuestros productos.',
       'en': 'Explore the catalog and discover all products.',
     },
     'price_calculator': {
@@ -159,38 +159,38 @@ class IdiomaService {
       'en': 'Consumption Block Optimizer',
     },
     'consumption_optimizer_desc': {
-      'es': 'Genera paquetes maestros desde una meta minima de LP.',
-      'en': 'Build master packs from a minimum LP target.',
+      'es': 'Genera paquetes maestros desde una meta mínima de LP.',
+      'en': 'Build master packs from a minimum LP goal.',
     },
     'local_inventory': {
-      'es': 'My Local Inventory',
+      'es': 'Inventario local',
       'en': 'My Local Inventory',
     },
     'local_inventory_desc': {
-      'es': 'Track physical stock available for immediate delivery.',
+      'es': 'Controla el stock físico disponible para entrega inmediata.',
       'en': 'Track physical stock available for immediate delivery.',
     },
     'ab_comparator': {
-      'es': 'A/B Comparator',
+      'es': 'Comparador A/B',
       'en': 'A/B Comparator',
     },
     'ab_comparator_desc': {
-      'es': 'Compare two supplements side by side for client needs.',
+      'es': 'Compara dos suplementos lado a lado según la necesidad del cliente.',
       'en': 'Compare two supplements side by side for client needs.',
     },
-    'diagnosis': {'es': 'Diagnostico', 'en': 'Diagnosis'},
+    'diagnosis': {'es': 'Diagnóstico', 'en': 'Diagnosis'},
     'diagnosis_desc': {
-      'es': 'Evalua y conoce las necesidades de tus clientes.',
-      'en': 'Evaluate and understand your clients needs.',
+      'es': 'Evalúa y conoce las necesidades de tus clientes.',
+      'en': "Evaluate and understand your clients' needs.",
     },
-    'body_change': {'es': 'Cambio fisico', 'en': 'Body transformation'},
+    'body_change': {'es': 'Cambio físico', 'en': 'Body transformation'},
     'body_change_desc': {
-      'es': 'Crea una guia personalizada para objetivos corporales.',
+      'es': 'Crea una guía personalizada para objetivos corporales.',
       'en': 'Create a personalized guide for body goals.',
     },
     'history': {'es': 'Historial', 'en': 'History'},
     'history_desc': {
-      'es': 'Revisa tus consultas, diagnosticos y recomendaciones previas.',
+      'es': 'Revisa tus consultas, diagnósticos y recomendaciones previas.',
       'en': 'Review previous consultations, diagnoses, and recommendations.',
     },
     'chat_live_desc': {
@@ -200,7 +200,7 @@ class IdiomaService {
     },
     'ai_adviser': {'es': 'Asesor IA 4Life', 'en': '4Life AI Adviser'},
     'ai_adviser_desc': {
-      'es': 'Obten recomendaciones personalizadas con inteligencia artificial.',
+      'es': 'Obtén recomendaciones personalizadas con inteligencia artificial.',
       'en': 'Get personalized recommendations with artificial intelligence.',
     },
     'profile': {'es': 'Perfil', 'en': 'Profile'},
@@ -213,10 +213,10 @@ class IdiomaService {
       'es': 'Consulta conceptos clave sobre productos y bienestar.',
       'en': 'Check key concepts about products and wellness.',
     },
-    'quick_access': {'es': 'Accesos rapidos', 'en': 'Quick access'},
-    'catalog': {'es': 'Catalogo', 'en': 'Catalog'},
+    'quick_access': {'es': 'Accesos rápidos', 'en': 'Quick access'},
+    'catalog': {'es': 'Catálogo', 'en': 'Catalog'},
     'prices': {'es': 'Precios', 'en': 'Prices'},
-    'diagnoses': {'es': 'Diagnosticos', 'en': 'Diagnoses'},
+    'diagnoses': {'es': 'Diagnósticos', 'en': 'Diagnoses'},
     'chats': {'es': 'Chats', 'en': 'Chats'},
     'home': {'es': 'Inicio', 'en': 'Home'},
     'consultations': {'es': 'Consultas', 'en': 'Consultations'},

@@ -308,7 +308,9 @@ class _FormularioPacienteState extends State<FormularioPaciente> {
   // ignore: unused_element
   Widget _buildFormularioDiagnosticoAnterior(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Formulario de Diagnóstico")),
+      appBar: AppBar(
+        title: Text(txtApp("Formulario de diagnóstico", "Diagnosis Form")),
+      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(25),
         child: Column(
@@ -324,16 +326,22 @@ class _FormularioPacienteState extends State<FormularioPaciente> {
                   child: DropdownButtonFormField<String>(
                     initialValue: _generoSeleccionado,
                     isDense: true,
-                    decoration: const InputDecoration(
-                      labelText: 'Género',
-                      border: OutlineInputBorder(),
-                      prefixIcon: Icon(Icons.wc),
-                      contentPadding:
-                          EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                    decoration: InputDecoration(
+                      labelText: txtApp('Género', 'Gender'),
+                      border: const OutlineInputBorder(),
+                      prefixIcon: const Icon(Icons.wc),
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 12),
                     ),
-                    items: const [
-                      DropdownMenuItem(value: 'Hombre', child: Text('Hombre')),
-                      DropdownMenuItem(value: 'Mujer', child: Text('Mujer')),
+                    items: [
+                      DropdownMenuItem(
+                        value: 'Hombre',
+                        child: Text(txtApp('Hombre', 'Male')),
+                      ),
+                      DropdownMenuItem(
+                        value: 'Mujer',
+                        child: Text(txtApp('Mujer', 'Female')),
+                      ),
                     ],
                     onChanged: (String? nuevoValor) {
                       setState(() {
@@ -342,7 +350,10 @@ class _FormularioPacienteState extends State<FormularioPaciente> {
                     },
                     validator: (value) {
                       if (value == null || value.isEmpty) {
-                        return 'Selecciona el género';
+                        return txtApp(
+                          'Selecciona el género',
+                          'Select the gender',
+                        );
                       }
                       return null;
                     },
@@ -350,8 +361,8 @@ class _FormularioPacienteState extends State<FormularioPaciente> {
                 ),
               ),
             ),
-            _buildCampo("Síntomas actuales", historialController,
-                "Describa qué siente...",
+            _buildCampo(txtApp("Síntomas actuales", "Current symptoms"),
+                historialController, txtApp("Describe qué siente...", "Describe how they feel..."),
                 lineas: 4),
             const SizedBox(height: 20),
             cargando
@@ -361,8 +372,10 @@ class _FormularioPacienteState extends State<FormularioPaciente> {
                     style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF1A237E),
                         minimumSize: const Size(double.infinity, 55)),
-                    child: const Text("GENERAR DIAGNÓSTICO",
-                        style: TextStyle(color: Colors.white)),
+                    child: Text(
+                      txtApp("GENERAR DIAGNÓSTICO", "GENERATE DIAGNOSIS"),
+                      style: const TextStyle(color: Colors.white),
+                    ),
                   ),
           ],
         ),
@@ -874,7 +887,7 @@ class _FormularioPacienteState extends State<FormularioPaciente> {
                     ),
                   ),
                   IconButton(
-                    tooltip: "Quitar archivo",
+                    tooltip: txtApp("Quitar archivo", "Remove file"),
                     onPressed: _quitarAdjuntoDiagnostico,
                     icon: const Icon(Icons.close_rounded),
                     color: const Color(0xFF12248B),

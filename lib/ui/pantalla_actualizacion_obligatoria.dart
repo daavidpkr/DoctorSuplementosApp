@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../services/actualizador_service.dart';
 
@@ -23,9 +24,23 @@ class _PantallaBloqueoVersionState extends State<PantallaBloqueoVersion> {
 
   double _progreso = 0;
   bool _descargando = false;
+  bool _ingles = false;
   String? _error;
 
   bool get _urlConfigurada => widget.urlDescarga.trim().isNotEmpty;
+  String _t(String es, String en) => _ingles ? en : es;
+
+  @override
+  void initState() {
+    super.initState();
+    _cargarIdioma();
+  }
+
+  Future<void> _cargarIdioma() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (!mounted) return;
+    setState(() => _ingles = prefs.getString('idioma_app_4life') == 'en');
+  }
 
   Future<void> _descargar() async {
     if (_descargando || !_urlConfigurada) return;
@@ -50,7 +65,10 @@ class _PantallaBloqueoVersionState extends State<PantallaBloqueoVersion> {
     } catch (_) {
       if (!mounted) return;
       setState(
-        () => _error = 'Ocurrio un error inesperado durante la actualizacion.',
+        () => _error = _t(
+          'Ocurrió un error inesperado durante la actualización.',
+          'An unexpected error occurred during the update.',
+        ),
       );
     } finally {
       if (mounted) {
@@ -115,10 +133,10 @@ class _PantallaBloqueoVersionState extends State<PantallaBloqueoVersion> {
                           ),
                         ),
                         const SizedBox(height: 24),
-                        const Text(
-                          'Actualizacion obligatoria',
+                        Text(
+                          _t('Actualización obligatoria', 'Required update'),
                           textAlign: TextAlign.center,
-                          style: TextStyle(
+                          style: const TextStyle(
                             color: azul,
                             fontSize: 30,
                             fontWeight: FontWeight.w900,
@@ -126,9 +144,14 @@ class _PantallaBloqueoVersionState extends State<PantallaBloqueoVersion> {
                         ),
                         const SizedBox(height: 14),
                         Text(
-                          'Tu version ${widget.versionActual} ya no es compatible. '
-                          'Instala la version ${widget.versionMinima} o una posterior '
-                          'para continuar usando DoctorSuplementos.',
+                          _t(
+                            'Tu versión ${widget.versionActual} ya no es compatible. '
+                                'Instala la versión ${widget.versionMinima} o una posterior '
+                                'para continuar usando DoctorSuplementos.',
+                            'Your version ${widget.versionActual} is no longer compatible. '
+                                'Install version ${widget.versionMinima} or later '
+                                'to continue using DoctorSuplementos.',
+                          ),
                           textAlign: TextAlign.center,
                           style: const TextStyle(
                             color: Color(0xFF4D5578),
@@ -151,8 +174,10 @@ class _PantallaBloqueoVersionState extends State<PantallaBloqueoVersion> {
                           const SizedBox(height: 12),
                           Text(
                             _progreso >= 1
-                                ? 'Abriendo instalador...'
-                                : 'Descargando $porcentaje%',
+                                ? _t('Abriendo instalador...',
+                                    'Opening installer...')
+                                : _t('Descargando $porcentaje%',
+                                    'Downloading $porcentaje%'),
                             style: const TextStyle(
                               color: azul,
                               fontSize: 16,
@@ -170,11 +195,13 @@ class _PantallaBloqueoVersionState extends State<PantallaBloqueoVersion> {
                         ],
                         if (!_urlConfigurada) ...[
                           const SizedBox(height: 20),
-                          const _MensajeEstado(
+                          _MensajeEstado(
                             icono: Icons.link_off_rounded,
-                            texto:
-                                'No se configuro una URL directa para el APK.',
-                            color: Color(0xFF9A5A00),
+                            texto: _t(
+                              'No se configuró una URL directa para el APK.',
+                              'A direct APK URL has not been configured.',
+                            ),
+                            color: const Color(0xFF9A5A00),
                           ),
                         ],
                         const SizedBox(height: 28),
@@ -203,10 +230,12 @@ class _PantallaBloqueoVersionState extends State<PantallaBloqueoVersion> {
                             ),
                             label: Text(
                               _descargando
-                                  ? 'Descargando actualización...'
+                                  ? _t('Descargando actualización...',
+                                      'Downloading update...')
                                   : _error == null
-                                      ? 'Descargar nueva versión'
-                                      : 'Intentar nuevamente',
+                                      ? _t('Descargar nueva versión',
+                                          'Download new version')
+                                      : _t('Intentar nuevamente', 'Try again'),
                               style: const TextStyle(
                                 fontSize: 17,
                                 fontWeight: FontWeight.w900,
@@ -215,10 +244,13 @@ class _PantallaBloqueoVersionState extends State<PantallaBloqueoVersion> {
                           ),
                         ),
                         const SizedBox(height: 12),
-                        const Text(
-                          'Al terminar, Android abrira el instalador.',
+                        Text(
+                          _t(
+                            'Al terminar, Android abrirá el instalador.',
+                            'When it finishes, Android will open the installer.',
+                          ),
                           textAlign: TextAlign.center,
-                          style: TextStyle(
+                          style: const TextStyle(
                             color: Color(0xFF747A9E),
                             fontSize: 13,
                             fontWeight: FontWeight.w700,
