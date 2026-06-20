@@ -38,6 +38,7 @@ dependencies:
   dio: ^5.4.0
   open_file: ^3.3.2
   permission_handler: ^11.3.0
+  video_player: ^2.11.1
 
 dev_dependencies:
   flutter_test:
@@ -75,3 +76,4 @@ flutter:
     - assets/lottie/
     - assets/productos/productos-ec/
     - assets/productos/productos-eu/
+    - assets/testimonios/

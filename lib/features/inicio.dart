@@ -131,6 +131,14 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
                     ),
                     _tarjetaMenu(
                       context,
+                      titulo: IdiomaService.texto('testimonials'),
+                      descripcion: IdiomaService.texto('testimonials_desc'),
+                      icono: Icons.ondemand_video_rounded,
+                      colores: const [Color(0xFF3047CC), Color(0xFF172394)],
+                      destino: const PaginaTestimonios4Life(),
+                    ),
+                    _tarjetaMenu(
+                      context,
                       titulo: IdiomaService.texto('dictionary'),
                       descripcion: IdiomaService.texto('dictionary_desc'),
                       icono: Icons.menu_book_rounded,

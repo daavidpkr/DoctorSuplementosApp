@@ -175,7 +175,8 @@ class IdiomaService {
       'en': 'A/B Comparator',
     },
     'ab_comparator_desc': {
-      'es': 'Compara dos suplementos lado a lado según la necesidad del cliente.',
+      'es':
+          'Compara dos suplementos lado a lado según la necesidad del cliente.',
       'en': 'Compare two supplements side by side for client needs.',
     },
     'diagnosis': {'es': 'Diagnóstico', 'en': 'Diagnosis'},
@@ -202,6 +203,11 @@ class IdiomaService {
     'ai_adviser_desc': {
       'es': 'Obtén recomendaciones personalizadas con inteligencia artificial.',
       'en': 'Get personalized recommendations with artificial intelligence.',
+    },
+    'testimonials': {'es': 'Testimonios', 'en': 'Testimonials'},
+    'testimonials_desc': {
+      'es': 'Mira historias reales en video para compartir inspiracion.',
+      'en': 'Watch real video stories to share inspiration.',
     },
     'profile': {'es': 'Perfil', 'en': 'Profile'},
     'profile_desc': {
