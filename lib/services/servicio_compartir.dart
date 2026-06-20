@@ -378,7 +378,7 @@ class ServicioCompartir {
       author: 'DoctorSuplementos',
       creator: 'DoctorSuplementos',
     );
-    final logo = await _cargarImagen('assets/icon.png');
+    final logo = await _cargarImagen('assets/icon.webp');
     final imagenes = <String, pw.MemoryImage?>{};
     for (final producto in documento.productos) {
       final ruta = producto.imagenAsset;

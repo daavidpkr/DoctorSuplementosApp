@@ -49,29 +49,29 @@ dev_dependencies:
 flutter_launcher_icons:
   android: true
   ios: true
-  image_path: "assets/icon.png"
+  image_path: "assets/icon.webp"
   min_sdk_android: 21
   adaptive_icon_background: "#FFFFFF"
-  adaptive_icon_foreground: "assets/icon.png"
+  adaptive_icon_foreground: "assets/icon.webp"
   web:
     generate: true
-    image_path: "assets/icon.png"
+    image_path: "assets/icon.webp"
     background_color: "#FFFFFF"
     theme_color: "#1A237E"
   windows:
     generate: true
-    image_path: "assets/icon.png"
+    image_path: "assets/icon.webp"
     icon_size: 256
   macos:
     generate: true
-    image_path: "assets/icon.png"
+    image_path: "assets/icon.webp"
 
 flutter:
   # Activa el diseño Material Design para botones y campos de texto
   uses-material-design: true
   assets:
     - .env
-    - assets/icon.png
+    - assets/icon.webp
     - assets/fonts/
     - assets/lottie/
     - assets/productos/productos-ec/

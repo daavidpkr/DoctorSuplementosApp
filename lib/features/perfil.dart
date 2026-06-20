@@ -221,7 +221,7 @@ class _PaginaPerfilState extends State<PaginaPerfil> {
                 child: fotoBytes == null
                     ? ClipOval(
                         child: Image.asset(
-                          'assets/icon.png',
+                          'assets/icon.webp',
                           width: 144,
                           height: 144,
                           fit: BoxFit.cover,
