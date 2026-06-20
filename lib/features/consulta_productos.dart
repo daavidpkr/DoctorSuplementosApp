@@ -743,6 +743,13 @@ class _ConsultaProductoPaginaState extends State<ConsultaProductoPagina> {
     required ProductoPrecio? precioProducto,
   }) {
     final ingles = IdiomaService.actual.value == IdiomaApp.ingles;
+    final secciones = _seccionesResultadoProducto(resultado);
+    final guionCapsula = _textoCapsulaAudioProducto(
+      titulo: productoIdentificado ?? titulo,
+      resultado: resultado,
+      secciones: secciones,
+      ingles: ingles,
+    );
     return Dialog(
       backgroundColor: Colors.white,
       insetPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 24),
@@ -834,8 +841,12 @@ class _ConsultaProductoPaginaState extends State<ConsultaProductoPagina> {
                         },
                       ),
                       const SizedBox(height: 16),
-                      for (final seccion
-                          in _seccionesResultadoProducto(resultado))
+                      _capsulaAudioProducto(
+                        guion: guionCapsula,
+                        ingles: ingles,
+                      ),
+                      const SizedBox(height: 4),
+                      for (final seccion in secciones)
                         _seccionResultadoProducto(seccion.key, seccion.value),
                     ],
                   ),
@@ -893,6 +904,111 @@ class _ConsultaProductoPaginaState extends State<ConsultaProductoPagina> {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _capsulaAudioProducto({
+    required String guion,
+    required bool ingles,
+  }) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF4F6FF),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFDDE3FF)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 46,
+            height: 46,
+            decoration: BoxDecoration(
+              color: const Color(0xFF12248B),
+              borderRadius: BorderRadius.circular(13),
+            ),
+            child: const Icon(
+              Icons.podcasts_rounded,
+              color: Colors.white,
+              size: 26,
+            ),
+          ),
+          const SizedBox(width: 13),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  ingles ? 'Quick audio capsule' : 'Capsula de audio',
+                  style: const TextStyle(
+                    color: Color(0xFF12248B),
+                    fontSize: 16,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 5),
+                Text(
+                  ingles
+                      ? 'Cellular education and product function in a short podcast-style track.'
+                      : 'Educacion celular y funcionamiento del producto en formato agil tipo podcast.',
+                  style: const TextStyle(
+                    color: Color(0xFF27315F),
+                    fontSize: 13.5,
+                    height: 1.35,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    FilledButton.icon(
+                      style: FilledButton.styleFrom(
+                        backgroundColor: const Color(0xFF12248B),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 11,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      icon: const Icon(Icons.play_arrow_rounded, size: 22),
+                      label: Text(
+                        ingles ? 'Play capsule' : 'Reproducir capsula',
+                        style: const TextStyle(fontWeight: FontWeight.w800),
+                      ),
+                      onPressed: () => ServicioTextoVoz.reproducir(guion),
+                    ),
+                    OutlinedButton.icon(
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: const Color(0xFF12248B),
+                        side: const BorderSide(color: Color(0xFFBFC8FF)),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 11,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      icon: const Icon(Icons.stop_circle_outlined, size: 22),
+                      label: Text(
+                        ingles ? 'Stop' : 'Detener',
+                        style: const TextStyle(fontWeight: FontWeight.w800),
+                      ),
+                      onPressed: ServicioTextoVoz.detener,
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -1147,6 +1263,66 @@ class _ConsultaProductoPaginaState extends State<ConsultaProductoPagina> {
         .map((entry) => MapEntry(entry.key, entry.value.join('\n')))
         .where((entry) => entry.value.trim().isNotEmpty)
         .toList();
+  }
+
+  String _textoCapsulaAudioProducto({
+    required String titulo,
+    required String resultado,
+    required List<MapEntry<String, String>> secciones,
+    required bool ingles,
+  }) {
+    String seccion(List<String> claves) {
+      for (final entry in secciones) {
+        final tituloNormalizado = normalizarTexto(entry.key);
+        for (final clave in claves) {
+          if (tituloNormalizado.contains(normalizarTexto(clave))) {
+            return entry.value.trim();
+          }
+        }
+      }
+      return '';
+    }
+
+    final descripcion = seccion(['Descripcion', 'Description']);
+    final componentes = seccion([
+      'Ingredientes o componentes principales',
+      'Main ingredients or components',
+    ]);
+    final uso = seccion(['Indicaciones de uso', 'Directions for use']);
+    final dosis = seccion(['Dosis sugerida', 'Suggested dosage']);
+    final precauciones = seccion([
+      'Contraindicaciones o precauciones',
+      'Contraindications or precautions',
+    ]);
+    final nota = seccion(['Nota', 'Note']);
+    final base = descripcion.isEmpty && componentes.isEmpty
+        ? resultado
+        : [
+            if (descripcion.isNotEmpty) descripcion,
+            if (componentes.isNotEmpty) componentes,
+            if (uso.isNotEmpty) uso,
+            if (dosis.isNotEmpty) dosis,
+            if (precauciones.isNotEmpty) precauciones,
+            if (nota.isNotEmpty) nota,
+          ].join('\n');
+
+    if (ingles) {
+      return '''
+Audio capsule about $titulo.
+In this quick cellular education track, review the product while you read its information.
+$base
+Remember: this is wellness education, not medical advice. This product is not medicine and does not replace guidance from a healthcare professional.
+'''
+          .trim();
+    }
+
+    return '''
+Capsula de audio sobre $titulo.
+En esta pista breve de educacion celular, revisa el producto mientras lees su informacion.
+$base
+Recuerda: esto es educacion de bienestar, no consejo medico. Este producto no es medicina y no reemplaza la indicacion de un profesional de salud.
+'''
+        .trim();
   }
 
   String _asegurarNotaNoMedicina(String resultado, IdiomaApp idioma) {
