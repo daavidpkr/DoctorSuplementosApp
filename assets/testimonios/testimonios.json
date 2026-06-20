@@ -1,22 +1,15 @@
 [
   {
-    "id": "de_cero_a_lider_global",
-    "titulo": "De Cero a Lider Global",
-    "descripcion": "Historia testimonial de crecimiento, vision y liderazgo para inspirar conversaciones con clientes y nuevos emprendedores.",
-    "videoUrl": "https://res.cloudinary.com/dyopany6o/video/upload/v1781983758/1De_Cero_a_L%C3%ADder_Global_La_Historia_de_un_Emprendedor_dodsbp.mp4",
+    "id": "testimonio_cancer_1",
+    "titulo": "Testimonio de Cancer",
+    "descripcion": "Historia testimonial de fe, acompanamiento y esperanza durante un proceso de cancer.",
+    "videoUrl": "https://res.cloudinary.com/dyopany6o/video/upload/v1781992133/testimonio-cancer-1_t5qbdq.mp4",
     "duracion": "1:00",
+    "categoriaEnfermedad": "cancer",
     "descripcionParrafos": [
-      "Este testimonio presenta una historia de avance personal y profesional desde una etapa inicial hasta una vision de liderazgo global. El enfoque central es mostrar como una decision, sostenida con disciplina y aprendizaje, puede convertirse en un camino de crecimiento real.",
-      "El video funciona como una herramienta corta para abrir conversaciones con personas que necesitan inspiracion, claridad o una referencia sencilla antes de conocer mas sobre la oportunidad. Su tono esta pensado para transmitir energia, enfoque y posibilidad sin convertir la historia en una promesa automatica de resultados.",
-      "Puede usarse como material de apoyo cuando un cliente o prospecto quiere entender el lado humano del emprendimiento: la mentalidad, la constancia y la expansion de vision que acompanan a quienes construyen un proyecto paso a paso."
-    ],
-    "etiquetas": [
-      "lider global",
-      "emprendedor",
-      "historia",
-      "liderazgo",
-      "testimonio",
-      "cero"
+      "Este testimonio comparte una experiencia personal vivida durante un proceso de cancer, con un enfoque humano en la esperanza, la fortaleza emocional y el acompanamiento cercano.",
+      "El video puede servir como material de apoyo para conversaciones sensibles con personas que atraviesan momentos dificiles o que buscan escuchar una historia real antes de conocer mas informacion.",
+      "Su objetivo es inspirar y abrir dialogo desde la experiencia, sin reemplazar orientacion medica profesional ni presentar resultados como promesas garantizadas."
     ]
   }
 ]

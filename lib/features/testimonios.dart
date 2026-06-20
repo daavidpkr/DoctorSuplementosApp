@@ -6,7 +6,7 @@ class Testimonio4Life {
   final String descripcion;
   final String videoUrl;
   final String duracion;
-  final List<String> etiquetas;
+  final String categoriaEnfermedad;
   final List<String> descripcionParrafos;
 
   const Testimonio4Life({
@@ -15,7 +15,7 @@ class Testimonio4Life {
     required this.descripcion,
     required this.videoUrl,
     required this.duracion,
-    required this.etiquetas,
+    required this.categoriaEnfermedad,
     required this.descripcionParrafos,
   });
 
@@ -26,14 +26,23 @@ class Testimonio4Life {
       descripcion: (json['descripcion'] ?? '').toString(),
       videoUrl: (json['videoUrl'] ?? '').toString(),
       duracion: (json['duracion'] ?? '').toString(),
-      etiquetas: (json['etiquetas'] as List? ?? const [])
-          .map((item) => item.toString())
-          .toList(),
+      categoriaEnfermedad: (json['categoriaEnfermedad'] ?? '').toString(),
       descripcionParrafos: (json['descripcionParrafos'] as List? ?? const [])
           .map((item) => item.toString())
           .where((item) => item.trim().isNotEmpty)
           .toList(),
     );
+  }
+}
+
+extension _FormatoDuracionTestimonio on Duration {
+  String get formatoVideo {
+    if (this <= Duration.zero) return '';
+    final horas = inHours;
+    final minutos = inMinutes.remainder(60).toString().padLeft(2, '0');
+    final segundos = inSeconds.remainder(60).toString().padLeft(2, '0');
+    if (horas > 0) return '$horas:$minutos:$segundos';
+    return '${inMinutes.remainder(60)}:$segundos';
   }
 }
 
@@ -56,6 +65,7 @@ class _PaginaTestimonios4LifeState extends State<PaginaTestimonios4Life> {
   String _busqueda = '';
   String _calidadActual = 'Auto';
   double _volumen = 1.0;
+  final Map<String, String> _duracionesDetectadas = {};
   List<Testimonio4Life> _testimonios = [];
   Testimonio4Life? _seleccionado;
   VideoPlayerController? _videoController;
@@ -94,6 +104,7 @@ class _PaginaTestimonios4LifeState extends State<PaginaTestimonios4Life> {
         _testimonios = testimonios;
         _cargandoLista = false;
       });
+      unawaited(_cargarDuracionesVideos(testimonios));
     } catch (_) {
       if (!mounted) return;
       setState(() => _cargandoLista = false);
@@ -116,7 +127,8 @@ class _PaginaTestimonios4LifeState extends State<PaginaTestimonios4Life> {
     for (final testimonio in _testimonios) {
       final texto = normalizarTexto(
         '${testimonio.titulo} ${testimonio.descripcion} '
-        '${testimonio.etiquetas.join(' ')}',
+        '${testimonio.categoriaEnfermedad} '
+        '${testimonio.descripcionParrafos.join(' ')}',
       );
       var puntaje = texto.contains(consulta) ? 8 : 0;
       for (final palabra in palabras) {
@@ -164,6 +176,7 @@ class _PaginaTestimonios4LifeState extends State<PaginaTestimonios4Life> {
 
     try {
       await controller.initialize();
+      _guardarDuracionDetectada(testimonio, controller.value.duration);
       await controller.setVolume(_volumen);
       if (posicionAnterior > Duration.zero &&
           posicionAnterior < controller.value.duration) {
@@ -180,6 +193,38 @@ class _PaginaTestimonios4LifeState extends State<PaginaTestimonios4Life> {
 
     if (!mounted) return;
     setState(() => _cargandoVideo = false);
+  }
+
+  Future<void> _cargarDuracionesVideos(
+      List<Testimonio4Life> testimonios) async {
+    for (final testimonio in testimonios) {
+      if (_duracionesDetectadas.containsKey(testimonio.id)) continue;
+      final controller = VideoPlayerController.networkUrl(
+        Uri.parse(testimonio.videoUrl),
+      );
+      try {
+        await controller.initialize();
+        _guardarDuracionDetectada(testimonio, controller.value.duration);
+      } catch (_) {
+        // La duracion manual queda como respaldo si la metadata no responde.
+      } finally {
+        await controller.dispose();
+      }
+    }
+  }
+
+  void _guardarDuracionDetectada(
+    Testimonio4Life testimonio,
+    Duration duracion,
+  ) {
+    final texto = duracion.formatoVideo;
+    if (texto.isEmpty || _duracionesDetectadas[testimonio.id] == texto) return;
+    if (!mounted) return;
+    setState(() => _duracionesDetectadas[testimonio.id] = texto);
+  }
+
+  String _duracionVisible(Testimonio4Life testimonio) {
+    return _duracionesDetectadas[testimonio.id] ?? testimonio.duracion;
   }
 
   String _urlPorCalidad(String url, String calidad) {
@@ -509,7 +554,7 @@ class _PaginaTestimonios4LifeState extends State<PaginaTestimonios4Life> {
                       borderRadius: BorderRadius.circular(5),
                     ),
                     child: Text(
-                      testimonio.duracion,
+                      _duracionVisible(testimonio),
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 9,
@@ -611,6 +656,35 @@ class _PaginaTestimonios4LifeState extends State<PaginaTestimonios4Life> {
   }
 
   Widget _videoGrande() {
+    final controller = _videoController;
+    final listo = controller != null && controller.value.isInitialized;
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final maxWidth = constraints.maxWidth.isFinite
+            ? constraints.maxWidth
+            : MediaQuery.of(context).size.width;
+        final maxHeight = constraints.maxHeight.isFinite
+            ? constraints.maxHeight
+            : double.infinity;
+        final ancho = math.min(maxWidth, maxHeight * 9 / 16);
+        return Center(
+          child: SizedBox(
+            width: ancho,
+            child: AspectRatio(
+              aspectRatio: 9 / 16,
+              child: _cargandoVideo || !listo
+                  ? const Center(
+                      child: CircularProgressIndicator(color: Colors.white),
+                    )
+                  : VideoPlayer(controller),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _videoMiniatura() {
     final controller = _videoController;
     final listo = controller != null && controller.value.isInitialized;
     return AspectRatio(
@@ -811,7 +885,7 @@ class _PaginaTestimonios4LifeState extends State<PaginaTestimonios4Life> {
           padding: const EdgeInsets.all(10),
           child: Row(
             children: [
-              SizedBox(width: 126, child: _videoGrande()),
+              SizedBox(width: 126, child: _videoMiniatura()),
               const SizedBox(width: 10),
               Expanded(
                 child: Text(

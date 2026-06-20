@@ -21,6 +21,7 @@ import 'ui/pantalla_resultado_ficha.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math' as math;
 
 part 'core/catalogo_productos.dart';
 part 'core/servicios_app.dart';
