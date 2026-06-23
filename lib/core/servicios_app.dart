@@ -17,15 +17,23 @@ class ArchivoAdjuntoIA {
 }
 
 class PerfilAsesor {
-  static const PerfilAsesor porDefecto =
-      PerfilAsesor(nombre: 'Socio', fotoBase64: '');
+  static const PerfilAsesor porDefecto = PerfilAsesor(
+    nombre: 'Socio',
+    fotoBase64: '',
+    codigoSocio: '',
+    telefonoSocio: '',
+  );
 
   final String nombre;
   final String fotoBase64;
+  final String codigoSocio;
+  final String telefonoSocio;
 
   const PerfilAsesor({
     required this.nombre,
     required this.fotoBase64,
+    this.codigoSocio = '',
+    this.telefonoSocio = '',
   });
 
   bool get tieneNombre => nombre.trim().isNotEmpty;
@@ -33,12 +41,16 @@ class PerfilAsesor {
   Map<String, dynamic> toJson() => {
         'nombre': nombre.trim(),
         'fotoBase64': fotoBase64,
+        'codigoSocio': codigoSocio.trim(),
+        'telefonoSocio': telefonoSocio.trim(),
       };
 
   factory PerfilAsesor.fromJson(Map<String, dynamic> json) {
     return PerfilAsesor(
       nombre: json['nombre']?.toString() ?? '',
       fotoBase64: json['fotoBase64']?.toString() ?? '',
+      codigoSocio: json['codigoSocio']?.toString() ?? '',
+      telefonoSocio: json['telefonoSocio']?.toString() ?? '',
     );
   }
 }

@@ -11,6 +11,9 @@ class PaginaPerfil extends StatefulWidget {
 
 class _PaginaPerfilState extends State<PaginaPerfil> {
   final TextEditingController _nombreController = TextEditingController();
+  final TextEditingController _codigoSocioController = TextEditingController();
+  final TextEditingController _telefonoSocioController =
+      TextEditingController();
   String _fotoBase64 = '';
   IdiomaApp _idioma = IdiomaApp.espanol;
   PaisApp _pais = PaisApp.ecuador;
@@ -30,6 +33,9 @@ class _PaginaPerfilState extends State<PaginaPerfil> {
     if (!mounted) return;
     setState(() {
       _nombreController.text = perfil.nombre;
+      _codigoSocioController.text = perfil.codigoSocio;
+      _telefonoSocioController.text =
+          _normalizarTelefonoSocio(perfil.telefonoSocio);
       _fotoBase64 = perfil.fotoBase64;
       _idioma = idioma;
       _pais = pais;
@@ -88,6 +94,8 @@ class _PaginaPerfilState extends State<PaginaPerfil> {
     final perfil = PerfilAsesor(
       nombre: _nombreController.text,
       fotoBase64: _fotoBase64,
+      codigoSocio: _codigoSocioController.text,
+      telefonoSocio: _normalizarTelefonoSocio(_telefonoSocioController.text),
     );
     await PerfilService.guardar(perfil);
     widget.onPerfilGuardado?.call();
@@ -101,7 +109,20 @@ class _PaginaPerfilState extends State<PaginaPerfil> {
   @override
   void dispose() {
     _nombreController.dispose();
+    _codigoSocioController.dispose();
+    _telefonoSocioController.dispose();
     super.dispose();
+  }
+
+  String _normalizarTelefonoSocio(String valor) {
+    var telefono = valor.replaceAll(RegExp(r'\D'), '');
+    if (telefono.startsWith('593')) {
+      telefono = telefono.substring(3);
+    }
+    while (telefono.startsWith('0')) {
+      telefono = telefono.substring(1);
+    }
+    return telefono;
   }
 
   @override
@@ -139,6 +160,10 @@ class _PaginaPerfilState extends State<PaginaPerfil> {
                         _tarjetaFotoPerfil(fotoBytes, ingles),
                         const SizedBox(height: 22),
                         _tarjetaInformacionAsesor(ingles),
+                        const SizedBox(height: 22),
+                        _tarjetaCodigoSocio(),
+                        const SizedBox(height: 22),
+                        _tarjetaTelefonoSocio(),
                         const SizedBox(height: 22),
                         _tarjetaIdioma(),
                         const SizedBox(height: 22),
@@ -527,6 +552,128 @@ class _PaginaPerfilState extends State<PaginaPerfil> {
               ),
             ),
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _tarjetaCodigoSocio() {
+    final ingles = IdiomaService.actual.value == IdiomaApp.ingles;
+    return _tarjetaCampoPerfil(
+      titulo: ingles ? 'Member code' : 'Codigo del socio',
+      controller: _codigoSocioController,
+      icono: Icons.badge_outlined,
+      hintText: ingles ? 'Enter your member code' : 'Ingresa tu codigo',
+      textInputAction: TextInputAction.next,
+    );
+  }
+
+  Widget _tarjetaTelefonoSocio() {
+    final ingles = IdiomaService.actual.value == IdiomaApp.ingles;
+    return _tarjetaCampoPerfil(
+      titulo: ingles ? 'Member phone for orders' : 'Telefono del socio',
+      controller: _telefonoSocioController,
+      icono: Icons.phone_iphone_rounded,
+      hintText: ingles ? '987654321' : '987654321',
+      keyboardType: TextInputType.phone,
+      textInputAction: TextInputAction.done,
+      prefixText: '+593 ',
+      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+      helperText: ingles
+          ? 'If you enter 0 at the beginning, it will be saved without 0.'
+          : 'Si ingresas 0 al inicio, se guardara sin el 0.',
+    );
+  }
+
+  Widget _tarjetaCampoPerfil({
+    required String titulo,
+    required TextEditingController controller,
+    required IconData icono,
+    required String hintText,
+    TextInputType? keyboardType,
+    TextInputAction? textInputAction,
+    String? prefixText,
+    String? helperText,
+    List<TextInputFormatter>? inputFormatters,
+  }) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
+      decoration: _decoracionTarjetaPerfil(),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Center(
+            child: Text(
+              titulo,
+              style: const TextStyle(
+                color: Color(0xFF12248B),
+                fontSize: 16,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ),
+          const SizedBox(height: 14),
+          TextField(
+            controller: controller,
+            keyboardType: keyboardType,
+            textInputAction: textInputAction,
+            inputFormatters: inputFormatters,
+            decoration: InputDecoration(
+              hintText: hintText,
+              prefixText: prefixText,
+              prefixStyle: const TextStyle(
+                color: Color(0xFF18215E),
+                fontSize: 16,
+                fontWeight: FontWeight.w800,
+              ),
+              hintStyle: const TextStyle(
+                color: Color(0xFF6B7192),
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+              ),
+              prefixIcon: Container(
+                margin: const EdgeInsets.fromLTRB(12, 11, 12, 11),
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF0F2FF),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  icono,
+                  color: const Color(0xFF172394),
+                  size: 22,
+                ),
+              ),
+              filled: true,
+              fillColor: Colors.white,
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide:
+                    const BorderSide(color: Color(0xFFE1E4F0), width: 1.4),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide:
+                    const BorderSide(color: Color(0xFF4059EA), width: 1.8),
+              ),
+            ),
+          ),
+          if (helperText != null) ...[
+            const SizedBox(height: 10),
+            Text(
+              helperText,
+              style: const TextStyle(
+                color: Color(0xFF2F3A78),
+                fontSize: 13,
+                height: 1.3,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
         ],
       ),
     );
