@@ -2,6 +2,7 @@ part of '../main.dart';
 
 const List<String> productosPermitidos4Life = [
   'Agpro',
+  'Aloe Vera Stix Tropical',
   'Bcv',
   'Belle vie',
   'Bioefa',
@@ -37,6 +38,7 @@ const double escalaTextoInterfaces = 0.90;
 final String catalogoPermitido4Life = productosPermitidos4Life.join(', ');
 
 const List<String> productosCambioFisico4Life = [
+  'Aloe Vera Stix Tropical',
   '4Life Transfer Factor GluCoach',
   'Energy Go Stix Berry',
   '4Life TF-Boost',
@@ -59,9 +61,12 @@ const Map<String, List<String>> _diferenciadoresProducto4Life = {
   'Riovida burst': ['riovida burst', 'burst'],
   'Riovida stix': ['riovida stix', 'riovida'],
   'Energy go stix': ['energy go', 'energy', 'go stix'],
+  'Aloe Vera Stix Tropical': ['aloe', 'aloe vera', 'aloe stix'],
 };
 
 const Map<String, String> imagenesProducto4Life = {
+  'Aloe Vera Stix Tropical':
+      'assets/productos/productos-ec/aloe_vera_stix_tropical.webp',
   'Transfer factor plus':
       'assets/productos/productos-ec/trasnfer_factor_plus.webp',
   'Riovida stix': 'assets/productos/productos-ec/riovida_stix.webp',
@@ -110,6 +115,22 @@ class ProductoPrecio {
   });
 }
 
+class InformacionProductoCatalogo {
+  final String descripcion;
+  final String componentes;
+  final String uso;
+  final String precauciones;
+  final String dosis;
+
+  const InformacionProductoCatalogo({
+    required this.descripcion,
+    required this.componentes,
+    required this.uso,
+    required this.precauciones,
+    required this.dosis,
+  });
+}
+
 class LineaProductoPrecio {
   final ProductoPrecio producto;
   final int cantidad;
@@ -138,6 +159,11 @@ class ConsultaProductoCantidad {
 }
 
 const List<ProductoPrecio> productosConPrecio4Life = [
+  ProductoPrecio(
+      nombre: 'Aloe Vera Stix Tropical',
+      afiliado: 40.04,
+      publico: 53.39,
+      lp: 22),
   ProductoPrecio(
       nombre: 'Transfer factor plus', afiliado: 83.17, publico: 110.98, lp: 55),
   ProductoPrecio(
@@ -182,6 +208,383 @@ const List<ProductoPrecio> productosConPrecio4Life = [
   ProductoPrecio(nombre: 'Recall', afiliado: 72.90, publico: 96.52, lp: 42),
   ProductoPrecio(nombre: 'TF Boost', afiliado: 27.72, publico: 36.96, lp: 15),
 ];
+
+const Map<String, double> preciosPromocionalesMiTienda4Life = {
+  'Agpro': 77.60,
+  'Bcv': 83.78,
+  'Belle vie': 72.28,
+  'Bioefa': 35.23,
+  'Colageno tipo i': 45.88,
+  'Crema cuerpo': 27.10,
+  'Energy go stix': 73.93,
+  'Fibre': 57.96,
+  'Glucoach': 83.78,
+  'Glutamine prime': 49.28,
+  'Kbu': 72.28,
+  'Malepro': 82.15,
+  'Nutrastart': 78.85,
+  'Pasta de dientes': 17.25,
+  'Preo biotics': 64.85,
+  'Protf': 96.10,
+  'Recall': 77.22,
+  'Renuvo': 73.93,
+  'Riovida burst': 56.68,
+  'Riovida stix': 46.14,
+  'TF Boost': 29.57,
+  'Transfer factor plus': 88.72,
+  'Transfer factor tri factor': 70.65,
+  'Vistari': 73.10,
+  'Aloe Vera Stix Tropical': 42.72,
+};
+
+final List<ProductoPrecio> productosMiTienda4Life = productosConPrecio4Life
+    .where(
+      (producto) => preciosPromocionalesMiTienda4Life.containsKey(
+        producto.nombre,
+      ),
+    )
+    .toList();
+
+double? precioPromocionalMiTienda(String nombre) {
+  return preciosPromocionalesMiTienda4Life[nombre];
+}
+
+const Map<String, InformacionProductoCatalogo> informacionProductos4Life = {
+  'Transfer factor tri factor': InformacionProductoCatalogo(
+    descripcion:
+        'Este producto es un suplemento disenado para respaldar el sistema inmunitario. Su formula combina la tecnologia de los factores de transferencia provenientes del calostro bovino y la yema de huevo, ayudando al cuerpo a reconocer, responder y recordar amenazas potenciales a la salud, promoviendo un equilibrio en el sistema de defensa natural.',
+    componentes:
+        '- Tri-Factor Formula, mezcla de calostro bovino y yema de huevo.\n- Otros ingredientes varian segun la presentacion en capsulas.',
+    uso:
+        'Se usa como apoyo diario para el bienestar inmunologico. Revisar la etiqueta oficial para la porcion exacta.',
+    precauciones:
+        'No usar como sustituto de una evaluacion medica. Consultar a un profesional de salud si existe embarazo, lactancia, alergias, medicacion o una condicion de salud.',
+    dosis: 'Seguir la dosis indicada en la etiqueta oficial del producto.',
+  ),
+  'Transfer factor plus': InformacionProductoCatalogo(
+    descripcion:
+        'Suplemento orientado al apoyo inmunologico avanzado. Combina factores de transferencia con ingredientes vegetales y hongos funcionales para acompanar las defensas naturales del cuerpo.',
+    componentes:
+        '- Factores de transferencia de calostro bovino y yema de huevo.\n- Mezcla de hongos y botanicos segun etiqueta oficial.',
+    uso:
+        'Ideal para personas que buscan respaldo diario de bienestar inmunitario.',
+    precauciones:
+        'Consultar con un profesional si hay condiciones medicas, alergias, embarazo, lactancia o uso de medicamentos.',
+    dosis: 'Seguir la indicacion de la etiqueta oficial vigente.',
+  ),
+  'Aloe Vera Stix Tropical': InformacionProductoCatalogo(
+    descripcion:
+        'Bebida en polvo con gel de aloe vera para diluir, pensada para apoyar la hidratacion y el bienestar digestivo diario con sabor tropical.',
+    componentes:
+        '- Gel de aloe vera en polvo.\n- Edulcorante no calorico y componentes propios de la presentacion en sobres.',
+    uso:
+        'Diluir el sobre segun la etiqueta y consumir como bebida de bienestar.',
+    precauciones:
+        'Verificar tolerancia individual. Consultar a un profesional si existe embarazo, lactancia, medicacion o condicion digestiva.',
+    dosis:
+        'Seguir la preparacion y frecuencia indicadas en la etiqueta oficial.',
+  ),
+  'Agpro': InformacionProductoCatalogo(
+    descripcion:
+        'Suplemento de bienestar enfocado en hombres, usado como apoyo nutricional para la vitalidad, energia diaria y equilibrio general.',
+    componentes:
+        '- Formula especializada AG-Pro.\n- Componentes nutricionales segun etiqueta oficial.',
+    uso:
+        'Puede acompanarse con una rutina saludable de descanso, hidratacion y actividad fisica.',
+    precauciones:
+        'Consultar a un profesional si existen condiciones hormonales, uso de medicamentos o enfermedades previas.',
+    dosis: 'Seguir la etiqueta oficial del producto.',
+  ),
+  'Bcv': InformacionProductoCatalogo(
+    descripcion:
+        'Suplemento orientado al bienestar cardiovascular y circulatorio, pensado para apoyar una rutina saludable del corazon.',
+    componentes:
+        '- Formula BCV de 4Life.\n- Factores de transferencia y componentes de soporte cardiovascular segun etiqueta.',
+    uso:
+        'Usar como complemento de bienestar junto con alimentacion equilibrada y seguimiento profesional cuando aplique.',
+    precauciones:
+        'Consultar si el cliente toma medicacion cardiovascular, anticoagulantes o tiene diagnosticos previos.',
+    dosis: 'Seguir la dosis indicada en la etiqueta vigente.',
+  ),
+  'Belle vie': InformacionProductoCatalogo(
+    descripcion:
+        'Suplemento de bienestar femenino disenado para apoyar equilibrio, vitalidad y cuidado integral de la mujer.',
+    componentes:
+        '- Formula Belle Vie de 4Life.\n- Ingredientes especificos de bienestar femenino segun etiqueta.',
+    uso: 'Acompanarlo con habitos saludables, hidratacion y descanso adecuado.',
+    precauciones:
+        'Consultar en embarazo, lactancia, condiciones hormonales o uso de medicamentos.',
+    dosis: 'Seguir la etiqueta oficial.',
+  ),
+  'Bioefa': InformacionProductoCatalogo(
+    descripcion:
+        'Suplemento de acidos grasos esenciales que apoya nutricion celular, bienestar general y equilibrio de grasas saludables en la dieta.',
+    componentes:
+        '- Acidos grasos esenciales.\n- CLA y componentes grasos segun presentacion oficial.',
+    uso: 'Usar como apoyo nutricional dentro de una alimentacion balanceada.',
+    precauciones:
+        'Consultar si hay alergias, uso de anticoagulantes o indicaciones medicas especiales.',
+    dosis: 'Seguir la etiqueta oficial del producto.',
+  ),
+  'Colageno tipo i': InformacionProductoCatalogo(
+    descripcion:
+        'Suplemento enfocado en belleza y estructura corporal, usado para apoyar piel, cabello, unas, articulaciones y tejido conectivo.',
+    componentes:
+        '- Colageno tipo I.\n- Componentes de soporte segun etiqueta oficial.',
+    uso:
+        'Puede integrarse en rutinas de belleza, bienestar articular y cuidado diario.',
+    precauciones:
+        'Verificar alergias y consultar si existe condicion medica o embarazo.',
+    dosis: 'Seguir la forma de preparacion indicada en la etiqueta.',
+  ),
+  'Crema cuerpo': InformacionProductoCatalogo(
+    descripcion:
+        'Producto de cuidado corporal para hidratar y suavizar la piel, ayudando a mantener una sensacion de humectacion diaria.',
+    componentes:
+        '- Ingredientes humectantes y emolientes segun etiqueta.\n- Formula cosmetica de uso externo.',
+    uso: 'Aplicar sobre piel limpia con masaje suave.',
+    precauciones:
+        'Uso externo. Evitar contacto con ojos e interrumpir si aparece irritacion.',
+    dosis: 'Aplicar segun necesidad y etiqueta del producto.',
+  ),
+  'Crema humectante': InformacionProductoCatalogo(
+    descripcion:
+        'Crema facial o corporal de hidratacion diaria para apoyar la suavidad, apariencia y confort de la piel.',
+    componentes:
+        '- Agentes humectantes.\n- Formula cosmetica segun presentacion oficial.',
+    uso: 'Aplicar sobre la piel limpia como parte de la rutina de cuidado.',
+    precauciones: 'Uso externo. Probar tolerancia y evitar zonas irritadas.',
+    dosis: 'Aplicar segun la etiqueta y necesidad de la piel.',
+  ),
+  'Crema para los ojos': InformacionProductoCatalogo(
+    descripcion:
+        'Producto cosmetico para el contorno de ojos, orientado a hidratar y mejorar la apariencia de esta zona delicada.',
+    componentes:
+        '- Formula cosmetica para contorno de ojos.\n- Ingredientes especificos segun etiqueta.',
+    uso:
+        'Aplicar pequena cantidad alrededor del contorno de ojos evitando contacto directo con el ojo.',
+    precauciones: 'Uso externo. Suspender si hay irritacion.',
+    dosis: 'Usar segun indicacion del envase.',
+  ),
+  'Energy go stix': InformacionProductoCatalogo(
+    descripcion:
+        'Bebida en sobres para apoyar energia y enfoque durante el dia, practica para personas activas o con jornadas exigentes.',
+    componentes:
+        '- Formula Energy Go Stix.\n- Componentes energeticos y saborizantes segun etiqueta.',
+    uso: 'Diluir segun la etiqueta y consumir como bebida de apoyo energetico.',
+    precauciones:
+        'Revisar tolerancia a estimulantes o componentes energeticos. Consultar si hay hipertension, embarazo o medicacion.',
+    dosis: 'Seguir la preparacion del sobre indicada en la etiqueta.',
+  ),
+  'Fibre': InformacionProductoCatalogo(
+    descripcion:
+        'Suplemento de fibra orientado a apoyar digestion, regularidad y bienestar intestinal dentro de una alimentacion equilibrada.',
+    componentes:
+        '- Mezcla de fibra dietaria.\n- Presentacion en sobres segun etiqueta.',
+    uso:
+        'Consumir con suficiente agua y acompanado de buenos habitos alimenticios.',
+    precauciones:
+        'Aumentar fibra gradualmente si el cliente es sensible. Consultar ante condiciones digestivas.',
+    dosis: 'Seguir la etiqueta oficial.',
+  ),
+  'Glucoach': InformacionProductoCatalogo(
+    descripcion:
+        'Suplemento dirigido al bienestar metabolico, usado como apoyo nutricional para personas que cuidan su equilibrio de glucosa dentro de habitos saludables.',
+    componentes:
+        '- Formula Glucoach.\n- Componentes de soporte metabolico segun etiqueta.',
+    uso:
+        'Acompanarlo con alimentacion balanceada, actividad fisica y seguimiento profesional cuando corresponda.',
+    precauciones:
+        'Consultar si el cliente usa medicamentos para glucosa o tiene diagnostico metabolico.',
+    dosis: 'Seguir la etiqueta oficial vigente.',
+  ),
+  'Glutamine prime': InformacionProductoCatalogo(
+    descripcion:
+        'Suplemento de glutamina usado para apoyar recuperacion, bienestar digestivo y nutricion en personas activas.',
+    componentes:
+        '- L-glutamina o formula de glutamina segun etiqueta.\n- Componentes adicionales de la presentacion oficial.',
+    uso:
+        'Puede usarse como parte de una rutina de actividad fisica o bienestar digestivo.',
+    precauciones:
+        'Consultar si hay enfermedad renal, embarazo, lactancia o medicacion.',
+    dosis: 'Seguir la etiqueta oficial.',
+  ),
+  'Kbu': InformacionProductoCatalogo(
+    descripcion:
+        'Producto de bienestar enfocado en belleza, hidratacion y cuidado corporal desde una rutina nutricional.',
+    componentes:
+        '- Formula KBU de 4Life.\n- Componentes de soporte de belleza segun etiqueta.',
+    uso: 'Integrar como apoyo diario para cuidado de belleza y bienestar.',
+    precauciones:
+        'Verificar ingredientes y consultar si hay alergias, embarazo o condicion medica.',
+    dosis: 'Seguir las instrucciones de la etiqueta oficial.',
+  ),
+  'Limpiador': InformacionProductoCatalogo(
+    descripcion:
+        'Producto cosmetico de limpieza para retirar impurezas y preparar la piel dentro de la rutina diaria.',
+    componentes:
+        '- Agentes limpiadores cosmeticos.\n- Formula segun presentacion oficial.',
+    uso:
+        'Aplicar sobre la piel segun indicacion del envase y enjuagar si corresponde.',
+    precauciones:
+        'Uso externo. Evitar contacto con ojos y suspender si irrita.',
+    dosis: 'Usar segun etiqueta.',
+  ),
+  'Malepro': InformacionProductoCatalogo(
+    descripcion:
+        'Suplemento orientado al bienestar masculino, usado como apoyo nutricional para vitalidad, energia y equilibrio general.',
+    componentes:
+        '- Formula MalePro.\n- Ingredientes de soporte masculino segun etiqueta.',
+    uso:
+        'Puede acompanarse con ejercicio, descanso y alimentacion equilibrada.',
+    precauciones:
+        'Consultar ante condiciones prostaticas, hormonales, cardiovasculares o uso de medicamentos.',
+    dosis: 'Seguir la etiqueta oficial.',
+  ),
+  'Nutrastart': InformacionProductoCatalogo(
+    descripcion:
+        'Suplemento nutricional diario pensado para apoyar energia, micronutrientes y bienestar general en la rutina.',
+    componentes:
+        '- Formula NutraStart.\n- Vitaminas, minerales o componentes nutricionales segun etiqueta.',
+    uso:
+        'Usar como complemento nutricional dentro de un plan de alimentacion saludable.',
+    precauciones:
+        'Revisar etiqueta si hay alergias, embarazo, lactancia o condiciones medicas.',
+    dosis: 'Seguir la etiqueta oficial.',
+  ),
+  'Pasta de dientes': InformacionProductoCatalogo(
+    descripcion:
+        'Producto de higiene oral para limpieza dental diaria y apoyo al cuidado de dientes y encias.',
+    componentes:
+        '- Formula de higiene oral segun etiqueta.\n- Ingredientes de limpieza y frescura bucal.',
+    uso: 'Cepillar los dientes segun rutina habitual.',
+    precauciones:
+        'No ingerir. Supervisar en ninos y evitar uso si hay sensibilidad a algun componente.',
+    dosis: 'Usar segun indicacion del envase.',
+  ),
+  'Preo biotics': InformacionProductoCatalogo(
+    descripcion:
+        'Suplemento orientado al bienestar digestivo, usado para apoyar el equilibrio de la microbiota y la salud intestinal.',
+    componentes:
+        '- Prebioticos y/o componentes digestivos segun etiqueta oficial.',
+    uso:
+        'Integrar con hidratacion y alimentacion rica en fibra cuando sea apropiado.',
+    precauciones:
+        'Consultar si hay condiciones digestivas, embarazo, lactancia o medicacion.',
+    dosis: 'Seguir la etiqueta oficial vigente.',
+  ),
+  'Protf': InformacionProductoCatalogo(
+    descripcion:
+        'Suplemento de proteina usado como apoyo nutricional para masa muscular, recuperacion y aporte de proteina diaria.',
+    componentes:
+        '- Proteina segun presentacion oficial.\n- Componentes nutricionales indicados en etiqueta.',
+    uso:
+        'Puede usarse en rutinas de actividad fisica o cuando se busca aumentar aporte proteico.',
+    precauciones:
+        'Consultar si hay enfermedad renal, alergias alimentarias o restricciones nutricionales.',
+    dosis: 'Preparar y consumir segun etiqueta.',
+  ),
+  'Recall': InformacionProductoCatalogo(
+    descripcion:
+        'Suplemento orientado al bienestar cognitivo, usado como apoyo para memoria, enfoque y claridad mental.',
+    componentes:
+        '- Formula Recall.\n- Componentes de soporte cognitivo segun etiqueta.',
+    uso:
+        'Usar como complemento de habitos de descanso, hidratacion y actividad mental.',
+    precauciones:
+        'Consultar si se usan medicamentos neurologicos, estimulantes o hay condicion medica.',
+    dosis: 'Seguir la etiqueta oficial.',
+  ),
+  'Renuvo': InformacionProductoCatalogo(
+    descripcion:
+        'Suplemento de bienestar y envejecimiento saludable, orientado a apoyar vitalidad, energia celular y equilibrio diario.',
+    componentes:
+        '- Formula Renuvo.\n- Componentes de soporte celular segun etiqueta.',
+    uso:
+        'Puede acompanarse con alimentacion saludable, descanso y actividad fisica regular.',
+    precauciones:
+        'Consultar si hay embarazo, lactancia, medicacion o condiciones de salud.',
+    dosis: 'Seguir la indicacion oficial del producto.',
+  ),
+  'Riovida burst': InformacionProductoCatalogo(
+    descripcion:
+        'Bebida o suplemento en presentacion practica con enfoque antioxidante y nutricional para apoyar bienestar diario.',
+    componentes:
+        '- Formula RioVida Burst.\n- Mezcla de frutas, antioxidantes o componentes segun etiqueta.',
+    uso: 'Consumir como complemento nutricional segun presentacion oficial.',
+    precauciones:
+        'Revisar ingredientes si hay sensibilidad a frutas, edulcorantes o componentes especificos.',
+    dosis: 'Seguir la etiqueta oficial.',
+  ),
+  'Riovida stix': InformacionProductoCatalogo(
+    descripcion:
+        'Bebida en sobres con enfoque antioxidante, practica para apoyar bienestar diario e hidratacion con sabor.',
+    componentes:
+        '- Formula RioVida Stix.\n- Mezcla de frutas y antioxidantes segun etiqueta.',
+    uso: 'Diluir el sobre y consumir segun la etiqueta.',
+    precauciones:
+        'Verificar ingredientes si hay alergias, sensibilidad digestiva o restricciones alimentarias.',
+    dosis: 'Seguir la preparacion indicada en la etiqueta.',
+  ),
+  'Suero': InformacionProductoCatalogo(
+    descripcion:
+        'Producto orientado a hidratacion y reposicion dentro de una rutina de bienestar, util para apoyo diario segun necesidad.',
+    componentes:
+        '- Formula tipo suero segun presentacion oficial.\n- Componentes de hidratacion indicados en etiqueta.',
+    uso: 'Preparar o consumir segun la indicacion del envase.',
+    precauciones:
+        'Consultar si hay restricciones de sodio, condicion renal o indicacion medica especial.',
+    dosis: 'Seguir la etiqueta oficial.',
+  ),
+  'TF Boost': InformacionProductoCatalogo(
+    descripcion:
+        'Suplemento practico de apoyo inmunologico y bienestar diario, pensado como complemento de la tecnologia de factores de transferencia.',
+    componentes:
+        '- Formula TF Boost.\n- Factores de transferencia o componentes de soporte segun etiqueta.',
+    uso:
+        'Usar como apoyo diario segun necesidades de bienestar y etiqueta oficial.',
+    precauciones:
+        'Consultar en embarazo, lactancia, alergias o condiciones medicas.',
+    dosis: 'Seguir la etiqueta vigente.',
+  ),
+  'Tonico': InformacionProductoCatalogo(
+    descripcion:
+        'Producto cosmetico tipo tonico para complementar la limpieza y preparacion de la piel.',
+    componentes:
+        '- Formula cosmetica tonificante segun etiqueta.\n- Ingredientes de cuidado de piel.',
+    uso:
+        'Aplicar despues de limpiar la piel, evitando contacto directo con ojos.',
+    precauciones: 'Uso externo. Suspender si hay irritacion.',
+    dosis: 'Usar segun indicacion del envase.',
+  ),
+  'Vistari': InformacionProductoCatalogo(
+    descripcion:
+        'Suplemento orientado al bienestar visual y soporte antioxidante para personas que cuidan su salud ocular.',
+    componentes:
+        '- Formula Vistari.\n- Componentes de soporte visual y antioxidante segun etiqueta.',
+    uso:
+        'Usar como complemento de habitos saludables para la vista, descanso visual e hidratacion.',
+    precauciones:
+        'Consultar si hay diagnosticos oculares, medicacion o tratamiento oftalmologico.',
+    dosis: 'Seguir la etiqueta oficial.',
+  ),
+};
+
+InformacionProductoCatalogo informacionProductoCatalogo(String nombre) {
+  return informacionProductos4Life[nombre] ??
+      InformacionProductoCatalogo(
+        descripcion:
+            'Producto 4Life de bienestar disenado para complementar una rutina saludable segun la necesidad del cliente y la linea a la que pertenece.',
+        componentes:
+            '- Componentes propios de la formula oficial del producto.\n- Revisar la etiqueta vigente para ingredientes, porciones y presentacion exacta.',
+        uso:
+            'Usar como suplemento de bienestar de acuerdo con la etiqueta oficial y las necesidades generales del cliente.',
+        precauciones:
+            'Recomendar orientacion profesional si el cliente esta embarazada, en lactancia, toma medicamentos, tiene alergias o presenta una condicion medica.',
+        dosis:
+            'Seguir la etiqueta oficial. Si existe alguna duda, verificar el envase o material vigente antes de indicar una dosis.',
+      );
+}
 
 final Map<String, PrecioProductoResultadoFicha> preciosResultado4Life = {
   for (final producto in productosConPrecio4Life)

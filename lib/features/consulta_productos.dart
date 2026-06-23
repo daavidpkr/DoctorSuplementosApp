@@ -1,732 +1,274 @@
 part of '../main.dart';
 
+enum TipoCatalogoProducto { afiliado, miTienda }
+
 class ConsultaProductoPagina extends StatefulWidget {
-  const ConsultaProductoPagina({super.key});
+  final TipoCatalogoProducto tipo;
+
+  const ConsultaProductoPagina({
+    super.key,
+    this.tipo = TipoCatalogoProducto.afiliado,
+  });
 
   @override
   State<ConsultaProductoPagina> createState() => _ConsultaProductoPaginaState();
 }
 
 class _ConsultaProductoPaginaState extends State<ConsultaProductoPagina> {
-  final controller = TextEditingController();
-  bool consultando = false;
-  List<String> _busquedasRecientes = [];
+  bool get _esMiTienda => widget.tipo == TipoCatalogoProducto.miTienda;
 
-  static const String _prefsRecientesKey = 'consultas_productos_recientes';
-  static const List<String> _ejemplosPopulares = [
-    'Transfer factor plus',
-    'Riovida stix',
-    'Renuvo',
-    'Bioefa',
-  ];
+  String get _tituloCatalogo => _esMiTienda
+      ? txtApp('Catalogo MiTienda', 'MyStore Catalog')
+      : txtApp('Catalogo Afiliado', 'Member Catalog');
 
-  @override
-  void initState() {
-    super.initState();
-    _cargarRecientes();
+  List<ProductoPrecio> get _productosCatalogo {
+    final productos = _esMiTienda
+        ? [...productosMiTienda4Life]
+        : [...productosConPrecio4Life];
+    productos.sort(
+      (a, b) => normalizarTexto(a.nombre).compareTo(normalizarTexto(b.nombre)),
+    );
+    return productos;
   }
 
-  Future<void> _cargarRecientes() async {
-    final prefs = await SharedPreferences.getInstance();
-    if (!mounted) return;
-    setState(() {
-      _busquedasRecientes = prefs.getStringList(_prefsRecientesKey) ?? [];
-    });
-  }
-
-  Future<void> _guardarReciente(String busqueda) async {
-    final texto = busqueda.trim();
-    if (texto.isEmpty) return;
-
-    final prefs = await SharedPreferences.getInstance();
-    final actualizadas = [
-      texto,
-      ..._busquedasRecientes.where(
-        (item) => normalizarTexto(item) != normalizarTexto(texto),
-      ),
-    ].take(6).toList();
-
-    await prefs.setStringList(_prefsRecientesKey, actualizadas);
-    if (!mounted) return;
-    setState(() => _busquedasRecientes = actualizadas);
-  }
-
-  Future<void> consultar() async {
-    final productoBuscado = controller.text.trim();
-    if (productoBuscado.isEmpty || consultando) return;
-
-    setState(() => consultando = true);
-    final productoCoincidenteLocal = buscarProductoPermitido(productoBuscado);
-    final productoParaIa = productoCoincidenteLocal ?? productoBuscado;
-
-    final model =
-        GenerativeModel(model: 'gemini-3.1-flash-lite', apiKey: geminiApiKey);
+  Future<void> _abrirProducto(ProductoPrecio producto) async {
     final idioma = await IdiomaService.cargar();
-    final instruccionIdioma = await IdiomaService.instruccionIa();
-    final prompt = """
-    IDIOMA OBLIGATORIO:
-    $instruccionIdioma
-
-    Actua como un asesor experto de productos 4Life.
-
-    Producto consultado:
-    "$productoParaIa"
-
-    Si el usuario lo escribio con errores, trabaja directamente con el producto correcto.
-    No digas que fue una coincidencia ni que el texto estaba mal escrito.
-
-    REGLA OBLIGATORIA: Solo puedes identificar, describir o recomendar productos de esta lista:
-    $catalogoPermitido4Life.
-    Si el usuario pregunta por un producto fuera de la lista, indica que no esta en el catalogo permitido
-    y sugiere que escriba uno de los productos autorizados.
-
-    REGLA DE DIFERENCIACION OBLIGATORIA:
-    No mezcles productos con nombres parecidos. Transfer factor tri factor y Transfer factor plus son productos distintos.
-    Riovida stix, Riovida burst y Energy go stix tambien son productos distintos.
-    Si el nombre consultado contiene "tri factor", responde solo sobre Transfer factor tri factor.
-    Si contiene "plus", responde solo sobre Transfer factor plus.
-    Si contiene "riovida stix" o "riovida", responde solo sobre Riovida stix, salvo que diga "burst".
-    Si contiene "riovida burst" o "burst", responde solo sobre Riovida burst.
-    Si contiene "energy", "energy go" o "go stix", responde solo sobre Energy go stix.
-
-    Responde en el idioma obligatorio indicado arriba, claro y ordenado, con esta estructura traducida al idioma seleccionado:
-
-    Producto identificado:
-    [Nombre correcto del producto]
-
-    Descripcion:
-    [Para que se usa o que respalda]
-
-    Ingredientes o componentes principales:
-    [Lista breve]
-
-    Indicaciones de uso:
-    [Uso sugerido de bienestar, sin prometer curas]
-
-    Contraindicaciones o precauciones:
-    [Advertencias responsables]
-
-    Dosis sugerida:
-    [Dosis general si la conoces. Si no estas seguro, indicalo y recomienda revisar la etiqueta oficial]
-
-    Nota:
-    Incluye obligatoriamente esta idea: Este producto no es medicina, no diagnostica, no trata, no cura ni previene enfermedades. Es un suplemento de bienestar y no reemplaza la indicacion de un profesional de salud.
-    No inventes informacion si no estas seguro. No recomiendes medicamentos, marcas externas ni productos fuera del catalogo permitido.
-    """;
-    try {
-      final response = await model.generateContent([Content.text(prompt)]);
-      final resultado = _asegurarNotaNoMedicina(
-        response.text ?? "No pude generar una respuesta.",
-        idioma,
-      );
-      final productoIdentificado = productoDesdeTexto(resultado) ??
-          productoCoincidenteLocal ??
-          buscarProductoPermitido(productoBuscado);
-      final imagenProducto = productoIdentificado == null
-          ? null
-          : imagenesProducto4Life[productoIdentificado];
-      final precioProducto = productoIdentificado == null
-          ? buscarProductoConPrecio(productoBuscado)
-          : buscarProductoConPrecio(productoIdentificado);
-      await ImpactoService.registrar(
-        tipo: 'consulta_producto',
-        titulo: productoIdentificado ?? productoBuscado,
-        datos: {
-          'busqueda': productoBuscado,
-          'producto': productoIdentificado ?? productoParaIa,
-        },
-      );
-
-      if (!mounted) return;
-      await _guardarReciente(productoIdentificado ?? productoBuscado);
-      if (!mounted) return;
-      showDialog(
-        context: context,
-        builder: (c) => _dialogoResultado(
-          dialogContext: c,
-          titulo: productoIdentificado ?? "Info: $productoBuscado",
-          resultado: resultado,
-          imagenProducto: imagenProducto,
-          productoIdentificado: productoIdentificado,
-          precioProducto: precioProducto,
-        ),
-      );
-    } catch (e) {
-      if (!mounted) return;
-      showDialog(
-        context: context,
-        builder: (c) => AlertDialog(
-          title: Text(txtApp("Error", "Error")),
-          content: Text(
-            txtApp(
-              "No se pudo consultar el producto con la IA.",
-              "The product could not be checked with AI.",
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(c),
-              child: Text(txtApp("Cerrar", "Close")),
-            ),
-          ],
-        ),
-      );
-    } finally {
-      if (mounted) {
-        setState(() => consultando = false);
-      }
-    }
+    final resultado = _informacionPredeterminadaProducto(producto, idioma);
+    final precioPromocional = precioPromocionalMiTienda(producto.nombre);
+    await ImpactoService.registrar(
+      tipo: _esMiTienda ? 'catalogo_mitienda' : 'catalogo_afiliado',
+      titulo: producto.nombre,
+      datos: {
+        'producto': producto.nombre,
+        'afiliado': producto.afiliado,
+        'publico': producto.publico,
+        'lp': producto.lp,
+        if (precioPromocional != null) 'promocional': precioPromocional,
+      },
+    );
+    if (!mounted) return;
+    showDialog(
+      context: context,
+      builder: (c) => _dialogoResultado(
+        dialogContext: c,
+        titulo: producto.nombre,
+        resultado: resultado,
+        imagenProducto: imagenesProducto4Life[producto.nombre],
+        productoIdentificado: producto.nombre,
+        precioProducto: producto,
+        precioPromocional: precioPromocional,
+      ),
+    );
   }
 
-  @override
-  void dispose() {
-    controller.dispose();
-    super.dispose();
+  String _informacionPredeterminadaProducto(
+    ProductoPrecio producto,
+    IdiomaApp idioma,
+  ) {
+    final esIngles = idioma == IdiomaApp.ingles;
+    final info = informacionProductoCatalogo(producto.nombre);
+    if (esIngles) {
+      return '''
+Description:
+${info.descripcion}
+
+Main ingredients or components:
+${info.componentes}
+
+Directions for use:
+${info.uso}
+
+Contraindications or precautions:
+${info.precauciones}
+
+Suggested dosage:
+${info.dosis}
+
+Note:
+This product is not medicine, does not diagnose, treat, cure, or prevent diseases. It is a wellness supplement and does not replace guidance from a healthcare professional.
+''';
+    }
+
+    return '''
+Descripcion:
+${info.descripcion}
+
+Ingredientes o componentes principales:
+${info.componentes}
+
+Indicaciones de uso:
+${info.uso}
+
+Contraindicaciones o precauciones:
+${info.precauciones}
+
+Dosis sugerida:
+${info.dosis}
+
+Nota:
+Este producto no es medicina, no diagnostica, no trata, no cura ni previene enfermedades. Es un suplemento de bienestar y no reemplaza la indicacion de un profesional de salud.
+''';
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF7F7FB),
-      body: Stack(
-        children: [
-          Container(
-            height: 252,
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [Color(0xFF172B98), Color(0xFF07125E)],
+      backgroundColor: Colors.white,
+      body: SafeArea(
+        child: Column(
+          children: [
+            _encabezadoConsulta(),
+            Expanded(
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final ancho = constraints.maxWidth;
+                  final columnas = ancho >= 760
+                      ? 3
+                      : ancho >= 520
+                          ? 3
+                          : 2;
+                  return GridView.builder(
+                    padding: const EdgeInsets.fromLTRB(24, 10, 24, 28),
+                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: columnas,
+                      mainAxisSpacing: 26,
+                      crossAxisSpacing: 26,
+                      childAspectRatio: 0.88,
+                    ),
+                    itemCount: _productosCatalogo.length,
+                    itemBuilder: (context, index) {
+                      return _tarjetaProductoCatalogo(
+                        _productosCatalogo[index],
+                      );
+                    },
+                  );
+                },
               ),
             ),
-          ),
-          SafeArea(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(16, 10, 16, 30),
-              child: Column(
-                children: [
-                  _encabezadoConsulta(),
-                  const SizedBox(height: 32),
-                  _tarjetaBusqueda(),
-                  const SizedBox(height: 18),
-                  _tarjetaConsejo(),
-                  const SizedBox(height: 20),
-                  _botonConsultar(),
-                  const SizedBox(height: 22),
-                  _tarjetaRecientes(),
-                ],
-              ),
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 
   Widget _encabezadoConsulta() {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        IconButton(
-          onPressed: () => Navigator.pop(context),
-          icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
-          iconSize: 34,
-          padding: EdgeInsets.zero,
-          constraints: const BoxConstraints.tightFor(width: 44, height: 44),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                txtApp("Consultar Productos", "Product Consultation"),
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 31,
-                  height: 1.1,
-                  fontWeight: FontWeight.w500,
-                ),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 26, 18, 18),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              _tituloCatalogo,
+              style: const TextStyle(
+                color: Color(0xFF12248B),
+                fontSize: 34,
+                height: 1,
+                fontWeight: FontWeight.w900,
               ),
-              const SizedBox(height: 9),
-              Text(
-                txtApp(
-                  "Busca informacion de suplementos",
-                  "Search supplement information",
-                ),
-                style: const TextStyle(
-                  color: Color(0xFFD9DFFF),
-                  fontSize: 19,
-                  height: 1.2,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ],
+            ),
           ),
-        ),
-      ],
-    );
-  }
-
-  Widget _tarjetaBusqueda() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(22, 28, 22, 24),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(22),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF0B176B).withValues(alpha: 0.10),
-            blurRadius: 24,
-            offset: const Offset(0, 10),
+          IconButton(
+            tooltip: txtApp("Cerrar", "Close"),
+            onPressed: () => Navigator.pop(context),
+            icon: const Icon(Icons.close_rounded),
+            color: const Color(0xFF3F3B46),
+            iconSize: 38,
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints.tightFor(width: 48, height: 48),
           ),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
+    );
+  }
+
+  Widget _tarjetaProductoCatalogo(ProductoPrecio producto) {
+    final imagen = imagenesProducto4Life[producto.nombre];
+    final ingles = IdiomaService.actual.value == IdiomaApp.ingles;
+    final precioPromocional = precioPromocionalMiTienda(producto.nombre);
+    final textoPrecio = _esMiTienda
+        ? '${ingles ? 'Promo' : 'Promocional'} \$${(precioPromocional ?? producto.afiliado).toStringAsFixed(2)} | LP ${producto.lp ?? 0}'
+        : precioPromocional == null
+            ? '${ingles ? 'Member' : 'Afiliado'} \$${producto.afiliado.toStringAsFixed(2)} | LP ${producto.lp ?? 0}'
+            : '${ingles ? 'Member' : 'Afiliado'} \$${producto.afiliado.toStringAsFixed(2)} | Promo \$${precioPromocional.toStringAsFixed(2)}';
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(26),
+        onTap: () => _abrirProducto(producto),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: const Color(0xFFFBFBFE),
+            borderRadius: BorderRadius.circular(26),
+            border: Border.all(color: const Color(0xFFE0E3EF), width: 1.6),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF12248B).withValues(alpha: 0.06),
+                blurRadius: 18,
+                offset: const Offset(0, 8),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      txtApp(
-                        "Busca el producto que necesitas",
-                        "Find the product you need",
-                      ),
-                      style: const TextStyle(
-                        color: Color(0xFF12248B),
-                        fontSize: 24,
-                        height: 1.15,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      txtApp(
-                        "Encuentra informacion detallada, precios y LP.",
-                        "Find detailed information, prices, and LP.",
-                      ),
-                      style: const TextStyle(
-                        color: Color(0xFF293573),
-                        fontSize: 18,
-                        height: 1.42,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 10),
-              _ilustracionBusqueda(),
-            ],
-          ),
-          const SizedBox(height: 28),
-          TextField(
-            controller: controller,
-            minLines: 1,
-            maxLines: 1,
-            textInputAction: TextInputAction.search,
-            onSubmitted: (_) => consultar(),
-            decoration: InputDecoration(
-              hintText: txtApp(
-                "Escribe el nombre del producto",
-                "Enter the product name",
-              ),
-              hintStyle: const TextStyle(
-                color: Color(0xFF858AA5),
-                fontSize: 18,
-                fontWeight: FontWeight.w500,
-              ),
-              prefixIcon: const Icon(
-                Icons.search_rounded,
-                color: Color(0xFF666C8F),
-                size: 33,
-              ),
-              suffixIcon: controller.text.isEmpty
-                  ? null
-                  : IconButton(
-                      tooltip: txtApp("Limpiar", "Clear"),
-                      onPressed: () => setState(controller.clear),
-                      icon: const Icon(Icons.cancel_rounded),
-                      color: const Color(0xFF666C8F),
-                    ),
-              filled: true,
-              fillColor: Colors.white,
-              contentPadding:
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
-                borderSide:
-                    const BorderSide(color: Color(0xFFD6D9E6), width: 1.5),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
-                borderSide:
-                    const BorderSide(color: Color(0xFF4056E8), width: 1.7),
-              ),
-            ),
-            onChanged: (_) => setState(() {}),
-          ),
-          const SizedBox(height: 24),
-          Text(
-            txtApp("Ejemplos populares:", "Popular examples:"),
-            style: const TextStyle(
-              color: Color(0xFF12248B),
-              fontSize: 17,
-              fontWeight: FontWeight.w900,
-            ),
-          ),
-          const SizedBox(height: 14),
-          Wrap(
-            spacing: 10,
-            runSpacing: 10,
-            children: [
-              for (final ejemplo in _ejemplosPopulares) _chipEjemplo(ejemplo),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _chipEjemplo(String texto) {
-    return InkWell(
-      borderRadius: BorderRadius.circular(22),
-      onTap: () {
-        setState(() => controller.text = texto);
-        consultar();
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
-        decoration: BoxDecoration(
-          color: const Color(0xFFEFF1FF),
-          borderRadius: BorderRadius.circular(22),
-        ),
-        child: Text(
-          texto,
-          style: const TextStyle(
-            color: Color(0xFF4565F0),
-            fontSize: 16,
-            fontWeight: FontWeight.w900,
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _ilustracionBusqueda() {
-    return SizedBox(
-      width: 104,
-      height: 112,
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          Positioned(
-            right: 0,
-            bottom: 6,
-            child: Container(
-              width: 76,
-              height: 76,
-              decoration: BoxDecoration(
-                color: const Color(0xFFE8ECFF),
-                borderRadius: BorderRadius.circular(22),
-              ),
-              child: const Icon(
-                Icons.inventory_2_outlined,
-                color: Color(0xFF2839C7),
-                size: 38,
-              ),
-            ),
-          ),
-          Positioned(
-            left: 0,
-            top: 4,
-            child: Container(
-              width: 58,
-              height: 58,
-              decoration: BoxDecoration(
-                color: const Color(0xFF2839C7),
-                borderRadius: BorderRadius.circular(18),
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color(0xFF2839C7).withValues(alpha: 0.20),
-                    blurRadius: 14,
-                    offset: const Offset(0, 7),
-                  ),
-                ],
-              ),
-              child: const Icon(
-                Icons.search_rounded,
-                color: Colors.white,
-                size: 34,
-              ),
-            ),
-          ),
-          Positioned(
-            right: 10,
-            top: 4,
-            child: Container(
-              width: 28,
-              height: 28,
-              decoration: const BoxDecoration(
-                color: Color(0xFFDDE5FF),
-                shape: BoxShape.circle,
-              ),
-            ),
-          ),
-          Positioned(
-            left: 16,
-            bottom: 8,
-            child: Container(
-              width: 28,
-              height: 28,
-              decoration: const BoxDecoration(
-                color: Color(0xFFEEF1FF),
-                shape: BoxShape.circle,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _tarjetaConsejo() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(22, 24, 22, 24),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFFEFF2FF), Color(0xFFF7F8FF)],
-        ),
-        borderRadius: BorderRadius.circular(18),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const CircleAvatar(
-            radius: 25,
-            backgroundColor: Color(0xFF5367F2),
-            child: Icon(Icons.info_rounded, color: Colors.white, size: 31),
-          ),
-          const SizedBox(width: 20),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  txtApp("Consejo", "Tip"),
-                  style: const TextStyle(
-                    color: Color(0xFF12248B),
-                    fontSize: 21,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-                const SizedBox(height: 10),
-                Text(
-                  txtApp(
-                    "Escribe el nombre exacto o parte del producto para obtener mejores resultados.",
-                    "Enter the exact name or part of the product for better results.",
-                  ),
-                  style: const TextStyle(
-                    color: Color(0xFF09196B),
-                    fontSize: 18,
-                    height: 1.35,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _botonConsultar() {
-    return InkWell(
-      borderRadius: BorderRadius.circular(36),
-      onTap: consultando ? null : consultar,
-      child: Container(
-        height: 70,
-        width: double.infinity,
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [Color(0xFF172394), Color(0xFF0B176B)],
-          ),
-          borderRadius: BorderRadius.circular(36),
-          boxShadow: [
-            BoxShadow(
-              color: const Color(0xFF0B176B).withValues(alpha: 0.24),
-              blurRadius: 18,
-              offset: const Offset(0, 8),
-            ),
-          ],
-        ),
-        child: Center(
-          child: consultando
-              ? const SizedBox(
-                  width: 26,
-                  height: 26,
-                  child: CircularProgressIndicator(
-                    color: Colors.white,
-                    strokeWidth: 3,
-                  ),
-                )
-              : Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.search_rounded,
-                        color: Colors.white, size: 34),
-                    const SizedBox(width: 16),
-                    Text(
-                      txtApp("Consultar", "Search"),
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 22,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                  ],
-                ),
-        ),
-      ),
-    );
-  }
-
-  Widget _tarjetaRecientes() {
-    return InkWell(
-      borderRadius: BorderRadius.circular(18),
-      onTap: _busquedasRecientes.isEmpty ? null : _mostrarRecientes,
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(18),
-          boxShadow: [
-            BoxShadow(
-              color: const Color(0xFF0B176B).withValues(alpha: 0.08),
-              blurRadius: 18,
-              offset: const Offset(0, 8),
-            ),
-          ],
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 64,
-              height: 64,
-              decoration: BoxDecoration(
-                color: const Color(0xFFEFF1FF),
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: const Icon(
-                Icons.history_rounded,
-                color: Color(0xFF12248B),
-                size: 36,
-              ),
-            ),
-            const SizedBox(width: 18),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    txtApp("Busquedas recientes", "Recent searches"),
-                    style: const TextStyle(
-                      color: Color(0xFF12248B),
-                      fontSize: 19,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    _busquedasRecientes.isEmpty
-                        ? txtApp(
-                            "Aun no tienes consultas recientes",
-                            "You do not have recent searches yet",
-                          )
-                        : txtApp(
-                            "Ver productos consultados recientemente",
-                            "View recently searched products",
-                          ),
-                    style: const TextStyle(
-                      color: Color(0xFF2F3C7D),
-                      fontSize: 16,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const Icon(
-              Icons.chevron_right_rounded,
-              color: Color(0xFF5A607E),
-              size: 36,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _mostrarRecientes() {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (context) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(18, 10, 18, 24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
                 child: Container(
-                  width: 44,
-                  height: 5,
+                  padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFD8DCEB),
-                    borderRadius: BorderRadius.circular(99),
+                    color: const Color(0xFFF5F7FC),
+                    borderRadius: BorderRadius.circular(4),
                   ),
-                ),
-              ),
-              const SizedBox(height: 18),
-              Text(
-                txtApp("Búsquedas recientes", "Recent searches"),
-                style: const TextStyle(
-                  color: Color(0xFF12248B),
-                  fontSize: 23,
-                  fontWeight: FontWeight.w900,
+                  child: imagen == null
+                      ? const Icon(
+                          Icons.inventory_2_outlined,
+                          color: Color(0xFF12248B),
+                          size: 46,
+                        )
+                      : Image.asset(
+                          imagen,
+                          fit: BoxFit.contain,
+                          filterQuality: FilterQuality.high,
+                          errorBuilder: (_, __, ___) => const Icon(
+                            Icons.inventory_2_outlined,
+                            color: Color(0xFF12248B),
+                            size: 46,
+                          ),
+                        ),
                 ),
               ),
               const SizedBox(height: 10),
-              for (final item in _busquedasRecientes)
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: const Icon(
-                    Icons.history_rounded,
-                    color: Color(0xFF12248B),
-                  ),
-                  title: Text(
-                    item,
-                    style: const TextStyle(fontWeight: FontWeight.w800),
-                  ),
-                  onTap: () {
-                    Navigator.pop(context);
-                    setState(() => controller.text = item);
-                    consultar();
-                  },
+              Text(
+                producto.nombre,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: Color(0xFF18215E),
+                  fontSize: 13,
+                  height: 1.1,
+                  fontWeight: FontWeight.w900,
                 ),
+              ),
+              const SizedBox(height: 6),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFEFF2FF),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  textoPrecio,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    color: Color(0xFF12248B),
+                    fontSize: 11,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
             ],
           ),
         ),
@@ -741,6 +283,7 @@ class _ConsultaProductoPaginaState extends State<ConsultaProductoPagina> {
     required String? imagenProducto,
     required String? productoIdentificado,
     required ProductoPrecio? precioProducto,
+    required double? precioPromocional,
   }) {
     final ingles = IdiomaService.actual.value == IdiomaApp.ingles;
     final secciones = _seccionesResultadoProducto(resultado);
@@ -805,6 +348,11 @@ class _ConsultaProductoPaginaState extends State<ConsultaProductoPagina> {
                                     imagenProducto,
                                     fit: BoxFit.contain,
                                     filterQuality: FilterQuality.high,
+                                    errorBuilder: (_, __, ___) => const Icon(
+                                      Icons.inventory_2_outlined,
+                                      color: Color(0xFF12248B),
+                                      size: 54,
+                                    ),
                                   ),
                                 );
                           if (compacta) {
@@ -816,7 +364,10 @@ class _ConsultaProductoPaginaState extends State<ConsultaProductoPagina> {
                                     precioProducto != null)
                                   const SizedBox(height: 12),
                                 if (precioProducto != null)
-                                  _precioResumenProducto(precioProducto),
+                                  _precioResumenProducto(
+                                    precioProducto,
+                                    precioPromocional: precioPromocional,
+                                  ),
                               ],
                             );
                           }
@@ -832,8 +383,10 @@ class _ConsultaProductoPaginaState extends State<ConsultaProductoPagina> {
                                   const SizedBox(width: 12),
                                 if (precioProducto != null)
                                   Expanded(
-                                    child:
-                                        _precioResumenProducto(precioProducto),
+                                    child: _precioResumenProducto(
+                                      precioProducto,
+                                      precioPromocional: precioPromocional,
+                                    ),
                                   ),
                               ],
                             ),
@@ -892,6 +445,7 @@ class _ConsultaProductoPaginaState extends State<ConsultaProductoPagina> {
                       imagenProducto: imagenProducto,
                       productoIdentificado: productoIdentificado,
                       precioProducto: precioProducto,
+                      precioPromocional: precioPromocional,
                     ),
                   ),
                   const Spacer(),
@@ -1013,7 +567,10 @@ class _ConsultaProductoPaginaState extends State<ConsultaProductoPagina> {
     );
   }
 
-  Widget _precioResumenProducto(ProductoPrecio producto) {
+  Widget _precioResumenProducto(
+    ProductoPrecio producto, {
+    required double? precioPromocional,
+  }) {
     final ingles = IdiomaService.actual.value == IdiomaApp.ingles;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
@@ -1042,6 +599,14 @@ class _ConsultaProductoPaginaState extends State<ConsultaProductoPagina> {
             producto.lp?.toString() ?? (ingles ? 'No data' : 'Sin dato'),
             Icons.star_outline_rounded,
           ),
+          if (precioPromocional != null) ...[
+            const Divider(height: 1),
+            _datoPrecio(
+              ingles ? "Promo" : "Promocional",
+              '\$${precioPromocional.toStringAsFixed(2)}',
+              Icons.local_offer_outlined,
+            ),
+          ],
         ],
       ),
     );
@@ -1053,6 +618,7 @@ class _ConsultaProductoPaginaState extends State<ConsultaProductoPagina> {
     required String? imagenProducto,
     required String? productoIdentificado,
     required ProductoPrecio? precioProducto,
+    required double? precioPromocional,
   }) async {
     final idioma = await IdiomaService.cargar();
     final notaNoMedicina = idioma == IdiomaApp.ingles
@@ -1086,13 +652,16 @@ class _ConsultaProductoPaginaState extends State<ConsultaProductoPagina> {
         '${idioma == IdiomaApp.ingles ? 'Retail price' : 'Precio publico'}: \$${precioProducto.publico.toStringAsFixed(2)}',
         'LP: ${precioProducto.lp ?? 0}',
       ],
+      if (precioPromocional != null)
+        '${idioma == IdiomaApp.ingles ? 'Promotional price' : 'Precio promocional'}: \$${precioPromocional.toStringAsFixed(2)}',
     ];
     final textoConPrecios = precioProducto == null
         ? resultado
         : '$resultado\n\n${idioma == IdiomaApp.ingles ? 'Prices' : 'Precios'}:\n'
             '${idioma == IdiomaApp.ingles ? 'Member' : 'Afiliado'}: \$${precioProducto.afiliado.toStringAsFixed(2)}\n'
             '${idioma == IdiomaApp.ingles ? 'Retail' : 'Publico'}: \$${precioProducto.publico.toStringAsFixed(2)}\n'
-            'LP: ${precioProducto.lp ?? 0}';
+            'LP: ${precioProducto.lp ?? 0}'
+            '${precioPromocional == null ? '' : '\n${idioma == IdiomaApp.ingles ? 'Promotional' : 'Promocional'}: \$${precioPromocional.toStringAsFixed(2)}'}';
     if (!mounted) return;
 
     return ServicioCompartir.mostrarOpciones(
@@ -1323,28 +892,6 @@ $base
 Recuerda: esto es educacion de bienestar, no consejo medico. Este producto no es medicina y no reemplaza la indicacion de un profesional de salud.
 '''
         .trim();
-  }
-
-  String _asegurarNotaNoMedicina(String resultado, IdiomaApp idioma) {
-    final notaNoMedicina = idioma == IdiomaApp.ingles
-        ? 'This product is not medicine, does not diagnose, treat, cure, or prevent diseases. It is a wellness supplement and does not replace guidance from a healthcare professional.'
-        : 'Este producto no es medicina, no diagnostica, no trata, no cura ni previene enfermedades. Es un suplemento de bienestar y no reemplaza la indicacion de un profesional de salud.';
-    final normalizado = normalizarTexto(resultado);
-    if ((normalizado.contains('no es medicina') &&
-            normalizado.contains('no reemplaza')) ||
-        (normalizado.contains('not medicine') &&
-            normalizado.contains('does not replace'))) {
-      return resultado;
-    }
-
-    final limpio = resultado.trimRight();
-    if (normalizarTexto(limpio).contains('nota') ||
-        normalizarTexto(limpio).contains('note')) {
-      return '$limpio\n$notaNoMedicina';
-    }
-    return idioma == IdiomaApp.ingles
-        ? '$limpio\n\nNote:\n$notaNoMedicina'
-        : '$limpio\n\nNota:\n$notaNoMedicina';
   }
 
   Widget _seccionResultadoProducto(String titulo, String contenido) {

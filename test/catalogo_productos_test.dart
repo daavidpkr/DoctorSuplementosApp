@@ -31,5 +31,16 @@ void main() {
       expect(buscarProductoPermitido('energy go stix'), 'Energy go stix');
       expect(buscarProductoConPrecio('energy')?.nombre, 'Energy go stix');
     });
+
+    test('incluye Aloe Vera Stix Tropical con precios completos', () {
+      final producto = buscarProductoConPrecio('aloe vera tropical');
+
+      expect(buscarProductoPermitido('aloe stix'), 'Aloe Vera Stix Tropical');
+      expect(producto?.nombre, 'Aloe Vera Stix Tropical');
+      expect(producto?.afiliado, 40.04);
+      expect(producto?.publico, 53.39);
+      expect(producto?.lp, 22);
+      expect(precioPromocionalMiTienda('Aloe Vera Stix Tropical'), 42.72);
+    });
   });
 }

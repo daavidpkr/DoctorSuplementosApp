@@ -49,9 +49,19 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
                       context,
                       titulo: IdiomaService.texto('consult_products'),
                       descripcion: IdiomaService.texto('consult_products_desc'),
-                      icono: Icons.search_rounded,
+                      icono: Icons.grid_view_rounded,
                       colores: const [Color(0xFF2E3192), Color(0xFF151B7C)],
                       destino: const ConsultaProductoPagina(),
+                    ),
+                    _tarjetaMenu(
+                      context,
+                      titulo: IdiomaService.texto('mitienda_catalog'),
+                      descripcion: IdiomaService.texto('mitienda_catalog_desc'),
+                      icono: Icons.storefront_rounded,
+                      colores: const [Color(0xFF118B48), Color(0xFF0B6B38)],
+                      destino: const ConsultaProductoPagina(
+                        tipo: TipoCatalogoProducto.miTienda,
+                      ),
                     ),
                     _tarjetaMenu(
                       context,

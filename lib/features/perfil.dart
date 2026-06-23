@@ -621,29 +621,45 @@ class _PaginaPerfilState extends State<PaginaPerfil> {
             inputFormatters: inputFormatters,
             decoration: InputDecoration(
               hintText: hintText,
-              prefixText: prefixText,
-              prefixStyle: const TextStyle(
-                color: Color(0xFF18215E),
-                fontSize: 16,
-                fontWeight: FontWeight.w800,
-              ),
               hintStyle: const TextStyle(
                 color: Color(0xFF6B7192),
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
               ),
-              prefixIcon: Container(
-                margin: const EdgeInsets.fromLTRB(12, 11, 12, 11),
-                width: 38,
-                height: 38,
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF0F2FF),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(
-                  icono,
-                  color: const Color(0xFF172394),
-                  size: 22,
+              prefixIconConstraints: BoxConstraints(
+                minWidth: prefixText == null ? 62 : 112,
+                minHeight: 60,
+              ),
+              prefixIcon: Padding(
+                padding: const EdgeInsets.only(left: 12, right: 10),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 38,
+                      height: 38,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF0F2FF),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Icon(
+                        icono,
+                        color: const Color(0xFF172394),
+                        size: 22,
+                      ),
+                    ),
+                    if (prefixText != null) ...[
+                      const SizedBox(width: 10),
+                      Text(
+                        prefixText,
+                        style: const TextStyle(
+                          color: Color(0xFF18215E),
+                          fontSize: 16,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
               ),
               filled: true,
