@@ -1225,6 +1225,8 @@ class _PantallaResultadoFichaState extends State<PantallaResultadoFicha> {
             )
           : null,
       ingles: widget.ingles,
+      permitirTexto: false,
+      permitirQrPdf: true,
     );
   }
 

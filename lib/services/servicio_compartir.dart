@@ -1,8 +1,14 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
+import 'package:qr_flutter/qr_flutter.dart';
 import 'package:share_plus/share_plus.dart';
+
+import 'cloudinary_service.dart';
 
 class SeccionDocumento {
   final String titulo;
@@ -149,6 +155,8 @@ class ServicioCompartir {
     DocumentoCompartible documento, {
     DocumentoCompartible? documentoInformativo,
     bool ingles = false,
+    bool permitirTexto = true,
+    bool permitirQrPdf = false,
   }) async {
     final tieneInformativo = documentoInformativo != null;
     final opcion = await showModalBottomSheet<_OpcionCompartirDocumento>(
@@ -192,8 +200,12 @@ class ServicioCompartir {
                         ? 'Choose with prices or informational only.'
                         : 'Elige con precios o solo informativo.')
                     : (ingles
-                        ? 'Choose a PDF or a text message.'
-                        : 'Elige un PDF o un mensaje de texto.'),
+                        ? (permitirQrPdf
+                            ? 'Choose a PDF or QR code.'
+                            : 'Choose a PDF or a text message.')
+                        : (permitirQrPdf
+                            ? 'Elige un PDF o comparte por QR.'
+                            : 'Elige un PDF o un mensaje de texto.')),
                 style: const TextStyle(
                   color: Color(0xFF596284),
                   fontSize: 15,
@@ -233,22 +245,55 @@ class ServicioCompartir {
                 ),
                 const SizedBox(height: 10),
               ],
-              _opcion(
-                context: sheetContext,
-                valor: _OpcionCompartirDocumento(
-                  tipo: 'texto',
-                  documento: documento,
+              if (permitirQrPdf) ...[
+                _opcion(
+                  context: sheetContext,
+                  valor: _OpcionCompartirDocumento(
+                    tipo: 'qr',
+                    documento: documento,
+                  ),
+                  icono: Icons.qr_code_2_rounded,
+                  titulo: tieneInformativo
+                      ? (ingles ? 'Complete QR' : 'QR completo')
+                      : (ingles ? 'Share by QR' : 'Compartir por QR'),
+                  descripcion: ingles
+                      ? 'Upload the PDF and show a scannable code.'
+                      : 'Sube el PDF y muestra un codigo escaneable.',
+                  color: const Color(0xFF118B48),
                 ),
-                icono: Icons.chat_bubble_outline_rounded,
-                titulo: tieneInformativo
-                    ? (ingles ? 'Text with prices' : 'Texto con precios')
-                    : (ingles ? 'Text' : 'Texto'),
-                descripcion: ingles
-                    ? 'Content ready to send by WhatsApp.'
-                    : 'Contenido listo para enviar por WhatsApp.',
-                color: const Color(0xFF118B48),
-              ),
-              if (tieneInformativo) ...[
+                const SizedBox(height: 10),
+              ] else if (permitirTexto) ...[
+                _opcion(
+                  context: sheetContext,
+                  valor: _OpcionCompartirDocumento(
+                    tipo: 'texto',
+                    documento: documento,
+                  ),
+                  icono: Icons.chat_bubble_outline_rounded,
+                  titulo: tieneInformativo
+                      ? (ingles ? 'Text with prices' : 'Texto con precios')
+                      : (ingles ? 'Text' : 'Texto'),
+                  descripcion: ingles
+                      ? 'Content ready to send by WhatsApp.'
+                      : 'Contenido listo para enviar por WhatsApp.',
+                  color: const Color(0xFF118B48),
+                ),
+              ],
+              if (tieneInformativo && permitirQrPdf) ...[
+                _opcion(
+                  context: sheetContext,
+                  valor: _OpcionCompartirDocumento(
+                    tipo: 'qr',
+                    documento: documentoInformativo,
+                  ),
+                  icono: Icons.qr_code_2_rounded,
+                  titulo: ingles ? 'Informational QR' : 'QR informativo',
+                  descripcion: ingles
+                      ? 'Upload the informational PDF and show its QR.'
+                      : 'Sube el PDF informativo y muestra su QR.',
+                  color: const Color(0xFF008C7E),
+                ),
+              ] else if (tieneInformativo && permitirTexto) ...[
                 const SizedBox(height: 10),
                 _opcion(
                   context: sheetContext,
@@ -277,12 +322,39 @@ class ServicioCompartir {
       return;
     }
 
-    _mostrarProcesando(context, ingles: ingles);
+    _mostrarProcesando(
+      context,
+      ingles: ingles,
+      mensaje: opcion.tipo == 'qr'
+          ? (ingles ? 'Preparing QR...' : 'Preparando QR...')
+          : null,
+    );
     try {
       final bytes = await generarPdf(documentoElegido);
       if (!context.mounted) return;
-      Navigator.of(context, rootNavigator: true).pop();
       final nombre = '${_nombreArchivoPdf(documentoElegido.nombreArchivo)}.pdf';
+      if (opcion.tipo == 'qr') {
+        final archivoPdf = await _guardarPdfTemporal(bytes, nombre);
+        final url = await CloudinaryService().uploadPdf(archivoPdf);
+        try {
+          await archivoPdf.delete();
+        } catch (_) {}
+        if (!context.mounted) return;
+        Navigator.of(context, rootNavigator: true).pop();
+        if (url == null) {
+          _mostrarErrorQr(context, ingles: ingles);
+          return;
+        }
+        await _mostrarQrPdf(
+          context,
+          url: url,
+          titulo: documentoElegido.titulo,
+          ingles: ingles,
+        );
+        return;
+      }
+
+      Navigator.of(context, rootNavigator: true).pop();
       await Share.shareXFiles(
         [
           XFile.fromData(
@@ -413,7 +485,11 @@ class ServicioCompartir {
     }
   }
 
-  static void _mostrarProcesando(BuildContext context, {required bool ingles}) {
+  static void _mostrarProcesando(
+    BuildContext context, {
+    required bool ingles,
+    String? mensaje,
+  }) {
     showDialog<void>(
       context: context,
       barrierDismissible: false,
@@ -431,12 +507,104 @@ class ServicioCompartir {
                 ),
                 const SizedBox(width: 16),
                 Text(
-                  ingles ? 'Preparing PDF...' : 'Preparando PDF...',
+                  mensaje ??
+                      (ingles ? 'Preparing PDF...' : 'Preparando PDF...'),
                   style: const TextStyle(fontWeight: FontWeight.w800),
                 ),
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+
+  static Future<File> _guardarPdfTemporal(
+    Uint8List bytes,
+    String nombre,
+  ) async {
+    final directorio = await getTemporaryDirectory();
+    final archivo = File('${directorio.path}/$nombre');
+    return archivo.writeAsBytes(bytes, flush: true);
+  }
+
+  static Future<void> _mostrarQrPdf(
+    BuildContext context, {
+    required String url,
+    required String titulo,
+    required bool ingles,
+  }) {
+    return showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+        title: Text(
+          ingles ? 'PDF QR code' : 'QR del PDF',
+          style: const TextStyle(
+            color: Color(0xFF12248B),
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            QrImageView(
+              data: url,
+              version: QrVersions.auto,
+              size: 230,
+              backgroundColor: Colors.white,
+            ),
+            const SizedBox(height: 12),
+            Text(
+              titulo,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: Color(0xFF17204B),
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            const SizedBox(height: 8),
+            SelectableText(
+              url,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: Color(0xFF66708F),
+                fontSize: 12,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton.icon(
+            onPressed: () {
+              Clipboard.setData(ClipboardData(text: url));
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    ingles ? 'Link copied.' : 'Link copiado.',
+                  ),
+                ),
+              );
+            },
+            icon: const Icon(Icons.copy_rounded),
+            label: Text(ingles ? 'Copy link' : 'Copiar link'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: Text(ingles ? 'Close' : 'Cerrar'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  static void _mostrarErrorQr(BuildContext context, {required bool ingles}) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          ingles
+              ? 'The QR could not be generated. Try again.'
+              : 'No se pudo generar el QR. Intentalo nuevamente.',
         ),
       ),
     );
