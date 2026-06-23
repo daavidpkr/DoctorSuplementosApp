@@ -11,9 +11,6 @@ dependencies:
   flutter:
     sdk: flutter
   
-  # Librería de Iconos (Estándar de Flutter)
-  cupertino_icons: ^1.0.8
-
   # Libreria de compartir contenido
   share_plus: 10.1.4
   pdf: ^3.12.0
