@@ -1,5 +1,8 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../services/servicio_compartir.dart';
 import '../services/servicio_texto_voz.dart';
@@ -1118,8 +1121,12 @@ class _PantallaResultadoFichaState extends State<PantallaResultadoFicha> {
     );
   }
 
-  Future<void> _compartir() {
+  Future<void> _compartir() async {
+    final telefonoSocio = await _telefonoSocioPerfil();
+    if (!mounted) return;
     final esCambio = widget.tipoFicha.toLowerCase().contains('cambio');
+    final esDiagnostico = widget.tipoFicha.toLowerCase().contains('diagn');
+    final incluirOrdenCompra = esCambio || esDiagnostico;
     final paciente = widget.paciente.trim().isEmpty
         ? _txt('PACIENTE', 'CLIENT')
         : widget.paciente.trim();
@@ -1167,6 +1174,9 @@ class _PantallaResultadoFichaState extends State<PantallaResultadoFicha> {
         return ProductoDocumento(
           nombre: producto.nombre,
           imagenAsset: producto.imagen,
+          precioAfiliado: precio?.afiliado,
+          cantidad: 1,
+          puntosLP: precio?.lp ?? 0,
           indicaciones: [
             ...producto.dosis,
             if (precio != null) ...[
@@ -1200,6 +1210,7 @@ class _PantallaResultadoFichaState extends State<PantallaResultadoFicha> {
         secciones: secciones,
         productos: productosConPrecios,
         nota: contenido.nota,
+        numeroWhatsAppCompra: incluirOrdenCompra ? telefonoSocio : null,
       ),
       documentoInformativo: incluyePrecios
           ? DocumentoCompartible(
@@ -1215,5 +1226,20 @@ class _PantallaResultadoFichaState extends State<PantallaResultadoFicha> {
           : null,
       ingles: widget.ingles,
     );
+  }
+
+  Future<String> _telefonoSocioPerfil() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString('perfil_asesor_4life');
+    if (raw == null || raw.isEmpty) return '';
+    try {
+      final json = jsonDecode(raw);
+      if (json is Map<String, dynamic>) {
+        return json['telefonoSocio']?.toString() ?? '';
+      }
+    } catch (_) {
+      return '';
+    }
+    return '';
   }
 }

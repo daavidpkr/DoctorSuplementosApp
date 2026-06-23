@@ -19,12 +19,32 @@ class ProductoDocumento {
   final String? imagenAsset;
   final List<String> indicaciones;
   final String detalle;
+  final double? precioAfiliado;
+  final int cantidad;
+  final int? puntosLP;
 
   const ProductoDocumento({
     required this.nombre,
     this.imagenAsset,
     this.indicaciones = const [],
     this.detalle = '',
+    this.precioAfiliado,
+    this.cantidad = 1,
+    this.puntosLP,
+  });
+}
+
+class ProductoOrdenCompra {
+  final String nombre;
+  final double precioAfiliado;
+  final int cantidad;
+  final int puntosLP;
+
+  const ProductoOrdenCompra({
+    required this.nombre,
+    required this.precioAfiliado,
+    required this.cantidad,
+    required this.puntosLP,
   });
 }
 
@@ -38,6 +58,7 @@ class DocumentoCompartible {
   final List<ProductoDocumento> productos;
   final String nota;
   final bool adjuntarImagenEnTexto;
+  final String? numeroWhatsAppCompra;
 
   const DocumentoCompartible({
     required this.titulo,
@@ -49,7 +70,58 @@ class DocumentoCompartible {
     this.productos = const [],
     this.nota = '',
     this.adjuntarImagenEnTexto = false,
+    this.numeroWhatsAppCompra,
   });
+}
+
+String generarLinkWhatsApp(
+  List<ProductoOrdenCompra> productos, {
+  required String numeroWhatsApp,
+}) {
+  final numero = _normalizarNumeroWhatsAppEcuador(numeroWhatsApp);
+  if (numero.isEmpty || productos.isEmpty) return '';
+
+  final buffer = StringBuffer()
+    ..writeln('Hola! Quiero concluir con mi compra de estos productos:')
+    ..writeln();
+  var totalPagar = 0.0;
+  var totalLp = 0;
+
+  for (final producto in productos) {
+    final cantidad = producto.cantidad <= 0 ? 1 : producto.cantidad;
+    final subtotal = producto.precioAfiliado * cantidad;
+    final lpProducto = producto.puntosLP * cantidad;
+    totalPagar += subtotal;
+    totalLp += lpProducto;
+
+    buffer
+      ..writeln('*${cantidad}x ${producto.nombre}*')
+      ..writeln('- Precio Afiliado: \$${subtotal.toStringAsFixed(2)}')
+      ..writeln('- Puntos LP: $lpProducto')
+      ..writeln();
+  }
+
+  buffer
+    ..writeln('-----------------------------')
+    ..writeln('*TOTAL A PAGAR:* \$${totalPagar.toStringAsFixed(2)}')
+    ..writeln('*TOTAL LP:* $totalLp')
+    ..writeln()
+    ..write('Quedo a la espera de las instrucciones.');
+
+  final mensajeCodificado = Uri.encodeComponent(buffer.toString());
+  return 'https://wa.me/$numero?text=$mensajeCodificado';
+}
+
+String _normalizarNumeroWhatsAppEcuador(String valor) {
+  var numero = valor.replaceAll(RegExp(r'\D'), '');
+  if (numero.startsWith('593')) {
+    numero = numero.substring(3);
+  }
+  while (numero.startsWith('0')) {
+    numero = numero.substring(1);
+  }
+  if (numero.length != 9) return '';
+  return '593$numero';
 }
 
 class _OpcionCompartirDocumento {
@@ -104,7 +176,9 @@ class ServicioCompartir {
               ),
               const SizedBox(height: 20),
               Text(
-                ingles ? 'How do you want to share?' : '¿Cómo deseas compartir?',
+                ingles
+                    ? 'How do you want to share?'
+                    : '¿Cómo deseas compartir?',
                 style: const TextStyle(
                   color: Color(0xFF12248B),
                   fontSize: 22,
@@ -464,6 +538,11 @@ class ServicioCompartir {
               ),
               pw.SizedBox(height: 10),
             ],
+            if (_linkOrdenCompra(documento).isNotEmpty) ...[
+              pw.SizedBox(height: 2),
+              _enlaceOrdenCompraPdf(_linkOrdenCompra(documento)),
+              pw.SizedBox(height: 10),
+            ],
           ],
           if (documento.nota.trim().isNotEmpty) ...[
             pw.SizedBox(height: 4),
@@ -742,6 +821,51 @@ class ServicioCompartir {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  static String _linkOrdenCompra(DocumentoCompartible documento) {
+    final numero = documento.numeroWhatsAppCompra?.trim() ?? '';
+    if (numero.isEmpty) return '';
+    final productosOrden = documento.productos
+        .where((producto) => producto.precioAfiliado != null)
+        .map(
+          (producto) => ProductoOrdenCompra(
+            nombre: producto.nombre,
+            precioAfiliado: producto.precioAfiliado!,
+            cantidad: producto.cantidad,
+            puntosLP: producto.puntosLP ?? 0,
+          ),
+        )
+        .toList();
+    return generarLinkWhatsApp(productosOrden, numeroWhatsApp: numero);
+  }
+
+  static pw.Widget _enlaceOrdenCompraPdf(String url) {
+    return pw.Container(
+      width: double.infinity,
+      padding: const pw.EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: pw.BoxDecoration(
+        color: const PdfColor.fromInt(0xFFF8F9FD),
+        borderRadius: pw.BorderRadius.circular(10),
+        border: pw.Border.all(color: _borde, width: 0.9),
+      ),
+      child: pw.Align(
+        alignment: pw.Alignment.centerLeft,
+        child: pw.UrlLink(
+          destination: url,
+          child: pw.Text(
+            'Concluye tu compra aquí',
+            style: pw.TextStyle(
+              color: _azulOscuro,
+              fontSize: 11,
+              fontWeight: pw.FontWeight.bold,
+              decoration: pw.TextDecoration.underline,
+              decorationColor: _azulOscuro,
+            ),
+          ),
+        ),
       ),
     );
   }
