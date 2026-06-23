@@ -1,45 +1,81 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
-class CloudinaryService {
-  static const String _cloudName = 'dyopany6o';
-  static const String _uploadPreset = 'diagnosticos_preset';
+const String _cloudinaryCloudName = 'dyopany6o';
+const String _cloudinaryUploadPreset = 'diagnosticos_preset';
+const Duration _cloudinaryUploadTimeout = Duration(seconds: 45);
 
+class CloudinaryService {
   Future<String?> uploadPdf(File pdfFile) async {
+    return compute(_uploadPdfToCloudinary, pdfFile.path);
+  }
+}
+
+Future<String?> _uploadPdfToCloudinary(String pdfPath) async {
+  final client = http.Client();
+  try {
     final uri = Uri.parse(
-      'https://api.cloudinary.com/v1_1/$_cloudName/raw/upload',
+      'https://api.cloudinary.com/v1_1/$_cloudinaryCloudName/raw/upload',
     );
     final request = http.MultipartRequest('POST', uri)
-      ..fields['upload_preset'] = _uploadPreset
-      ..files.add(await http.MultipartFile.fromPath('file', pdfFile.path));
+      ..fields['upload_preset'] = _cloudinaryUploadPreset
+      ..files.add(await http.MultipartFile.fromPath('file', pdfPath));
 
-    try {
-      final streamedResponse = await request.send();
-      final response = await http.Response.fromStream(streamedResponse);
-      if (response.statusCode < 200 || response.statusCode >= 300) {
-        debugCloudinaryError(response.statusCode, response.body);
-        return null;
-      }
+    final streamedResponse = await client
+        .send(request)
+        .timeout(_cloudinaryUploadTimeout, onTimeout: () {
+      client.close();
+      throw TimeoutException(
+        'Cloudinary upload timed out',
+        _cloudinaryUploadTimeout,
+      );
+    });
 
-      final data = jsonDecode(response.body) as Map<String, dynamic>;
-      final secureUrl = data['secure_url']?.toString();
-      if (secureUrl == null || secureUrl.trim().isEmpty) return null;
-      return secureUrl.replaceAll(r'\/', '/');
-    } catch (error) {
-      debugCloudinaryException(error);
+    final response = await http.Response.fromStream(streamedResponse)
+        .timeout(_cloudinaryUploadTimeout, onTimeout: () {
+      client.close();
+      throw TimeoutException(
+        'Cloudinary response timed out',
+        _cloudinaryUploadTimeout,
+      );
+    });
+
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      _debugCloudinaryError(response.statusCode, response.body);
       return null;
     }
-  }
 
-  void debugCloudinaryError(int statusCode, String body) {
-    // ignore: avoid_print
-    print('Cloudinary upload error $statusCode: $body');
+    final data = jsonDecode(response.body) as Map<String, dynamic>;
+    final secureUrl = data['secure_url']?.toString();
+    if (secureUrl == null || secureUrl.trim().isEmpty) return null;
+    return secureUrl.replaceAll(r'\/', '/');
+  } on TimeoutException catch (error) {
+    _debugCloudinaryException(error);
+    return null;
+  } on SocketException catch (error) {
+    _debugCloudinaryException(error);
+    return null;
+  } on FormatException catch (error) {
+    _debugCloudinaryException(error);
+    return null;
+  } catch (error) {
+    _debugCloudinaryException(error);
+    return null;
+  } finally {
+    client.close();
   }
+}
 
-  void debugCloudinaryException(Object error) {
-    // ignore: avoid_print
-    print('Cloudinary upload exception: $error');
-  }
+void _debugCloudinaryError(int statusCode, String body) {
+  // ignore: avoid_print
+  print('Cloudinary upload error $statusCode: $body');
+}
+
+void _debugCloudinaryException(Object error) {
+  // ignore: avoid_print
+  print('Cloudinary upload exception: $error');
 }
