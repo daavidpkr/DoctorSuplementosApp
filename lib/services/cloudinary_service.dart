@@ -4,27 +4,12 @@ import 'dart:io';
 import 'package:http/http.dart' as http;
 
 class CloudinaryService {
-  static const String _cloudName = 'dyopany60';
+  static const String _cloudName = 'dyopany6o';
   static const String _uploadPreset = 'diagnosticos_preset';
 
   Future<String?> uploadPdf(File pdfFile) async {
-    if (!await pdfFile.exists()) {
-      debugCloudinaryException(
-        'ERROR CRITICO: El archivo PDF no existe en la ruta: ${pdfFile.path}',
-      );
-      return null;
-    }
-
-    final fileSize = await pdfFile.length();
-    if (fileSize <= 0) {
-      debugCloudinaryException(
-        'ERROR CRITICO: El archivo PDF esta vacio en la ruta: ${pdfFile.path}',
-      );
-      return null;
-    }
-
     final uri = Uri.parse(
-      'https://api.cloudinary.com/v1_1/$_cloudName/auto/upload',
+      'https://api.cloudinary.com/v1_1/$_cloudName/raw/upload',
     );
     final request = http.MultipartRequest('POST', uri)
       ..fields['upload_preset'] = _uploadPreset
