@@ -6,8 +6,8 @@ class ServicioTextoVoz {
 
   static final FlutterTts _tts = FlutterTts();
   static String? _idiomaConfigurado;
-  static const double _palabrasPorSegundoEs = 2.25;
-  static const double _palabrasPorSegundoEn = 2.45;
+  static const double _palabrasPorSegundoEs = 1.95;
+  static const double _palabrasPorSegundoEn = 2.08;
 
   static Future<String> _idiomaActual() async {
     final prefs = await SharedPreferences.getInstance();
@@ -19,9 +19,9 @@ class ServicioTextoVoz {
 
     await _tts.setLanguage(idioma == 'en' ? 'en-US' : 'es-US');
     await _seleccionarMejorVoz(idioma);
-    await _tts.setSpeechRate(idioma == 'en' ? 0.42 : 0.40);
+    await _tts.setSpeechRate(idioma == 'en' ? 0.38 : 0.36);
     await _tts.setVolume(1.0);
-    await _tts.setPitch(idioma == 'en' ? 1.02 : 1.0);
+    await _tts.setPitch(idioma == 'en' ? 1.0 : 0.98);
     await _tts.awaitSpeakCompletion(true);
     _idiomaConfigurado = idioma;
   }
@@ -51,6 +51,11 @@ class ServicioTextoVoz {
         }
         if (nombre.contains('neural')) {
           puntaje += 18;
+        }
+        if (nombre.contains('wavenet') ||
+            nombre.contains('studio') ||
+            nombre.contains('online')) {
+          puntaje += 16;
         }
         if (nombre.contains('premium') ||
             nombre.contains('enhanced') ||
@@ -129,7 +134,7 @@ class ServicioTextoVoz {
           'Análisis del caso. ${contenido.substring(inicioAnalisis.end)}';
     }
 
-    return _mejorarPronunciacion(contenido, idioma)
+    return _mejorarFluidez(_mejorarPronunciacion(contenido, idioma), idioma)
         .replaceAllMapped(
           RegExp(r'\[([^\]]+)\]\([^)]+\)'),
           (coincidencia) => coincidencia.group(1) ?? '',
@@ -179,6 +184,31 @@ class ServicioTextoVoz {
     for (final entry in reemplazos.entries) {
       contenido = contenido.replaceAll(entry.key, entry.value);
     }
+    return contenido;
+  }
+
+  static String _mejorarFluidez(String texto, String idioma) {
+    var contenido = texto
+        .replaceAll(RegExp(r'\betc\.', caseSensitive: false), 'etcetera')
+        .replaceAll(RegExp(r'\bEE\.\s*UU\.', caseSensitive: false),
+            idioma == 'en' ? 'United States' : 'Estados Unidos')
+        .replaceAll(RegExp(r'\bDr\.', caseSensitive: false), 'Doctor')
+        .replaceAll(RegExp(r'\bDra\.', caseSensitive: false), 'Doctora');
+
+    contenido = contenido.replaceAllMapped(
+      RegExp(r'([^.!?]{95,}?)(,\s+|;\s+|:\s+)'),
+      (match) => '${match.group(1)?.trim()}. ',
+    );
+    contenido = contenido.replaceAllMapped(
+      RegExp(r'([^.!?]{130,}?)(\s+)'),
+      (match) => '${match.group(1)?.trim()}, ',
+    );
+    contenido = contenido
+        .replaceAll(RegExp(r'\bTransfer Factor\b', caseSensitive: false),
+            idioma == 'en' ? 'Transfer Factor' : 'Transfer Factor')
+        .replaceAll(RegExp(r'\bSistema Inmunitario\b', caseSensitive: false),
+            'Sistema Inmunitario')
+        .replaceAll(RegExp(r'\bRespaldo\b', caseSensitive: false), 'Respaldo');
     return contenido;
   }
 }

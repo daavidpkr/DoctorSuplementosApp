@@ -48,18 +48,6 @@ Future<void> _compartirRespuestaChat(
   );
 }
 
-class _SegmentoRespuestaVoz {
-  final String texto;
-  final int inicio;
-  final int fin;
-
-  const _SegmentoRespuestaVoz({
-    required this.texto,
-    required this.inicio,
-    required this.fin,
-  });
-}
-
 class PaginaChatbot extends StatefulWidget {
   final String titulo;
   final bool modoLlamada;
@@ -83,7 +71,6 @@ class PaginaChatbot extends StatefulWidget {
 class _PaginaChatbotState extends State<PaginaChatbot> {
   final TextEditingController _controller = TextEditingController();
   final AudioRecorder _audioRecorder = AudioRecorder();
-  final ScrollController _scrollRespuestaBot = ScrollController();
   final List<Map<String, String>> mensajes = [];
   ArchivoAdjuntoIA? _adjunto;
   bool enviando = false;
@@ -93,11 +80,8 @@ class _PaginaChatbotState extends State<PaginaChatbot> {
   bool _botHablando = false;
   String _estadoLlamada = "Conectando...";
   String _ultimaRespuestaBot = "";
-  List<String> _lineasRespuestaBot = [];
-  List<_SegmentoRespuestaVoz> _segmentosRespuestaBot = [];
-  int _lineaRespuestaActiva = 0;
-  String _textoVozRespuestaBot = "";
-  bool _progresoVozRecibido = false;
+  bool _faseOndasVoz = false;
+  bool _bienvenidaChatLiveReproducida = false;
   Timer? _temporizadorRespuestaBot;
   late String _conversacionId;
 
@@ -149,147 +133,12 @@ class _PaginaChatbotState extends State<PaginaChatbot> {
         .any(normalizado.contains);
   }
 
-  List<_SegmentoRespuestaVoz> _segmentarRespuestaBot(String texto) {
-    final limpio = texto.replaceAll(RegExp(r'\s+'), ' ').trim();
-    if (limpio.isEmpty) return const [];
-    final partes = RegExp(r'[^.!?;:]+[.!?;:]?')
-        .allMatches(limpio)
-        .where(
-          (match) => (match.group(0)?.trim() ?? '').isNotEmpty,
-        )
-        .toList();
-    if (partes.length <= 1) {
-      final segmentos = <_SegmentoRespuestaVoz>[];
-      var inicioLinea = 0;
-      var textoLinea = '';
-      for (final match in RegExp(r'\S+').allMatches(limpio)) {
-        final palabra = match.group(0) ?? '';
-        final candidato = textoLinea.isEmpty ? palabra : '$textoLinea $palabra';
-        if (textoLinea.isNotEmpty && candidato.length > 52) {
-          segmentos.add(_SegmentoRespuestaVoz(
-            texto: textoLinea,
-            inicio: inicioLinea,
-            fin: match.start,
-          ));
-          inicioLinea = match.start;
-          textoLinea = palabra;
-        } else {
-          if (textoLinea.isEmpty) inicioLinea = match.start;
-          textoLinea = candidato;
-        }
-      }
-      if (textoLinea.isNotEmpty) {
-        segmentos.add(_SegmentoRespuestaVoz(
-          texto: textoLinea,
-          inicio: inicioLinea,
-          fin: limpio.length,
-        ));
-      }
-      return segmentos;
-    }
-    return partes
-        .map((match) => _SegmentoRespuestaVoz(
-              texto: (match.group(0) ?? '').trim(),
-              inicio: match.start,
-              fin: match.end,
-            ))
-        .toList();
-  }
-
   void _iniciarAnimacionRespuestaBot(String texto) {
     _temporizadorRespuestaBot?.cancel();
-    final idioma = _ingles ? 'en' : 'es';
-    final textoVoz = ServicioTextoVoz.prepararTexto(texto, idioma: idioma);
-    final segmentos =
-        _segmentarRespuestaBot(textoVoz.isEmpty ? texto : textoVoz);
     setState(() {
       _ultimaRespuestaBot = texto;
-      _lineasRespuestaBot =
-          segmentos.map((segmento) => segmento.texto).toList();
-      _segmentosRespuestaBot = segmentos;
-      _lineaRespuestaActiva = 0;
-      _textoVozRespuestaBot = textoVoz;
-      _progresoVozRecibido = false;
-      _botHablando = segmentos.isNotEmpty;
-    });
-    if (segmentos.isEmpty) return;
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_scrollRespuestaBot.hasClients) {
-        _scrollRespuestaBot.jumpTo(0);
-      }
-    });
-
-    final duracionEstimada = ServicioTextoVoz.estimarDuracion(
-      texto,
-      idioma: idioma,
-    );
-    final intervalo = Duration(
-      milliseconds:
-          (duracionEstimada.inMilliseconds / segmentos.length).round().clamp(
-                900,
-                2600,
-              ),
-    );
-
-    _temporizadorRespuestaBot = Timer.periodic(intervalo, (timer) {
-      if (!mounted ||
-          !_botHablando ||
-          _progresoVozRecibido ||
-          _lineasRespuestaBot.isEmpty) {
-        timer.cancel();
-        return;
-      }
-      final siguiente = _lineaRespuestaActiva + 1;
-      if (siguiente >= _lineasRespuestaBot.length) {
-        timer.cancel();
-        return;
-      }
-      setState(() => _lineaRespuestaActiva = siguiente);
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!_scrollRespuestaBot.hasClients) return;
-        final maximo = _scrollRespuestaBot.position.maxScrollExtent;
-        final destino = (siguiente * 44.0).clamp(0.0, maximo);
-        _scrollRespuestaBot.animateTo(
-          destino,
-          duration: const Duration(milliseconds: 620),
-          curve: Curves.easeOutCubic,
-        );
-      });
-    });
-  }
-
-  void _sincronizarProgresoVoz(
-    String text,
-    int startOffset,
-    int endOffset,
-    String word,
-  ) {
-    if (!mounted || !_botHablando || _segmentosRespuestaBot.isEmpty) return;
-    _progresoVozRecibido = true;
-    _temporizadorRespuestaBot?.cancel();
-    _temporizadorRespuestaBot = null;
-    final base = text.isNotEmpty ? text : _textoVozRespuestaBot;
-    if (base.isEmpty) return;
-    final offset = (endOffset <= 0 ? startOffset : endOffset)
-        .clamp(0, base.length)
-        .toInt();
-    final indice = _segmentosRespuestaBot.indexWhere(
-      (segmento) => offset >= segmento.inicio && offset <= segmento.fin,
-    );
-    final linea = (indice < 0 ? _segmentosRespuestaBot.length - 1 : indice)
-        .clamp(0, _segmentosRespuestaBot.length - 1);
-    if (linea == _lineaRespuestaActiva) return;
-    setState(() => _lineaRespuestaActiva = linea);
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!_scrollRespuestaBot.hasClients) return;
-      final maximo = _scrollRespuestaBot.position.maxScrollExtent;
-      final destino = (linea * 44.0).clamp(0.0, maximo);
-      _scrollRespuestaBot.animateTo(
-        destino,
-        duration: const Duration(milliseconds: 320),
-        curve: Curves.easeOutCubic,
-      );
+      _botHablando = texto.trim().isNotEmpty;
+      _faseOndasVoz = !_faseOndasVoz;
     });
   }
 
@@ -299,9 +148,13 @@ class _PaginaChatbotState extends State<PaginaChatbot> {
     if (mounted) {
       setState(() {
         _botHablando = false;
-        _progresoVozRecibido = false;
       });
     }
+  }
+
+  void _continuarAnimacionOndasVoz() {
+    if (!mounted || !_botHablando) return;
+    setState(() => _faseOndasVoz = !_faseOndasVoz);
   }
 
   @override
@@ -323,8 +176,26 @@ class _PaginaChatbotState extends State<PaginaChatbot> {
   Future<void> _iniciarLlamada() async {
     if (!mounted) return;
     setState(
-      () => _estadoLlamada = _txt("Manten pulsado el microfono para hablar",
-          "Hold the microphone to talk"),
+      () => _estadoLlamada = _txt(
+        "Hola, soy DoctorSuplementos. En que te puedo ayudar?",
+        "Hi, I am DoctorSuplementos. How can I help you?",
+      ),
+    );
+    if (_bienvenidaChatLiveReproducida) return;
+    _bienvenidaChatLiveReproducida = true;
+    final bienvenida = _txt(
+      "Hola, soy DoctorSuplementos. En que te puedo ayudar?",
+      "Hi, I am DoctorSuplementos. How can I help you?",
+    );
+    _iniciarAnimacionRespuestaBot(bienvenida);
+    await ServicioTextoVoz.reproducir(bienvenida);
+    if (!mounted) return;
+    _detenerAnimacionRespuestaBot();
+    setState(
+      () => _estadoLlamada = _txt(
+        "Manten pulsado el microfono para hablar",
+        "Hold the microphone to talk",
+      ),
     );
   }
 
@@ -359,8 +230,11 @@ class _PaginaChatbotState extends State<PaginaChatbot> {
     final instruccionProducto = productoCoincidente == null
         ? ""
         : "Si la consulta menciona un producto mal escrito, responde directamente sobre $productoCoincidente. No digas que fue una coincidencia ni que estaba mal escrito.";
+    final instruccionVozHumana = _ingles
+        ? "Voice style: Act like a professional narrator with a warm, close and conversational tone. Sound like a real human explaining something to a friend, not a robot reading a document. Keep a natural rhythm, emphasize key words, use commas and periods as breathing pauses, pronounce technical terms clearly, avoid abbreviations, and write with punctuation that helps the voice sound expressive."
+        : "Configuracion de voz: Actua como un locutor profesional con un tono cercano, calido y conversacional. Suena como un humano real que explica algo a un amigo, no como un robot leyendo un documento. Mantén ritmo natural, enfasis en palabras clave, pausas coherentes con comas y puntos, claridad en terminos tecnicos, evita abreviaturas y usa signos de pregunta o exclamacion cuando ayuden a la entonacion.";
     final instruccionVoz = widget.modoLlamada
-        ? "Esta es una llamada de voz. Responde de forma natural, explicativa y suficientemente completa para evitar confusiones. No seas demasiado corto si la pregunta necesita contexto, pasos o advertencias. Puedes usar ejemplos sencillos, pero no saludes de nuevo en cada respuesta."
+        ? "Esta es una llamada de voz. Responde de forma natural, explicativa y suficientemente completa para evitar confusiones. No seas demasiado corto si la pregunta necesita contexto, pasos o advertencias. Puedes usar ejemplos sencillos, pero no saludes de nuevo en cada respuesta. Escribe frases respirables, separadas con comas y puntos, para que la voz se entienda completa."
         : "";
     final instruccionComponente = consultaSobreComponente
         ? "La consulta parece ser sobre un componente, ingrediente o concepto de bienestar, no sobre un producto especifico. Explica que es, para que sirve, como se interpreta y que precauciones generales considerar. No conviertas la respuesta en una recomendacion de producto y no metas un producto 4Life si el usuario no pidio un producto."
@@ -377,6 +251,7 @@ class _PaginaChatbotState extends State<PaginaChatbot> {
     Usa saltos de linea normales y texto limpio.
     Responde preguntas libres sobre suplementos, productos 4Life, habitos saludables, ventas y seguimiento de clientes.
     Prioriza respuestas explicativas y completas cuando eso evite confusiones; no respondas demasiado corto si la pregunta requiere contexto.
+    $instruccionVozHumana
     REGLA OBLIGATORIA DE PRODUCTOS: Cuando recomiendes, compares, armes rutinas o sugieras productos,
     usa UNICAMENTE estos nombres del catalogo autorizado: $catalogoPermitido4Life.
     Si el socio pide algo que requiera un producto fuera de esa lista, explica que solo puedes recomendar
@@ -434,10 +309,7 @@ class _PaginaChatbotState extends State<PaginaChatbot> {
       );
       if (widget.modoLlamada) {
         _iniciarAnimacionRespuestaBot(respuestaIA);
-        await ServicioTextoVoz.reproducir(
-          respuestaIA,
-          onProgreso: _sincronizarProgresoVoz,
-        );
+        await ServicioTextoVoz.reproducir(respuestaIA);
         if (mounted) {
           setState(() {
             _estadoLlamada = _txt(
@@ -486,7 +358,6 @@ class _PaginaChatbotState extends State<PaginaChatbot> {
       unawaited(ServicioTextoVoz.detener());
     }
     _temporizadorRespuestaBot?.cancel();
-    _scrollRespuestaBot.dispose();
     _audioRecorder.dispose();
     _controller.dispose();
     super.dispose();
@@ -926,8 +797,8 @@ extension _PaginaChatbotUi on _PaginaChatbotState {
                 const SizedBox(height: 24),
                 AnimatedSwitcher(
                   duration: const Duration(milliseconds: 250),
-                  child: _botHablando && _lineasRespuestaBot.isNotEmpty
-                      ? _letrasRespuestaBot()
+                  child: _botHablando
+                      ? _ondasRespuestaBot()
                       : SizedBox(
                           key: const ValueKey('respuesta_bot_live_vacia'),
                           height: _ultimaRespuestaBot.trim().isEmpty ? 0 : 18,
@@ -1010,13 +881,13 @@ extension _PaginaChatbotUi on _PaginaChatbotState {
     );
   }
 
-  Widget _letrasRespuestaBot() {
+  Widget _ondasRespuestaBot() {
     return Container(
-      key: const ValueKey('respuesta_bot_live'),
+      key: const ValueKey('ondas_bot_live'),
       width: double.infinity,
-      height: 178,
+      height: 118,
       margin: const EdgeInsets.symmetric(horizontal: 24),
-      padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
+      padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(18),
@@ -1024,53 +895,48 @@ extension _PaginaChatbotUi on _PaginaChatbotState {
           color: Colors.white.withValues(alpha: 0.24),
         ),
       ),
-      child: ShaderMask(
-        shaderCallback: (rect) {
-          return const LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              Colors.transparent,
-              Colors.white,
-              Colors.white,
-              Colors.transparent,
-            ],
-            stops: [0, 0.16, 0.84, 1],
-          ).createShader(rect);
+      child: TweenAnimationBuilder<double>(
+        tween: Tween<double>(begin: 0, end: _faseOndasVoz ? 1 : 0),
+        duration: const Duration(milliseconds: 760),
+        curve: Curves.easeInOutSine,
+        onEnd: () {
+          _continuarAnimacionOndasVoz();
         },
-        blendMode: BlendMode.dstIn,
-        child: ListView.builder(
-          controller: _scrollRespuestaBot,
-          physics: const NeverScrollableScrollPhysics(),
-          padding: const EdgeInsets.symmetric(vertical: 42),
-          itemCount: _lineasRespuestaBot.length,
-          itemBuilder: (context, index) {
-            final activa = index == _lineaRespuestaActiva;
-            final pasada = index < _lineaRespuestaActiva;
-            return AnimatedDefaultTextStyle(
-              duration: const Duration(milliseconds: 280),
-              curve: Curves.easeOutCubic,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: activa
-                    ? Colors.white
-                    : pasada
-                        ? Colors.white.withValues(alpha: 0.38)
-                        : Colors.white.withValues(alpha: 0.58),
-                fontSize: activa ? 20 : 17,
-                height: 1.28,
-                fontWeight: activa ? FontWeight.w900 : FontWeight.w700,
-              ),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 5),
-                child: Text(
-                  _lineasRespuestaBot[index],
-                  textAlign: TextAlign.center,
-                ),
-              ),
-            );
-          },
-        ),
+        builder: (context, valor, _) {
+          return Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              for (var i = 0; i < 17; i++) ...[
+                _barraOndaVoz(i, valor),
+                if (i != 16) const SizedBox(width: 5),
+              ],
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _barraOndaVoz(int indice, double valor) {
+    final centro = (indice - 8).abs();
+    final fase = (valor * math.pi * 2) + (indice * 0.55);
+    final energia = (math.sin(fase).abs() * 0.62) + 0.38;
+    final alto = (18 + ((8 - centro).clamp(0, 8) * 4.0) + (energia * 38))
+        .clamp(16.0, 74.0);
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 180),
+      width: centro == 0 ? 7 : 5,
+      height: alto,
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: centro < 4 ? 0.92 : 0.58),
+        borderRadius: BorderRadius.circular(99),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF9EA9FF).withValues(alpha: 0.18),
+            blurRadius: 10,
+            spreadRadius: 1,
+          ),
+        ],
       ),
     );
   }

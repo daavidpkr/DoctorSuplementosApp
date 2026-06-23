@@ -1056,50 +1056,14 @@ class _PaginaDiccionario4LifeState extends State<PaginaDiccionario4Life> {
 
   bool _esEntradaAnimada(EntradaDiccionario4Life entrada) => true;
 
-  String _assetAnimacion(EntradaDiccionario4Life entrada) {
-    final texto = _normalizar(
-      '${entrada.termino} ${entrada.conceptoEs} ${entrada.conceptoEn}',
-    );
-    final categorias = _categoriaEntrada(entrada);
-    if (texto.contains('calostro bovino') ||
-        texto.contains('bovine colostrum') ||
-        categorias.contains('nutricion') ||
-        categorias.contains('bienestar')) {
-      return 'assets/lottie/bovine_colostrum_cells.json';
-    }
+  String _assetAnimacion() {
     return 'assets/lottie/transfer_factor_cells.json';
   }
 
-  String _tituloAnimacion(EntradaDiccionario4Life entrada, bool ingles) {
-    final texto = _normalizar(
-      '${entrada.termino} ${entrada.conceptoEs} ${entrada.conceptoEn}',
-    );
-    if (texto.contains('calostro bovino') ||
-        texto.contains('bovine colostrum')) {
-      return ingles
-          ? 'Bovine colostrum supporting cellular activity'
-          : 'Calostro bovino apoyando la actividad celular';
-    }
-    if (texto.contains('factor de transferencia') ||
-        texto.contains('factores de transferencia') ||
-        texto.contains('transfer factor')) {
-      return ingles
-          ? 'Transfer factors interacting with immune cells'
-          : 'Factores de transferencia interactuando con celulas inmunes';
-    }
-    if (_categoriaEntrada(entrada).contains('negocio')) {
-      return ingles
-          ? 'Business concept mapped into a quick visual loop'
-          : 'Concepto de negocio explicado en un bucle visual rapido';
-    }
-    if (_categoriaEntrada(entrada).contains('nutricion')) {
-      return ingles
-          ? 'Nutritional component supporting cellular wellness'
-          : 'Componente nutricional apoyando el bienestar celular';
-    }
+  String _tituloAnimacion(bool ingles) {
     return ingles
-        ? 'Wellness concept shown as cellular support'
-        : 'Concepto de bienestar mostrado como apoyo celular';
+        ? 'Key concept shown as a simple visual loop'
+        : 'Concepto clave mostrado en un bucle visual simple';
   }
 
   Widget _animacionComponente(EntradaDiccionario4Life entrada, bool ingles) {
@@ -1116,7 +1080,7 @@ class _PaginaDiccionario4LifeState extends State<PaginaDiccionario4Life> {
           SizedBox(
             height: 190,
             child: Lottie.asset(
-              _assetAnimacion(entrada),
+              _assetAnimacion(),
               repeat: true,
               animate: true,
               fit: BoxFit.contain,
@@ -1129,7 +1093,7 @@ class _PaginaDiccionario4LifeState extends State<PaginaDiccionario4Life> {
           ),
           const SizedBox(height: 8),
           Text(
-            _tituloAnimacion(entrada, ingles),
+            _tituloAnimacion(ingles),
             textAlign: TextAlign.center,
             style: const TextStyle(
               color: Color(0xFF12248B),

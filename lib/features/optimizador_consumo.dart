@@ -13,6 +13,7 @@ class _PaginaOptimizadorConsumoState extends State<PaginaOptimizadorConsumo> {
       TextEditingController(text: '150');
   List<PaqueteConsumo> _paquetes = [];
   List<ProductoPrecio> _productosObligatorios = [];
+  int _variacionPaquetes = 0;
 
   static const Color _azul = Color(0xFF172394);
   static const Color _azulOscuro = Color(0xFF07125E);
@@ -34,11 +35,51 @@ class _PaginaOptimizadorConsumoState extends State<PaginaOptimizadorConsumo> {
   int get _metaLp => int.tryParse(_metaController.text.trim()) ?? 150;
   String _t(String es, String en) => txtApp(es, en);
 
+  Future<bool> _confirmarExceso150() async {
+    final meta = _metaLp;
+    final lpFijo = _productosObligatorios.fold<int>(
+      0,
+      (total, producto) => total + (producto.lp ?? 0),
+    );
+    if (meta <= 150 && lpFijo <= 150) return true;
+
+    final continuar = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(_t('Se paso de 150 LP', 'Over 150 LP')),
+        content: Text(
+          _t(
+            'La meta o los productos escogidos superan los 150 LP. Estas seguro de continuar?',
+            'The goal or selected products are over 150 LP. Are you sure you want to continue?',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(_t('Cancelar', 'Cancel')),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(_t('Continuar', 'Continue')),
+          ),
+        ],
+      ),
+    );
+    return continuar ?? false;
+  }
+
+  Future<void> _generarPaquetesDesdeBoton() async {
+    if (!await _confirmarExceso150()) return;
+    _variacionPaquetes++;
+    _generarPaquetes();
+  }
+
   void _generarPaquetes() {
     final meta = _metaLp.clamp(1, 999).toInt();
     final paquetes = _OptimizadorConsumo.generar(
       meta,
       obligatorios: _productosObligatorios,
+      variacion: _variacionPaquetes,
     );
     setState(() => _paquetes = paquetes);
 
@@ -84,12 +125,12 @@ class _PaginaOptimizadorConsumoState extends State<PaginaOptimizadorConsumo> {
         titulo: _t('Productos obligatorios', 'Required products'),
         buscar: _t('Buscar producto', 'Search product'),
         ayuda: _t(
-          'Escoge hasta 2 productos para incluirlos en todos los planes.',
-          'Choose up to 2 products to include in every plan.',
+          'Escoge hasta 3 productos para incluirlos en todos los planes.',
+          'Choose up to 3 products to include in every plan.',
         ),
         limpiar: _t('Limpiar', 'Clear'),
         aplicar: _t('Aplicar', 'Apply'),
-        maximoTexto: _t('Máximo 2 productos', 'Maximum 2 products'),
+        maximoTexto: _t('Maximo 3 productos', 'Maximum 3 products'),
         afiliado: _t('Afiliado', 'Member'),
       ),
     );
@@ -370,7 +411,7 @@ class _PaginaOptimizadorConsumoState extends State<PaginaOptimizadorConsumo> {
           const SizedBox(height: 18),
           InkWell(
             borderRadius: BorderRadius.circular(18),
-            onTap: _generarPaquetes,
+            onTap: _generarPaquetesDesdeBoton,
             child: Container(
               height: 74,
               padding: const EdgeInsets.symmetric(horizontal: 22),
@@ -578,8 +619,8 @@ class _PaginaOptimizadorConsumoState extends State<PaginaOptimizadorConsumo> {
                     const SizedBox(height: 6),
                     Text(
                       _t(
-                        '${paquete.lineas.length} productos diseñados para ${paquete.metaLp}+ LP',
-                        '${paquete.lineas.length} products engineered for ${paquete.metaLp}+ LP',
+                        '${paquete.lineas.length} productos maximo para ${paquete.metaLp}+ LP',
+                        '${paquete.lineas.length} products max for ${paquete.metaLp}+ LP',
                       ),
                       style: const TextStyle(
                         color: _texto,
@@ -829,6 +870,7 @@ class _OptimizadorConsumo {
   static List<PaqueteConsumo> generar(
     int metaLp, {
     List<ProductoPrecio> obligatorios = const [],
+    int variacion = 0,
   }) {
     final productos = productosConPrecio4Life
         .where((producto) => (producto.lp ?? 0) > 0)
@@ -862,10 +904,11 @@ class _OptimizadorConsumo {
           final nuevoLp = entry.key + (lp * cantidad);
           if (nuevoLp > maxLp) continue;
 
-          final lineas = [
+          final lineas = _compactarLineas([
             ...entry.value,
             LineaProductoPrecio(producto: producto, cantidad: cantidad),
-          ];
+          ]);
+          if (_cantidadProductosDistintos(lineas) > 3) continue;
           final actual = mejoresPorLp[nuevoLp];
           if (actual == null || _esMejor(lineas, actual)) {
             mejoresPorLp[nuevoLp] = lineas;
@@ -885,7 +928,11 @@ class _OptimizadorConsumo {
         .toList()
       ..sort(_compararPaquetes);
 
-    return _diversificar(paquetes).take(4).toList();
+    return _diversificar(paquetes, variacion: variacion).take(4).toList();
+  }
+
+  static int _cantidadProductosDistintos(List<LineaProductoPrecio> lineas) {
+    return lineas.map((linea) => linea.producto.nombre).toSet().length;
   }
 
   static bool _esMejor(
@@ -914,6 +961,8 @@ class _OptimizadorConsumo {
   static int _compararPaquetes(PaqueteConsumo a, PaqueteConsumo b) {
     final excedente = a.excedenteLp.compareTo(b.excedenteLp);
     if (excedente != 0) return excedente;
+    final lineas = a.lineas.length.compareTo(b.lineas.length);
+    if (lineas != 0) return lineas;
     final cantidad = a.cantidadProductos.compareTo(b.cantidadProductos);
     if (cantidad != 0) return cantidad;
     return a.totalAfiliado.compareTo(b.totalAfiliado);
@@ -927,11 +976,36 @@ class _OptimizadorConsumo {
     return ordenadas;
   }
 
-  static List<PaqueteConsumo> _diversificar(List<PaqueteConsumo> paquetes) {
+  static List<LineaProductoPrecio> _compactarLineas(
+      List<LineaProductoPrecio> lineas) {
+    final porProducto = <String, LineaProductoPrecio>{};
+    for (final linea in lineas) {
+      final actual = porProducto[linea.producto.nombre];
+      porProducto[linea.producto.nombre] = LineaProductoPrecio(
+        producto: linea.producto,
+        cantidad: (actual?.cantidad ?? 0) + linea.cantidad,
+      );
+    }
+    return porProducto.values.toList();
+  }
+
+  static List<PaqueteConsumo> _diversificar(
+    List<PaqueteConsumo> paquetes, {
+    required int variacion,
+  }) {
     final seleccionados = <PaqueteConsumo>[];
     final firmas = <String>{};
+    if (paquetes.isEmpty) return seleccionados;
 
-    for (final paquete in paquetes) {
+    final ventana = paquetes.take(24).toList();
+    final inicio = ventana.isEmpty ? 0 : variacion.abs() % ventana.length;
+    final orden = [
+      ...ventana.skip(inicio),
+      ...ventana.take(inicio),
+      ...paquetes.skip(ventana.length),
+    ];
+
+    for (final paquete in orden) {
       final firma = paquete.lineas
           .map((linea) => '${linea.producto.nombre}:${linea.cantidad}')
           .join('|');
@@ -1000,7 +1074,7 @@ class _SelectorProductosObligatoriosState
     setState(() {
       if (_seleccionados.contains(producto.nombre)) {
         _seleccionados.remove(producto.nombre);
-      } else if (_seleccionados.length < 2) {
+      } else if (_seleccionados.length < 3) {
         _seleccionados.add(producto.nombre);
       }
     });
@@ -1090,7 +1164,7 @@ class _SelectorProductosObligatoriosState
               ),
             ),
             const SizedBox(height: 10),
-            if (_seleccionados.length >= 2)
+            if (_seleccionados.length >= 3)
               Align(
                 alignment: Alignment.centerLeft,
                 child: Text(

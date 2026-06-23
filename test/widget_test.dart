@@ -14,11 +14,11 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.textContaining('Hola, Socio'), findsOneWidget);
-    expect(find.text('Consultar producto(s)'), findsOneWidget);
-    expect(find.text('Diagnóstico'), findsOneWidget);
-    expect(find.text('Historial'), findsOneWidget);
-    expect(find.text('Asesor IA 4Life'), findsOneWidget);
-    expect(find.text('Accesos rápidos'), findsOneWidget);
+    expect(find.text(IdiomaService.texto('consult_products')), findsWidgets);
+    expect(find.text(IdiomaService.texto('diagnosis')), findsOneWidget);
+    expect(find.text(IdiomaService.texto('history')), findsOneWidget);
+    expect(find.text(IdiomaService.texto('ai_adviser')), findsOneWidget);
+    expect(find.text(IdiomaService.texto('quick_access')), findsOneWidget);
   });
 
   testWidgets('fresh install starts on adviser profile', (tester) async {
