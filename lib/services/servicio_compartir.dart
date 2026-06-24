@@ -1,14 +1,8 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
-import 'package:qr_flutter/qr_flutter.dart';
 import 'package:share_plus/share_plus.dart';
-
-import 'cloudinary_service.dart';
 
 class SeccionDocumento {
   final String titulo;
@@ -57,25 +51,21 @@ class ProductoOrdenCompra {
 class DocumentoCompartible {
   final String titulo;
   final String nombreArchivo;
-  final String texto;
   final String? paciente;
   final DateTime fecha;
   final List<SeccionDocumento> secciones;
   final List<ProductoDocumento> productos;
   final String nota;
-  final bool adjuntarImagenEnTexto;
   final String? numeroWhatsAppCompra;
 
   const DocumentoCompartible({
     required this.titulo,
     required this.nombreArchivo,
-    required this.texto,
     required this.fecha,
     this.paciente,
     this.secciones = const [],
     this.productos = const [],
     this.nota = '',
-    this.adjuntarImagenEnTexto = false,
     this.numeroWhatsAppCompra,
   });
 }
@@ -131,11 +121,9 @@ String _normalizarNumeroWhatsAppEcuador(String valor) {
 }
 
 class _OpcionCompartirDocumento {
-  final String tipo;
   final DocumentoCompartible documento;
 
   const _OpcionCompartirDocumento({
-    required this.tipo,
     required this.documento,
   });
 }
@@ -155,8 +143,6 @@ class ServicioCompartir {
     DocumentoCompartible documento, {
     DocumentoCompartible? documentoInformativo,
     bool ingles = false,
-    bool permitirTexto = true,
-    bool permitirQrPdf = false,
   }) async {
     final tieneInformativo = documentoInformativo != null;
     final opcion = await showModalBottomSheet<_OpcionCompartirDocumento>(
@@ -200,12 +186,8 @@ class ServicioCompartir {
                         ? 'Choose with prices or informational only.'
                         : 'Elige con precios o solo informativo.')
                     : (ingles
-                        ? (permitirQrPdf
-                            ? 'Choose a PDF or QR code.'
-                            : 'Choose a PDF or a text message.')
-                        : (permitirQrPdf
-                            ? 'Elige un PDF o comparte por QR.'
-                            : 'Elige un PDF o un mensaje de texto.')),
+                        ? 'A professional PDF will be generated.'
+                        : 'Se generar\u00e1 un PDF profesional.'),
                 style: const TextStyle(
                   color: Color(0xFF596284),
                   fontSize: 15,
@@ -216,7 +198,6 @@ class ServicioCompartir {
               _opcion(
                 context: sheetContext,
                 valor: _OpcionCompartirDocumento(
-                  tipo: 'pdf',
                   documento: documento,
                 ),
                 icono: Icons.picture_as_pdf_rounded,
@@ -233,7 +214,6 @@ class ServicioCompartir {
                 _opcion(
                   context: sheetContext,
                   valor: _OpcionCompartirDocumento(
-                    tipo: 'pdf',
                     documento: documentoInformativo,
                   ),
                   icono: Icons.picture_as_pdf_rounded,
@@ -245,70 +225,6 @@ class ServicioCompartir {
                 ),
                 const SizedBox(height: 10),
               ],
-              if (permitirQrPdf) ...[
-                _opcion(
-                  context: sheetContext,
-                  valor: _OpcionCompartirDocumento(
-                    tipo: 'qr',
-                    documento: documento,
-                  ),
-                  icono: Icons.qr_code_2_rounded,
-                  titulo: tieneInformativo
-                      ? (ingles ? 'Complete QR' : 'QR completo')
-                      : (ingles ? 'Share by QR' : 'Compartir por QR'),
-                  descripcion: ingles
-                      ? 'Upload the PDF and show a scannable code.'
-                      : 'Sube el PDF y muestra un codigo escaneable.',
-                  color: const Color(0xFF118B48),
-                ),
-                const SizedBox(height: 10),
-              ] else if (permitirTexto) ...[
-                _opcion(
-                  context: sheetContext,
-                  valor: _OpcionCompartirDocumento(
-                    tipo: 'texto',
-                    documento: documento,
-                  ),
-                  icono: Icons.chat_bubble_outline_rounded,
-                  titulo: tieneInformativo
-                      ? (ingles ? 'Text with prices' : 'Texto con precios')
-                      : (ingles ? 'Text' : 'Texto'),
-                  descripcion: ingles
-                      ? 'Content ready to send by WhatsApp.'
-                      : 'Contenido listo para enviar por WhatsApp.',
-                  color: const Color(0xFF118B48),
-                ),
-              ],
-              if (tieneInformativo && permitirQrPdf) ...[
-                _opcion(
-                  context: sheetContext,
-                  valor: _OpcionCompartirDocumento(
-                    tipo: 'qr',
-                    documento: documentoInformativo,
-                  ),
-                  icono: Icons.qr_code_2_rounded,
-                  titulo: ingles ? 'Informational QR' : 'QR informativo',
-                  descripcion: ingles
-                      ? 'Upload the informational PDF and show its QR.'
-                      : 'Sube el PDF informativo y muestra su QR.',
-                  color: const Color(0xFF008C7E),
-                ),
-              ] else if (tieneInformativo && permitirTexto) ...[
-                const SizedBox(height: 10),
-                _opcion(
-                  context: sheetContext,
-                  valor: _OpcionCompartirDocumento(
-                    tipo: 'texto',
-                    documento: documentoInformativo,
-                  ),
-                  icono: Icons.chat_bubble_outline_rounded,
-                  titulo: ingles ? 'Informational text' : 'Texto informativo',
-                  descripcion: ingles
-                      ? 'Message without prices or doses.'
-                      : 'Mensaje sin precios ni dosis.',
-                  color: const Color(0xFF008C7E),
-                ),
-              ],
             ],
           ),
         ),
@@ -317,42 +233,15 @@ class ServicioCompartir {
 
     if (opcion == null || !context.mounted) return;
     final documentoElegido = opcion.documento;
-    if (opcion.tipo == 'texto') {
-      await _compartirTexto(documentoElegido);
-      return;
-    }
 
     _mostrarProcesando(
       context,
       ingles: ingles,
-      mensaje: opcion.tipo == 'qr'
-          ? (ingles ? 'Preparing QR...' : 'Preparando QR...')
-          : null,
     );
     try {
       final bytes = await generarPdf(documentoElegido);
       if (!context.mounted) return;
       final nombre = '${_nombreArchivoPdf(documentoElegido.nombreArchivo)}.pdf';
-      if (opcion.tipo == 'qr') {
-        final archivoPdf = await _guardarPdfTemporal(bytes, nombre);
-        final url = await CloudinaryService().uploadPdf(archivoPdf);
-        try {
-          await archivoPdf.delete();
-        } catch (_) {}
-        if (!context.mounted) return;
-        Navigator.of(context, rootNavigator: true).pop();
-        if (url == null) {
-          _mostrarErrorQr(context, ingles: ingles);
-          return;
-        }
-        await _mostrarQrPdf(
-          context,
-          url: url,
-          titulo: documentoElegido.titulo,
-          ingles: ingles,
-        );
-        return;
-      }
 
       Navigator.of(context, rootNavigator: true).pop();
       await Share.shareXFiles(
@@ -444,47 +333,6 @@ class ServicioCompartir {
     );
   }
 
-  static Future<void> _compartirTexto(DocumentoCompartible documento) async {
-    if (!documento.adjuntarImagenEnTexto) {
-      await Share.share(documento.texto, subject: documento.titulo);
-      return;
-    }
-
-    final imagenAsset = documento.productos
-        .map((producto) => producto.imagenAsset)
-        .whereType<String>()
-        .where((ruta) => ruta.trim().isNotEmpty)
-        .cast<String?>()
-        .firstWhere((ruta) => ruta != null, orElse: () => null);
-
-    if (imagenAsset == null) {
-      await Share.share(documento.texto, subject: documento.titulo);
-      return;
-    }
-
-    try {
-      final data = await rootBundle.load(imagenAsset);
-      final bytes = data.buffer.asUint8List(
-        data.offsetInBytes,
-        data.lengthInBytes,
-      );
-      await Share.shareXFiles(
-        [
-          XFile.fromData(
-            bytes,
-            name:
-                '${_nombreArchivoPdf(documento.nombreArchivo)}.${_extensionImagen(imagenAsset)}',
-            mimeType: _mimeImagen(imagenAsset),
-          ),
-        ],
-        subject: documento.titulo,
-        text: documento.texto,
-      );
-    } catch (_) {
-      await Share.share(documento.texto, subject: documento.titulo);
-    }
-  }
-
   static void _mostrarProcesando(
     BuildContext context, {
     required bool ingles,
@@ -514,97 +362,6 @@ class ServicioCompartir {
               ],
             ),
           ),
-        ),
-      ),
-    );
-  }
-
-  static Future<File> _guardarPdfTemporal(
-    Uint8List bytes,
-    String nombre,
-  ) async {
-    final directorio = await getTemporaryDirectory();
-    final archivo = File('${directorio.path}/$nombre');
-    return archivo.writeAsBytes(bytes, flush: true);
-  }
-
-  static Future<void> _mostrarQrPdf(
-    BuildContext context, {
-    required String url,
-    required String titulo,
-    required bool ingles,
-  }) {
-    return showDialog<void>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
-        title: Text(
-          ingles ? 'PDF QR code' : 'QR del PDF',
-          style: const TextStyle(
-            color: Color(0xFF12248B),
-            fontWeight: FontWeight.w900,
-          ),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            QrImageView(
-              data: url,
-              version: QrVersions.auto,
-              size: 230,
-              backgroundColor: Colors.white,
-            ),
-            const SizedBox(height: 12),
-            Text(
-              titulo,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: Color(0xFF17204B),
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-            const SizedBox(height: 8),
-            SelectableText(
-              url,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: Color(0xFF66708F),
-                fontSize: 12,
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton.icon(
-            onPressed: () {
-              Clipboard.setData(ClipboardData(text: url));
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(
-                    ingles ? 'Link copied.' : 'Link copiado.',
-                  ),
-                ),
-              );
-            },
-            icon: const Icon(Icons.copy_rounded),
-            label: Text(ingles ? 'Copy link' : 'Copiar link'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: Text(ingles ? 'Close' : 'Cerrar'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  static void _mostrarErrorQr(BuildContext context, {required bool ingles}) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          ingles
-              ? 'The QR could not be generated. Try again.'
-              : 'No se pudo generar el QR. Intentalo nuevamente.',
         ),
       ),
     );
@@ -1086,26 +843,6 @@ class ServicioCompartir {
         .replaceAll(RegExp(r'\s+'), ' ')
         .trim();
     return limpio.isEmpty ? respaldo.toUpperCase() : limpio;
-  }
-
-  static String _extensionImagen(String ruta) {
-    final extension = ruta.split('.').last.toLowerCase();
-    if (extension == 'jpg' || extension == 'jpeg' || extension == 'webp') {
-      return extension;
-    }
-    return 'png';
-  }
-
-  static String _mimeImagen(String ruta) {
-    switch (_extensionImagen(ruta)) {
-      case 'jpg':
-      case 'jpeg':
-        return 'image/jpeg';
-      case 'webp':
-        return 'image/webp';
-      default:
-        return 'image/png';
-    }
   }
 
   static String _archivoSeguro(String texto) {

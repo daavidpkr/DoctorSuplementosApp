@@ -161,7 +161,6 @@ class _PaginaOptimizadorConsumoState extends State<PaginaOptimizadorConsumo> {
           'PAQUETE MAESTRO DE CONSUMO 4LIFE',
           '4LIFE MASTER CONSUMPTION PACK',
         ),
-        texto: _textoPaquete(paquete),
         fecha: fecha,
         secciones: [
           SeccionDocumento(

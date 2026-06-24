@@ -655,13 +655,6 @@ Este producto no es medicina, no diagnostica, no trata, no cura ni previene enfe
       if (precioPromocional != null)
         '${idioma == IdiomaApp.ingles ? 'Promotional price' : 'Precio promocional'}: \$${precioPromocional.toStringAsFixed(2)}',
     ];
-    final textoConPrecios = precioProducto == null
-        ? resultado
-        : '$resultado\n\n${idioma == IdiomaApp.ingles ? 'Prices' : 'Precios'}:\n'
-            '${idioma == IdiomaApp.ingles ? 'Member' : 'Afiliado'}: \$${precioProducto.afiliado.toStringAsFixed(2)}\n'
-            '${idioma == IdiomaApp.ingles ? 'Retail' : 'Publico'}: \$${precioProducto.publico.toStringAsFixed(2)}\n'
-            'LP: ${precioProducto.lp ?? 0}'
-            '${precioPromocional == null ? '' : '\n${idioma == IdiomaApp.ingles ? 'Promotional' : 'Promocional'}: \$${precioPromocional.toStringAsFixed(2)}'}';
     if (!mounted) return;
 
     return ServicioCompartir.mostrarOpciones(
@@ -672,7 +665,6 @@ Este producto no es medicina, no diagnostica, no trata, no cura ni previene enfe
             : 'INFORME DEL PRODUCTO ${nombre.toUpperCase()}',
         nombreArchivo:
             idioma == IdiomaApp.ingles ? 'REPORT $nombre' : 'INFORME $nombre',
-        texto: textoConPrecios,
         fecha: DateTime.now(),
         secciones: secciones
             .where(
@@ -703,7 +695,6 @@ Este producto no es medicina, no diagnostica, no trata, no cura ni previene enfe
           ),
         ],
         nota: notaNoMedicina,
-        adjuntarImagenEnTexto: true,
       ),
       documentoInformativo: DocumentoCompartible(
         titulo: idioma == IdiomaApp.ingles
@@ -711,7 +702,6 @@ Este producto no es medicina, no diagnostica, no trata, no cura ni previene enfe
             : 'INFORME DEL PRODUCTO ${nombre.toUpperCase()}',
         nombreArchivo:
             idioma == IdiomaApp.ingles ? 'REPORT $nombre' : 'INFORME $nombre',
-        texto: resultado,
         fecha: DateTime.now(),
         secciones: secciones
             .where(
@@ -741,7 +731,6 @@ Este producto no es medicina, no diagnostica, no trata, no cura ni previene enfe
           ),
         ],
         nota: notaNoMedicina,
-        adjuntarImagenEnTexto: true,
       ),
       ingles: idioma == IdiomaApp.ingles,
     );

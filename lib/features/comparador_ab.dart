@@ -74,7 +74,6 @@ class _PaginaComparadorABState extends State<PaginaComparadorAB> {
           'COMPARACIÓN A B 4LIFE',
           '4LIFE A B COMPARISON',
         ),
-        texto: _textoComparacion(),
         fecha: fecha,
         secciones: [
           SeccionDocumento(

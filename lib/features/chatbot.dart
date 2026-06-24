@@ -39,7 +39,6 @@ Future<void> _compartirRespuestaChat(
     DocumentoCompartible(
       titulo: 'RESPUESTA DEL ASESOR IA 4LIFE',
       nombreArchivo: 'respuesta_asesor_ia_4life',
-      texto: texto,
       fecha: DateTime.now(),
       secciones: secciones,
       productos: productos,

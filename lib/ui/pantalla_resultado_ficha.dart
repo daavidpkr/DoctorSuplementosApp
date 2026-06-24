@@ -1192,19 +1192,11 @@ class _PantallaResultadoFichaState extends State<PantallaResultadoFicha> {
     final incluyePrecios = contenido.productos.any(
       (producto) => widget.preciosProducto.containsKey(producto.nombre),
     );
-    final textoConPrecios = incluyePrecios
-        ? '${widget.resultado}\n\n${_txt('Precios de productos', 'Product prices')}:\n${contenido.productos.where((producto) => widget.preciosProducto.containsKey(producto.nombre)).map((producto) {
-            final precio = widget.preciosProducto[producto.nombre]!;
-            return '${producto.nombre}: ${_txt('Afiliado', 'Member')} \$${precio.afiliado.toStringAsFixed(2)} | ${_txt('Publico', 'Retail')} \$${precio.publico.toStringAsFixed(2)} | LP ${precio.lp ?? 0}';
-          }).join('\n')}'
-        : widget.resultado;
-
     return ServicioCompartir.mostrarOpciones(
       context,
       DocumentoCompartible(
         titulo: titulo,
         nombreArchivo: nombreArchivo,
-        texto: textoConPrecios,
         paciente: widget.paciente,
         fecha: widget.fecha,
         secciones: secciones,
@@ -1216,7 +1208,6 @@ class _PantallaResultadoFichaState extends State<PantallaResultadoFicha> {
           ? DocumentoCompartible(
               titulo: titulo,
               nombreArchivo: nombreArchivo,
-              texto: widget.resultado,
               paciente: widget.paciente,
               fecha: widget.fecha,
               secciones: secciones,
@@ -1225,8 +1216,6 @@ class _PantallaResultadoFichaState extends State<PantallaResultadoFicha> {
             )
           : null,
       ingles: widget.ingles,
-      permitirTexto: false,
-      permitirQrPdf: true,
     );
   }
 

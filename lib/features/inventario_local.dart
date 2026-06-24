@@ -137,7 +137,6 @@ class _PaginaInventarioLocalState extends State<PaginaInventarioLocal> {
       DocumentoCompartible(
         titulo: _t('INVENTARIO LOCAL 4LIFE', '4LIFE LOCAL INVENTORY'),
         nombreArchivo: _t('INVENTARIO LOCAL 4LIFE', '4LIFE LOCAL INVENTORY'),
-        texto: _textoInventario(),
         fecha: fecha,
         secciones: [
           SeccionDocumento(

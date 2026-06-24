@@ -43,7 +43,6 @@ void main() {
       DocumentoCompartible(
         titulo: 'DIAGNOSTICO DE PACIENTE',
         nombreArchivo: 'diagnostico_paciente',
-        texto: 'Diagnostico de prueba',
         paciente: 'Paciente',
         fecha: DateTime(2026, 6, 12),
         secciones: const [

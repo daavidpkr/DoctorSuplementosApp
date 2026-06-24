@@ -249,14 +249,6 @@ class _PaginaCalculadoraPreciosState extends State<PaginaCalculadoraPrecios> {
     return buffer.toString();
   }
 
-  String _resumenCompartirInformativo() {
-    final buffer = StringBuffer('Productos 4Life seleccionados\n\n');
-    for (final linea in _productos) {
-      buffer.writeln('${linea.cantidad} x ${linea.producto.nombre}');
-    }
-    return buffer.toString();
-  }
-
   Future<void> _compartirResultado() {
     final fecha = DateTime.now();
     final productosInformativos = _productos
@@ -273,7 +265,6 @@ class _PaginaCalculadoraPreciosState extends State<PaginaCalculadoraPrecios> {
       DocumentoCompartible(
         titulo: 'COTIZACIÓN DE PRODUCTOS 4LIFE',
         nombreArchivo: 'COTIZACION PRODUCTOS 4LIFE',
-        texto: _resumenCompartir(),
         fecha: fecha,
         secciones: [
           SeccionDocumento(
@@ -302,7 +293,6 @@ class _PaginaCalculadoraPreciosState extends State<PaginaCalculadoraPrecios> {
       documentoInformativo: DocumentoCompartible(
         titulo: 'PRODUCTOS 4LIFE',
         nombreArchivo: 'COTIZACION PRODUCTOS 4LIFE',
-        texto: _resumenCompartirInformativo(),
         fecha: fecha,
         secciones: const [
           SeccionDocumento(
