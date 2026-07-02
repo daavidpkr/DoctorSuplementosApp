@@ -59,7 +59,7 @@ void main() {
           ProductoDocumento(
             nombre: 'Transfer factor plus',
             imagenAsset:
-                'assets/productos/productos-ec/trasnfer_factor_plus.png',
+                'assets/productos/productos-ec/trasnfer_factor_plus.webp',
             indicaciones: [
               'Dosis manana: 1 capsula',
               'Precio afiliado: \$42.50',

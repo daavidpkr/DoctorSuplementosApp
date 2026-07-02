@@ -80,8 +80,8 @@ const Map<String, String> imagenesProducto4Life = {
   'Transfer factor plus':
       'assets/productos/productos-ec/trasnfer_factor_plus.webp',
   'Transfer factor MAX':
-      'assets/productos/productos-ec/transfer_factor_max.png',
-  'Riovida Jugo': 'assets/productos/productos-ec/riovida_jugo.png',
+      'assets/productos/productos-ec/transfer_factor_max.webp',
+  'Riovida Jugo': 'assets/productos/productos-ec/riovida_jugo.webp',
   'Riovida stix': 'assets/productos/productos-ec/riovida_stix.webp',
   'Energy go stix': 'assets/productos/productos-ec/energy_go_stix.webp',
   'Renuvo': 'assets/productos/productos-ec/renuvo.webp',

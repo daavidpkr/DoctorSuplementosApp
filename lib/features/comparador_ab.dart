@@ -88,8 +88,9 @@ class _PaginaComparadorABState extends State<PaginaComparadorAB> {
                 imagenAsset: imagenesProducto4Life[producto.nombre],
                 indicaciones: [
                   '${_t('Enfoque', 'Focus')}: ${_enfoqueProducto(producto)}',
-                  '${_t('Afiliado', 'Member')}: ${_precio(producto.afiliado)}',
-                  '${_t('Público', 'Retail')}: ${_precio(producto.publico)}',
+                  '${_t('Calidad principal', 'Main quality')}: ${_senalCalidad(producto)}',
+                  '${_t('Especializacion', 'Specialization')}: ${_nivelEspecializacion(producto)}',
+                  '${_t('Formato', 'Format')}: ${_formatoProducto(producto)}',
                   'LP: ${producto.lp ?? 0}',
                 ],
               ),
@@ -108,17 +109,21 @@ class _PaginaComparadorABState extends State<PaginaComparadorAB> {
     buffer
         .writeln('${_t('Enfoque', 'Focus')}: ${_enfoqueProducto(_productoA)}');
     buffer.writeln(
-        '${_t('Afiliado', 'Member')}: ${_precio(_productoA.afiliado)}');
+        '${_t('Calidad principal', 'Main quality')}: ${_senalCalidad(_productoA)}');
+    buffer.writeln(
+        '${_t('Especializacion', 'Specialization')}: ${_nivelEspecializacion(_productoA)}');
     buffer
-        .writeln('${_t('Público', 'Retail')}: ${_precio(_productoA.publico)}');
+        .writeln('${_t('Formato', 'Format')}: ${_formatoProducto(_productoA)}');
     buffer.writeln('LP: ${_productoA.lp ?? 0}\n');
     buffer.writeln('${_t('Producto B', 'Product B')}: ${_productoB.nombre}');
     buffer
         .writeln('${_t('Enfoque', 'Focus')}: ${_enfoqueProducto(_productoB)}');
     buffer.writeln(
-        '${_t('Afiliado', 'Member')}: ${_precio(_productoB.afiliado)}');
+        '${_t('Calidad principal', 'Main quality')}: ${_senalCalidad(_productoB)}');
+    buffer.writeln(
+        '${_t('Especializacion', 'Specialization')}: ${_nivelEspecializacion(_productoB)}');
     buffer
-        .writeln('${_t('Público', 'Retail')}: ${_precio(_productoB.publico)}');
+        .writeln('${_t('Formato', 'Format')}: ${_formatoProducto(_productoB)}');
     buffer.writeln('LP: ${_productoB.lp ?? 0}\n');
     buffer.writeln(
         '${_t('Decisión rápida', 'Quick decision')}: ${_decisionRapida()}');
@@ -127,21 +132,11 @@ class _PaginaComparadorABState extends State<PaginaComparadorAB> {
     return buffer.toString();
   }
 
-  String _precio(double valor) => '\$${valor.toStringAsFixed(2)}';
-  bool get _ingles => IdiomaService.actual.value == IdiomaApp.ingles;
   String _t(String es, String en) => txtApp(es, en);
-
-  String _gananciaPorProducto(ProductoPrecio producto) {
-    final ganancia = (producto.lp ?? 0) * 0.25;
-    final texto = ganancia.toStringAsFixed(2);
-    return _ingles ? texto : texto.replaceAll('.', ',');
-  }
 
   String _decisionRapida() {
     final lpA = _productoA.lp ?? 0;
     final lpB = _productoB.lp ?? 0;
-    final valorA = lpA * 0.25;
-    final valorB = lpB * 0.25;
 
     if (_enfoqueProducto(_productoA) != _enfoqueProducto(_productoB)) {
       return _t(
@@ -149,37 +144,82 @@ class _PaginaComparadorABState extends State<PaginaComparadorAB> {
         'Choose ${_productoA.nombre} for ${_enfoqueProducto(_productoA).toLowerCase()} needs, or ${_productoB.nombre} for ${_enfoqueProducto(_productoB).toLowerCase()} needs.',
       );
     }
-    if (valorA > valorB) {
+    if (lpA > lpB) {
       return _t(
-        '${_productoA.nombre} deja mayor ganancia por producto.',
-        '${_productoA.nombre} gives a higher gain per product.',
+        '${_productoA.nombre} ofrece una senal de calidad mas robusta para el mismo enfoque.',
+        '${_productoA.nombre} offers a stronger quality signal for the same focus.',
       );
     }
-    if (valorB > valorA) {
+    if (lpB > lpA) {
       return _t(
-        '${_productoB.nombre} deja mayor ganancia por producto.',
-        '${_productoB.nombre} gives a higher gain per product.',
+        '${_productoB.nombre} ofrece una senal de calidad mas robusta para el mismo enfoque.',
+        '${_productoB.nombre} offers a stronger quality signal for the same focus.',
       );
     }
     return _t(
-      'Ambos productos están cercanos; decide según preferencia del cliente, formato y objetivo de bienestar.',
+      'Ambos productos estan cercanos; decide segun necesidad del cliente, formato y tolerancia.',
       'Both products are close; decide by client preference, format, and wellness goal.',
     );
   }
 
   String _lecturaComparativa() {
-    final precioA = _productoA.afiliado;
-    final precioB = _productoB.afiliado;
     final lpA = _productoA.lp ?? 0;
     final lpB = _productoB.lp ?? 0;
-    final costoLpA = lpA == 0 ? double.infinity : precioA / lpA;
-    final costoLpB = lpB == 0 ? double.infinity : precioB / lpB;
-    final masEconomicoLp = costoLpA <= costoLpB ? _productoA : _productoB;
     final mayorLp = lpA >= lpB ? _productoA : _productoB;
     return _t(
-      '${_productoA.nombre} se interpreta como una opcion de ${_enfoqueProducto(_productoA).toLowerCase()}, con $lpA LP y precio afiliado de ${_precio(precioA)}. ${_productoB.nombre} se interpreta como una opcion de ${_enfoqueProducto(_productoB).toLowerCase()}, con $lpB LP y precio afiliado de ${_precio(precioB)}. Si el objetivo principal es maximizar volumen LP, destaca ${mayorLp.nombre}; si el objetivo es cuidar el costo por LP, destaca ${masEconomicoLp.nombre}. Para decidir con un cliente, cruza esta informacion con necesidad real, presupuesto, tolerancia y formato preferido.',
-      '${_productoA.nombre} reads as a ${_enfoqueProducto(_productoA).toLowerCase()} option, with $lpA LP and a member price of ${_precio(precioA)}. ${_productoB.nombre} reads as a ${_enfoqueProducto(_productoB).toLowerCase()} option, with $lpB LP and a member price of ${_precio(precioB)}. If the main goal is maximizing LP volume, ${mayorLp.nombre} stands out; if the goal is controlling cost per LP, ${masEconomicoLp.nombre} stands out. To decide with a client, cross this with real need, budget, tolerance, and preferred format.',
+      '${_productoA.nombre} se interpreta como una opcion de ${_enfoqueProducto(_productoA).toLowerCase()} con calidad ${_senalCalidad(_productoA).toLowerCase()}, formato ${_formatoProducto(_productoA).toLowerCase()} y $lpA LP. ${_productoB.nombre} se interpreta como una opcion de ${_enfoqueProducto(_productoB).toLowerCase()} con calidad ${_senalCalidad(_productoB).toLowerCase()}, formato ${_formatoProducto(_productoB).toLowerCase()} y $lpB LP. Si ambos cubren la misma necesidad, destaca ${mayorLp.nombre} por una senal de calidad mas amplia. Para decidir con un cliente, cruza esta informacion con necesidad real, tolerancia, rutina y formato preferido.',
+      '${_productoA.nombre} reads as a ${_enfoqueProducto(_productoA).toLowerCase()} option with ${_senalCalidad(_productoA).toLowerCase()} quality, ${_formatoProducto(_productoA).toLowerCase()} format, and $lpA LP. ${_productoB.nombre} reads as a ${_enfoqueProducto(_productoB).toLowerCase()} option with ${_senalCalidad(_productoB).toLowerCase()} quality, ${_formatoProducto(_productoB).toLowerCase()} format, and $lpB LP. If both cover the same need, ${mayorLp.nombre} stands out for a broader quality signal. To decide with a client, cross this with real need, tolerance, routine, and preferred format.',
     );
+  }
+
+  String _senalCalidad(ProductoPrecio producto) {
+    final lp = producto.lp ?? 0;
+    if (lp >= 100) {
+      return _t('Alta concentracion y soporte principal',
+          'High concentration and primary support');
+    }
+    if (lp >= 50) {
+      return _t('Soporte fuerte para rutina diaria',
+          'Strong support for a daily routine');
+    }
+    if (lp >= 25) {
+      return _t('Soporte complementario equilibrado',
+          'Balanced complementary support');
+    }
+    return _t('Soporte puntual o de entrada', 'Targeted or entry support');
+  }
+
+  String _nivelEspecializacion(ProductoPrecio producto) {
+    final enfoque = _enfoqueProducto(producto);
+    if (enfoque == _t('Bienestar general', 'General wellness')) {
+      return _t('Amplio', 'Broad');
+    }
+    final nombre = normalizarTexto(producto.nombre);
+    if (nombre.contains('max') ||
+        nombre.contains('tri factor') ||
+        nombre.contains('tf boost') ||
+        nombre.contains('glucoach') ||
+        nombre.contains('bcv')) {
+      return _t('Muy especifico', 'Highly specific');
+    }
+    return _t('Especifico', 'Specific');
+  }
+
+  String _formatoProducto(ProductoPrecio producto) {
+    final nombre = normalizarTexto(producto.nombre);
+    if (nombre.contains('stix') || nombre.contains('go')) {
+      return _t('Stix portatil', 'Portable stix');
+    }
+    if (nombre.contains('jugo') || nombre.contains('burst')) {
+      return _t('Bebida o toma diaria', 'Drink or daily serving');
+    }
+    if (nombre.contains('crema') ||
+        nombre.contains('tonico') ||
+        nombre.contains('limpiador') ||
+        nombre.contains('suero')) {
+      return _t('Topico', 'Topical');
+    }
+    return _t('Capsulas o suplemento base', 'Capsules or core supplement');
   }
 
   String _enfoqueProducto(ProductoPrecio producto) {
@@ -356,8 +396,8 @@ class _PaginaComparadorABState extends State<PaginaComparadorAB> {
           const SizedBox(height: 10),
           Text(
             _t(
-              'Compara enfoque, LP, precio afiliado, precio público y señales de decisión lado a lado.',
-              'Compare focus, LP, member price, retail price, and decision signals side by side.',
+              'Compara enfoque, calidad, especializacion, formato y senales de decision lado a lado.',
+              'Compare focus, quality, specialization, format, and decision signals side by side.',
             ),
             style: const TextStyle(
               color: _texto,
@@ -543,16 +583,15 @@ class _PaginaComparadorABState extends State<PaginaComparadorAB> {
           const SizedBox(height: 16),
           _filaMetrica(_t('Enfoque de bienestar', 'Wellness focus'),
               _enfoqueProducto(_productoA), _enfoqueProducto(_productoB)),
-          _filaMetrica(_t('Precio afiliado', 'Member price'),
-              _precio(_productoA.afiliado), _precio(_productoB.afiliado)),
-          _filaMetrica(_t('Precio público', 'Retail price'),
-              _precio(_productoA.publico), _precio(_productoB.publico)),
-          _filaMetrica('LP', '${_productoA.lp ?? 0}', '${_productoB.lp ?? 0}'),
+          _filaMetrica(_t('Calidad principal', 'Main quality'),
+              _senalCalidad(_productoA), _senalCalidad(_productoB)),
           _filaMetrica(
-            _t('Ganancia por producto', 'Gain per product'),
-            _gananciaPorProducto(_productoA),
-            _gananciaPorProducto(_productoB),
-          ),
+              _t('Especializacion', 'Specialization'),
+              _nivelEspecializacion(_productoA),
+              _nivelEspecializacion(_productoB)),
+          _filaMetrica(_t('Formato', 'Format'), _formatoProducto(_productoA),
+              _formatoProducto(_productoB)),
+          _filaMetrica('LP', '${_productoA.lp ?? 0}', '${_productoB.lp ?? 0}'),
         ],
       ),
     );
@@ -835,6 +874,20 @@ class _SelectorProductoABState extends State<_SelectorProductoAB> {
         .toList();
   }
 
+  String _resumenCalidad(ProductoPrecio producto) {
+    final nombre = normalizarTexto(producto.nombre);
+    final enfoque = nombre.contains('riovida')
+        ? txtApp('Antioxidante', 'Antioxidant')
+        : nombre.contains('transfer factor') ||
+                nombre.contains('tf boost') ||
+                nombre.contains('agpro')
+            ? txtApp('Inmune', 'Immune')
+            : nombre.contains('energy')
+                ? txtApp('Energia', 'Energy')
+                : txtApp('Bienestar', 'Wellness');
+    return '$enfoque | LP ${producto.lp ?? 0}';
+  }
+
   @override
   Widget build(BuildContext context) {
     return SafeArea(
@@ -927,7 +980,7 @@ class _SelectorProductoABState extends State<_SelectorProductoAB> {
                       ),
                     ),
                     subtitle: Text(
-                      '${txtApp('Afiliado', 'Member')} \$${producto.afiliado.toStringAsFixed(2)} | LP ${producto.lp ?? 0}',
+                      _resumenCalidad(producto),
                     ),
                     trailing: seleccionado
                         ? const Icon(Icons.check_circle_rounded,

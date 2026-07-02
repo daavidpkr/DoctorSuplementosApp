@@ -18,7 +18,7 @@ class _PaginaOptimizadorAceleradoState
 
   late final List<PaqueteAcelerado> _predeterminados;
   late List<PaqueteAcelerado> _sugeridos;
-  int _seleccionado = 0;
+  int? _seleccionado;
   int _variacion = 0;
 
   @override
@@ -176,7 +176,6 @@ class _PaginaOptimizadorAceleradoState
 
   @override
   Widget build(BuildContext context) {
-    final fijo = _predeterminados[_seleccionado];
     return Scaffold(
       backgroundColor: const Color(0xFFF7F7FB),
       body: Stack(
@@ -200,8 +199,10 @@ class _PaginaOptimizadorAceleradoState
                   _encabezado(),
                   const SizedBox(height: 30),
                   _selectorPredeterminados(),
-                  const SizedBox(height: 16),
-                  _tarjetaPaquete(fijo),
+                  if (_seleccionado != null) ...[
+                    const SizedBox(height: 16),
+                    _tarjetaPaquete(_predeterminados[_seleccionado!]),
+                  ],
                   const SizedBox(height: 18),
                   _encabezadoSugeridos(),
                   const SizedBox(height: 12),
