@@ -324,7 +324,9 @@ class _PaginaOptimizadorAceleradoState
     final activo = _seleccionado == indice;
     return InkWell(
       borderRadius: BorderRadius.circular(14),
-      onTap: () => setState(() => _seleccionado = indice),
+      onTap: () => setState(
+        () => _seleccionado = _seleccionado == indice ? null : indice,
+      ),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 160),
         constraints: const BoxConstraints(minHeight: 58),

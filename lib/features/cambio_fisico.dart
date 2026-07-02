@@ -518,17 +518,14 @@ class _FormularioCambioFisicoState extends State<FormularioCambioFisico> {
   }
 
   Widget _selectorGenero() {
-    return DropdownButtonFormField<String>(
-      initialValue: _generoSeleccionado,
-      icon: const Icon(Icons.keyboard_arrow_down_rounded,
-          color: Color(0xFF12248B), size: 32),
-      decoration: _inputDecoracion(
-        hint: txtApp("Selecciona una opcion", "Select an option"),
-      ),
-      items: const [
-        DropdownMenuItem(value: 'Masculino', child: Text('Masculino')),
-        DropdownMenuItem(value: 'Femenino', child: Text('Femenino')),
-      ],
+    return _selectorVisual(
+      valor: _generoSeleccionado,
+      placeholder: txtApp("Selecciona una opcion", "Select an option"),
+      icono: Icons.wc_rounded,
+      opciones: const ['Masculino', 'Femenino'],
+      etiqueta: (valor) => valor == 'Masculino'
+          ? txtApp('Masculino', 'Male')
+          : txtApp('Femenino', 'Female'),
       onChanged: (valor) => setState(() => _generoSeleccionado = valor),
     );
   }
@@ -538,16 +535,13 @@ class _FormularioCambioFisicoState extends State<FormularioCambioFisico> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        DropdownButtonFormField<String>(
-          initialValue: _contexturaSeleccionada,
-          icon: const Icon(Icons.keyboard_arrow_down_rounded,
-              color: Color(0xFF12248B), size: 32),
-          decoration: _inputDecoracion(
-            hint: txtApp("Selecciona una contextura", "Select a body frame"),
-          ),
-          items: _contexturas.keys
-              .map((tipo) => DropdownMenuItem(value: tipo, child: Text(tipo)))
-              .toList(),
+        _selectorVisual(
+          valor: _contexturaSeleccionada,
+          placeholder:
+              txtApp("Selecciona una contextura", "Select a body frame"),
+          icono: Icons.accessibility_new_rounded,
+          opciones: _contexturas.keys.toList(),
+          etiqueta: (valor) => valor,
           onChanged: (valor) => setState(() => _contexturaSeleccionada = valor),
         ),
         if (descripcion != null) ...[
@@ -563,6 +557,67 @@ class _FormularioCambioFisicoState extends State<FormularioCambioFisico> {
           ),
         ],
       ],
+    );
+  }
+
+  Widget _selectorVisual({
+    required String? valor,
+    required String placeholder,
+    required IconData icono,
+    required List<String> opciones,
+    required String Function(String valor) etiqueta,
+    required ValueChanged<String> onChanged,
+  }) {
+    return PopupMenuButton<String>(
+      initialValue: valor,
+      onSelected: onChanged,
+      offset: const Offset(0, 58),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      itemBuilder: (context) => [
+        for (final opcion in opciones)
+          PopupMenuItem(value: opcion, child: Text(etiqueta(opcion))),
+      ],
+      child: Container(
+        height: 64,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: const Color(0xFFE1E4F0), width: 1.4),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 38,
+              height: 38,
+              decoration: BoxDecoration(
+                color: const Color(0xFFF0F2FF),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(icono, color: const Color(0xFF172394), size: 22),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Text(
+                valor == null ? placeholder : etiqueta(valor),
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: valor == null
+                      ? const Color(0xFF6B7192)
+                      : const Color(0xFF18215E),
+                  fontSize: 16,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+            const Icon(
+              Icons.keyboard_arrow_down_rounded,
+              color: Color(0xFF2839C7),
+              size: 28,
+            ),
+          ],
+        ),
+      ),
     );
   }
 

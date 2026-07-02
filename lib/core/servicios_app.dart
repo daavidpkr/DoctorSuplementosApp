@@ -340,6 +340,11 @@ class ImpactoService {
     final raw = prefs.getStringList(prefsKey) ?? [];
     return raw.map((e) => jsonDecode(e) as Map<String, dynamic>).toList();
   }
+
+  static Future<void> limpiar() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList(prefsKey, []);
+  }
 }
 
 class InstalacionInicialService {

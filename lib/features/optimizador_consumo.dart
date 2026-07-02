@@ -32,7 +32,9 @@ class _PaginaOptimizadorConsumoState extends State<PaginaOptimizadorConsumo> {
     super.dispose();
   }
 
-  int get _metaLp => int.tryParse(_metaController.text.trim()) ?? 150;
+  int get _metaLp => (int.tryParse(_metaController.text.trim()) ?? 150)
+      .clamp(150, 999)
+      .toInt();
   String _t(String es, String en) => txtApp(es, en);
 
   void _generarPaquetesDesdeBoton() {
@@ -41,7 +43,10 @@ class _PaginaOptimizadorConsumoState extends State<PaginaOptimizadorConsumo> {
   }
 
   void _generarPaquetes() {
-    final meta = _metaLp.clamp(1, 999).toInt();
+    final meta = _metaLp;
+    if (_metaController.text.trim() != meta.toString()) {
+      _metaController.text = meta.toString();
+    }
     final paquetes = _OptimizadorConsumo.generar(
       meta,
       obligatorios: _productosObligatorios,
@@ -73,7 +78,7 @@ class _PaginaOptimizadorConsumoState extends State<PaginaOptimizadorConsumo> {
   }
 
   void _ajustarMeta(int cambio) {
-    final nuevaMeta = (_metaLp + cambio).clamp(1, 999).toInt();
+    final nuevaMeta = (_metaLp + cambio).clamp(150, 999).toInt();
     _metaController.text = nuevaMeta.toString();
     _generarPaquetes();
   }

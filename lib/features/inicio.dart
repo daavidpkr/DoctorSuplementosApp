@@ -9,6 +9,7 @@ class PantallaPrincipal extends StatefulWidget {
 
 class _PantallaPrincipalState extends State<PantallaPrincipal> {
   late Future<PerfilAsesor> _perfilFuture;
+  final Set<String> _categoriasAbiertas = <String>{};
 
   @override
   void initState() {
@@ -25,8 +26,129 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
     });
   }
 
+  void _alternarCategoria(String id) {
+    setState(() {
+      if (_categoriasAbiertas.contains(id)) {
+        _categoriasAbiertas.remove(id);
+      } else {
+        _categoriasAbiertas.add(id);
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
+    final catalogoAfiliado = _FichaInicio(
+      titulo: IdiomaService.texto('consult_products'),
+      descripcion: IdiomaService.texto('consult_products_desc'),
+      icono: Icons.grid_view_rounded,
+      colores: const [Color(0xFF2E3192), Color(0xFF151B7C)],
+      destino: const ConsultaProductoPagina(),
+    );
+    final catalogoMiTienda = _FichaInicio(
+      titulo: IdiomaService.texto('mitienda_catalog'),
+      descripcion: IdiomaService.texto('mitienda_catalog_desc'),
+      icono: Icons.storefront_rounded,
+      colores: const [Color(0xFF118B48), Color(0xFF0B6B38)],
+      destino: const ConsultaProductoPagina(
+        tipo: TipoCatalogoProducto.miTienda,
+      ),
+    );
+    final calculadoraPrecios = _FichaInicio(
+      titulo: IdiomaService.texto('price_calculator'),
+      descripcion: IdiomaService.texto('price_calculator_desc'),
+      icono: Icons.calculate_rounded,
+      colores: const [Color(0xFF008C7E), Color(0xFF006B61)],
+      destino: const PaginaCalculadoraPrecios(),
+    );
+    final optimizadorConsumo = _FichaInicio(
+      titulo: IdiomaService.texto('consumption_optimizer'),
+      descripcion: IdiomaService.texto('consumption_optimizer_desc'),
+      icono: Icons.view_module_rounded,
+      colores: const [Color(0xFF172394), Color(0xFF07125E)],
+      destino: const PaginaOptimizadorConsumo(),
+    );
+    final optimizadorAcelerado = _FichaInicio(
+      titulo: IdiomaService.texto('accelerated_optimizer'),
+      descripcion: IdiomaService.texto('accelerated_optimizer_desc'),
+      icono: Icons.rocket_launch_rounded,
+      colores: const [Color(0xFF172394), Color(0xFF0B6B88)],
+      destino: const PaginaOptimizadorAcelerado(),
+    );
+    final inventarioLocal = _FichaInicio(
+      titulo: IdiomaService.texto('local_inventory'),
+      descripcion: IdiomaService.texto('local_inventory_desc'),
+      icono: Icons.inventory_2_rounded,
+      colores: const [Color(0xFF3047CC), Color(0xFF172394)],
+      destino: const PaginaInventarioLocal(),
+    );
+    final comparadorAB = _FichaInicio(
+      titulo: IdiomaService.texto('ab_comparator'),
+      descripcion: IdiomaService.texto('ab_comparator_desc'),
+      icono: Icons.compare_arrows_rounded,
+      colores: const [Color(0xFF1487A8), Color(0xFF172394)],
+      destino: const PaginaComparadorAB(),
+    );
+    final diagnostico = _FichaInicio(
+      titulo: IdiomaService.texto('diagnosis'),
+      descripcion: IdiomaService.texto('diagnosis_desc'),
+      icono: Icons.medical_services_rounded,
+      colores: const [Color(0xFF1457E8), Color(0xFF1531A6)],
+      destino: const FormularioPaciente(),
+    );
+    final cambioFisico = _FichaInicio(
+      titulo: IdiomaService.texto('body_change'),
+      descripcion: IdiomaService.texto('body_change_desc'),
+      icono: Icons.fitness_center_rounded,
+      colores: const [Color(0xFF1457E8), Color(0xFF1531A6)],
+      destino: const FormularioCambioFisico(),
+    );
+    final historial = _FichaInicio(
+      titulo: IdiomaService.texto('history'),
+      descripcion: IdiomaService.texto('history_desc'),
+      icono: Icons.history_rounded,
+      colores: const [Color(0xFF8051D4), Color(0xFF6047B7)],
+      destino: const PaginaHistorial(),
+    );
+    final chatLive = _FichaInicio(
+      titulo: "Chat Live 4Life",
+      descripcion: IdiomaService.texto('chat_live_desc'),
+      icono: Icons.forum_rounded,
+      colores: const [Color(0xFF6A4DE8), Color(0xFF3C2AAE)],
+      destino: const PaginaChatbot(
+        titulo: "Chat Live 4Life",
+        modoLlamada: true,
+      ),
+    );
+    final asesorIa = _FichaInicio(
+      titulo: IdiomaService.texto('ai_adviser'),
+      descripcion: IdiomaService.texto('ai_adviser_desc'),
+      icono: Icons.chat_rounded,
+      colores: const [Color(0xFF1487A8), Color(0xFF087394)],
+      destino: const PaginaChatbot(),
+    );
+    final testimonios = _FichaInicio(
+      titulo: IdiomaService.texto('testimonials'),
+      descripcion: IdiomaService.texto('testimonials_desc'),
+      icono: Icons.ondemand_video_rounded,
+      colores: const [Color(0xFF3047CC), Color(0xFF172394)],
+      destino: const PaginaTestimonios4Life(),
+    );
+    final diccionario = _FichaInicio(
+      titulo: IdiomaService.texto('dictionary'),
+      descripcion: IdiomaService.texto('dictionary_desc'),
+      icono: Icons.menu_book_rounded,
+      colores: const [Color(0xFF3047CC), Color(0xFF172394)],
+      destino: const PaginaDiccionario4Life(),
+    );
+    final perfil = _FichaInicio(
+      titulo: IdiomaService.texto('profile'),
+      descripcion: IdiomaService.texto('profile_desc'),
+      icono: Icons.person_rounded,
+      colores: const [Color(0xFF455A64), Color(0xFF263238)],
+      destino: PaginaPerfil(onPerfilGuardado: _recargarPerfil),
+    );
+
     return Scaffold(
       backgroundColor: const Color(0xFFF7F7FB),
       body: SafeArea(
@@ -45,133 +167,88 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
                       },
                     ),
                     const SizedBox(height: 18),
-                    _tarjetaMenu(
+                    _tarjetaCategoria(
                       context,
-                      titulo: IdiomaService.texto('consult_products'),
-                      descripcion: IdiomaService.texto('consult_products_desc'),
-                      icono: Icons.grid_view_rounded,
+                      id: 'catalogos',
+                      titulo: txtApp('Catalogos', 'Catalogs'),
+                      descripcion: txtApp(
+                        'Catalogo afiliado y Catalogo MiTienda.',
+                        'Member Catalog and MyStore Catalog.',
+                      ),
+                      icono: Icons.view_list_rounded,
                       colores: const [Color(0xFF2E3192), Color(0xFF151B7C)],
-                      destino: const ConsultaProductoPagina(),
+                      fichas: [catalogoAfiliado, catalogoMiTienda],
                     ),
-                    _tarjetaMenu(
+                    _tarjetaCategoria(
                       context,
-                      titulo: IdiomaService.texto('mitienda_catalog'),
-                      descripcion: IdiomaService.texto('mitienda_catalog_desc'),
-                      icono: Icons.storefront_rounded,
-                      colores: const [Color(0xFF118B48), Color(0xFF0B6B38)],
-                      destino: const ConsultaProductoPagina(
-                        tipo: TipoCatalogoProducto.miTienda,
+                      id: 'panel_rendimiento',
+                      titulo:
+                          txtApp('Panel de Rendimiento', 'Performance Panel'),
+                      descripcion: txtApp(
+                        'Calculadoras y optimizadores para planificar compras.',
+                        'Calculators and optimizers for purchase planning.',
                       ),
-                    ),
-                    _tarjetaMenu(
-                      context,
-                      titulo: IdiomaService.texto('price_calculator'),
-                      descripcion: IdiomaService.texto('price_calculator_desc'),
-                      icono: Icons.calculate_rounded,
+                      icono: Icons.speed_rounded,
                       colores: const [Color(0xFF008C7E), Color(0xFF006B61)],
-                      destino: const PaginaCalculadoraPrecios(),
+                      fichas: [
+                        calculadoraPrecios,
+                        optimizadorConsumo,
+                        optimizadorAcelerado,
+                      ],
                     ),
-                    _tarjetaMenu(
+                    _tarjetaCategoria(
                       context,
-                      titulo: IdiomaService.texto('consumption_optimizer'),
-                      descripcion:
-                          IdiomaService.texto('consumption_optimizer_desc'),
-                      icono: Icons.view_module_rounded,
-                      colores: const [Color(0xFF172394), Color(0xFF07125E)],
-                      destino: const PaginaOptimizadorConsumo(),
-                    ),
-                    _tarjetaMenu(
-                      context,
-                      titulo: IdiomaService.texto('accelerated_optimizer'),
-                      descripcion:
-                          IdiomaService.texto('accelerated_optimizer_desc'),
-                      icono: Icons.rocket_launch_rounded,
-                      colores: const [Color(0xFF172394), Color(0xFF0B6B88)],
-                      destino: const PaginaOptimizadorAcelerado(),
-                    ),
-                    _tarjetaMenu(
-                      context,
-                      titulo: IdiomaService.texto('local_inventory'),
-                      descripcion: IdiomaService.texto('local_inventory_desc'),
-                      icono: Icons.inventory_2_rounded,
-                      colores: const [Color(0xFF3047CC), Color(0xFF172394)],
-                      destino: const PaginaInventarioLocal(),
-                    ),
-                    _tarjetaMenu(
-                      context,
-                      titulo: IdiomaService.texto('ab_comparator'),
-                      descripcion: IdiomaService.texto('ab_comparator_desc'),
-                      icono: Icons.compare_arrows_rounded,
-                      colores: const [Color(0xFF1487A8), Color(0xFF172394)],
-                      destino: const PaginaComparadorAB(),
-                    ),
-                    _tarjetaMenu(
-                      context,
-                      titulo: IdiomaService.texto('diagnosis'),
-                      descripcion: IdiomaService.texto('diagnosis_desc'),
-                      icono: Icons.medical_services_rounded,
-                      colores: const [Color(0xFF1457E8), Color(0xFF1531A6)],
-                      destino: const FormularioPaciente(),
-                    ),
-                    _tarjetaMenu(
-                      context,
-                      titulo: IdiomaService.texto('body_change'),
-                      descripcion: IdiomaService.texto('body_change_desc'),
-                      icono: Icons.fitness_center_rounded,
-                      colores: const [Color(0xFF1457E8), Color(0xFF1531A6)],
-                      destino: const FormularioCambioFisico(),
-                    ),
-                    _tarjetaMenu(
-                      context,
-                      titulo: IdiomaService.texto('history'),
-                      descripcion: IdiomaService.texto('history_desc'),
-                      icono: Icons.history_rounded,
-                      colores: const [Color(0xFF8051D4), Color(0xFF6047B7)],
-                      destino: const PaginaHistorial(),
-                    ),
-                    _tarjetaMenu(
-                      context,
-                      titulo: "Chat Live 4Life",
-                      descripcion: IdiomaService.texto('chat_live_desc'),
-                      icono: Icons.forum_rounded,
-                      colores: const [Color(0xFF6A4DE8), Color(0xFF3C2AAE)],
-                      destino: const PaginaChatbot(
-                        titulo: "Chat Live 4Life",
-                        modoLlamada: true,
+                      id: 'diagnosticos',
+                      titulo: txtApp('Diagnosticos', 'Diagnoses'),
+                      descripcion: txtApp(
+                        'Diagnostico, cambio fisico e historial.',
+                        'Diagnosis, body transformation, and history.',
                       ),
+                      icono: Icons.assignment_turned_in_rounded,
+                      colores: const [Color(0xFF1457E8), Color(0xFF1531A6)],
+                      fichas: [diagnostico, cambioFisico, historial],
                     ),
-                    _tarjetaMenu(
+                    _tarjetaCategoria(
                       context,
-                      titulo: IdiomaService.texto('ai_adviser'),
-                      descripcion: IdiomaService.texto('ai_adviser_desc'),
-                      icono: Icons.chat_rounded,
-                      colores: const [Color(0xFF1487A8), Color(0xFF087394)],
-                      destino: const PaginaChatbot(),
+                      id: 'analisis_control',
+                      titulo:
+                          txtApp('Analisis y Control', 'Analysis and Control'),
+                      descripcion: txtApp(
+                        'Inventario local y comparador A/B.',
+                        'Local inventory and A/B comparator.',
+                      ),
+                      icono: Icons.analytics_rounded,
+                      colores: const [Color(0xFF1487A8), Color(0xFF172394)],
+                      fichas: [inventarioLocal, comparadorAB],
                     ),
-                    _tarjetaMenu(
+                    _tarjetaCategoria(
                       context,
-                      titulo: IdiomaService.texto('testimonials'),
-                      descripcion: IdiomaService.texto('testimonials_desc'),
-                      icono: Icons.ondemand_video_rounded,
+                      id: 'asistentes_ia',
+                      titulo: txtApp('Asistentes IA', 'AI Assistants'),
+                      descripcion: txtApp(
+                        'Chat Live y Asesor IA 4Life.',
+                        'Chat Live and 4Life AI Adviser.',
+                      ),
+                      icono: Icons.auto_awesome_rounded,
+                      colores: const [Color(0xFF6A4DE8), Color(0xFF3C2AAE)],
+                      fichas: [chatLive, asesorIa],
+                    ),
+                    _tarjetaCategoria(
+                      context,
+                      id: 'recursos_aprendizaje',
+                      titulo: txtApp(
+                        'Recursos y Centro de Aprendizaje',
+                        'Resources and Learning Center',
+                      ),
+                      descripcion: txtApp(
+                        'Testimonios y diccionario.',
+                        'Testimonials and dictionary.',
+                      ),
+                      icono: Icons.school_rounded,
                       colores: const [Color(0xFF3047CC), Color(0xFF172394)],
-                      destino: const PaginaTestimonios4Life(),
+                      fichas: [testimonios, diccionario],
                     ),
-                    _tarjetaMenu(
-                      context,
-                      titulo: IdiomaService.texto('dictionary'),
-                      descripcion: IdiomaService.texto('dictionary_desc'),
-                      icono: Icons.menu_book_rounded,
-                      colores: const [Color(0xFF3047CC), Color(0xFF172394)],
-                      destino: const PaginaDiccionario4Life(),
-                    ),
-                    _tarjetaMenu(
-                      context,
-                      titulo: IdiomaService.texto('profile'),
-                      descripcion: IdiomaService.texto('profile_desc'),
-                      icono: Icons.person_rounded,
-                      colores: const [Color(0xFF455A64), Color(0xFF263238)],
-                      destino: PaginaPerfil(onPerfilGuardado: _recargarPerfil),
-                    ),
+                    _tarjetaMenu(context, ficha: perfil),
                     const SizedBox(height: 8),
                     Padding(
                       padding: const EdgeInsets.only(left: 8, bottom: 10),
@@ -318,14 +395,11 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
 
   Widget _tarjetaMenu(
     BuildContext context, {
-    required String titulo,
-    required String descripcion,
-    required IconData icono,
-    required List<Color> colores,
-    required Widget destino,
+    required _FichaInicio ficha,
+    EdgeInsets margin = const EdgeInsets.only(bottom: 10),
   }) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 10),
+      margin: margin,
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
@@ -343,7 +417,7 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
           borderRadius: BorderRadius.circular(12),
           onTap: () => Navigator.push(
             context,
-            MaterialPageRoute(builder: (context) => destino),
+            MaterialPageRoute(builder: (context) => ficha.destino),
           ),
           child: Padding(
             padding: const EdgeInsets.all(15),
@@ -354,13 +428,13 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
                   height: 60,
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
-                      colors: colores,
+                      colors: ficha.colores,
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                     ),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: Icon(icono, color: Colors.white, size: 34),
+                  child: Icon(ficha.icono, color: Colors.white, size: 34),
                 ),
                 const SizedBox(width: 18),
                 Expanded(
@@ -368,7 +442,7 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        titulo,
+                        ficha.titulo,
                         style: const TextStyle(
                           color: Color(0xFF111B59),
                           fontSize: 18,
@@ -378,7 +452,7 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
                       ),
                       const SizedBox(height: 5),
                       Text(
-                        descripcion,
+                        ficha.descripcion,
                         style: const TextStyle(
                           color: Color(0xFF465074),
                           fontSize: 12,
@@ -399,6 +473,127 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _tarjetaCategoria(
+    BuildContext context, {
+    required String id,
+    required String titulo,
+    required String descripcion,
+    required IconData icono,
+    required List<Color> colores,
+    required List<_FichaInicio> fichas,
+  }) {
+    final abierta = _categoriasAbiertas.contains(id);
+    return Column(
+      children: [
+        Container(
+          margin: EdgeInsets.only(bottom: abierta ? 2 : 10),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF0E1A5F).withValues(alpha: 0.08),
+                blurRadius: 14,
+                offset: const Offset(0, 7),
+              ),
+            ],
+          ),
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(12),
+              onTap: () => _alternarCategoria(id),
+              child: Padding(
+                padding: const EdgeInsets.all(15),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 60,
+                      height: 60,
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: colores,
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Icon(icono, color: Colors.white, size: 34),
+                    ),
+                    const SizedBox(width: 18),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            titulo,
+                            style: const TextStyle(
+                              color: Color(0xFF111B59),
+                              fontSize: 18,
+                              fontWeight: FontWeight.w900,
+                              height: 1.05,
+                            ),
+                          ),
+                          const SizedBox(height: 5),
+                          Text(
+                            descripcion,
+                            style: const TextStyle(
+                              color: Color(0xFF465074),
+                              fontSize: 12,
+                              height: 1.22,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    AnimatedRotation(
+                      turns: abierta ? 0.25 : 0,
+                      duration: const Duration(milliseconds: 180),
+                      child: const Icon(
+                        Icons.chevron_right_rounded,
+                        color: Color(0xFF071451),
+                        size: 31,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+        AnimatedCrossFade(
+          firstChild: const SizedBox.shrink(),
+          secondChild: Padding(
+            padding: const EdgeInsets.fromLTRB(12, 4, 0, 12),
+            child: Container(
+              padding: const EdgeInsets.fromLTRB(10, 8, 0, 2),
+              decoration: const BoxDecoration(
+                border: Border(
+                  left: BorderSide(color: Color(0xFF2839C7), width: 3),
+                ),
+              ),
+              child: Column(
+                children: fichas
+                    .map(
+                      (ficha) => _tarjetaMenu(
+                        context,
+                        ficha: ficha,
+                        margin: const EdgeInsets.only(top: 8),
+                      ),
+                    )
+                    .toList(),
+              ),
+            ),
+          ),
+          crossFadeState:
+              abierta ? CrossFadeState.showSecond : CrossFadeState.showFirst,
+          duration: const Duration(milliseconds: 180),
+        ),
+      ],
     );
   }
 
@@ -562,6 +757,22 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
       ),
     );
   }
+}
+
+class _FichaInicio {
+  final String titulo;
+  final String descripcion;
+  final IconData icono;
+  final List<Color> colores;
+  final Widget destino;
+
+  const _FichaInicio({
+    required this.titulo,
+    required this.descripcion,
+    required this.icono,
+    required this.colores,
+    required this.destino,
+  });
 }
 
 class _MoleculaPainter extends CustomPainter {

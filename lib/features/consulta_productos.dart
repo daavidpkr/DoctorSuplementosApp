@@ -147,18 +147,19 @@ Este producto no es medicina, no diagnostica, no trata, no cura ni previene enfe
               child: LayoutBuilder(
                 builder: (context, constraints) {
                   final ancho = constraints.maxWidth;
-                  final columnas = ancho >= 760
-                      ? 3
-                      : ancho >= 520
-                          ? 3
-                          : 2;
+                  final columnas = ancho >= 900 ? 4 : 3;
                   return GridView.builder(
-                    padding: const EdgeInsets.fromLTRB(24, 10, 24, 28),
+                    padding: EdgeInsets.fromLTRB(
+                      ancho < 420 ? 12 : 24,
+                      10,
+                      ancho < 420 ? 12 : 24,
+                      28,
+                    ),
                     gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                       crossAxisCount: columnas,
-                      mainAxisSpacing: 26,
-                      crossAxisSpacing: 26,
-                      childAspectRatio: 0.88,
+                      mainAxisSpacing: ancho < 420 ? 12 : 20,
+                      crossAxisSpacing: ancho < 420 ? 10 : 18,
+                      childAspectRatio: ancho < 420 ? 0.55 : 0.72,
                     ),
                     itemCount: _productosCatalogo.length,
                     itemBuilder: (context, index) {
@@ -376,6 +377,10 @@ Este producto no es medicina, no diagnostica, no trata, no cura ni previene enfe
       0,
       (total, producto) => total + producto.afiliado,
     );
+    final totalPublico = productos.fold<double>(
+      0,
+      (total, producto) => total + producto.publico,
+    );
     return Dialog(
       backgroundColor: Colors.white,
       insetPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 24),
@@ -417,8 +422,8 @@ Este producto no es medicina, no diagnostica, no trata, no cura ni previene enfe
                     '\$${totalAfiliado.toStringAsFixed(2)}',
                   ),
                   _resumenMultiple(
-                    ingles ? 'Products' : 'Productos',
-                    '${productos.length}',
+                    ingles ? 'Retail' : 'Publico',
+                    '\$${totalPublico.toStringAsFixed(2)}',
                   ),
                 ],
               ),
@@ -489,64 +494,115 @@ Este producto no es medicina, no diagnostica, no trata, no cura ni previene enfe
 
   Widget _filaProductoMultiple(ProductoPrecio producto) {
     final info = informacionProductoCatalogo(producto.nombre);
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF8F9FF),
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFFE1E4F0)),
+        onTap: () => _abrirProducto(producto),
+        child: Container(
+          margin: const EdgeInsets.only(bottom: 10),
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: const Color(0xFFF8F9FF),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: const Color(0xFFE1E4F0)),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SizedBox(
+                width: 62,
+                height: 62,
+                child: Image.asset(
+                  imagenesProducto4Life[producto.nombre] ?? '',
+                  fit: BoxFit.contain,
+                  errorBuilder: (_, __, ___) =>
+                      const Icon(Icons.inventory_2_outlined),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      producto.nombre,
+                      style: const TextStyle(
+                        color: Color(0xFF111B59),
+                        fontSize: 15,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '${txtApp('Afiliado', 'Member')} \$${producto.afiliado.toStringAsFixed(2)} | LP ${producto.lp ?? 0} | ${txtApp('Publico', 'Retail')} \$${producto.publico.toStringAsFixed(2)}',
+                      style: const TextStyle(
+                        color: Color(0xFF465074),
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      info.descripcion,
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Color(0xFF27315F),
+                        fontSize: 13,
+                        height: 1.3,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              const Icon(
+                Icons.chevron_right_rounded,
+                color: Color(0xFF12248B),
+                size: 26,
+              ),
+            ],
+          ),
+        ),
       ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 62,
-            height: 62,
-            child: Image.asset(
-              imagenesProducto4Life[producto.nombre] ?? '',
-              fit: BoxFit.contain,
-              errorBuilder: (_, __, ___) =>
-                  const Icon(Icons.inventory_2_outlined),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  producto.nombre,
-                  style: const TextStyle(
-                    color: Color(0xFF111B59),
-                    fontSize: 15,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  '${txtApp('Afiliado', 'Member')} \$${producto.afiliado.toStringAsFixed(2)} | LP ${producto.lp ?? 0}',
-                  style: const TextStyle(
-                    color: Color(0xFF465074),
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  info.descripcion,
-                  maxLines: 3,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: Color(0xFF27315F),
-                    fontSize: 13,
-                    height: 1.3,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
+    );
+  }
+
+  String _textoPrecioCatalogo(
+    ProductoPrecio producto, {
+    required double? precioPromocional,
+    required bool ingles,
+  }) {
+    final promo = precioPromocional;
+    return [
+      '${ingles ? 'Member' : 'Afiliado'} \$${producto.afiliado.toStringAsFixed(2)}',
+      'LP ${producto.lp ?? 0}',
+      '${ingles ? 'Retail' : 'Publico'} \$${producto.publico.toStringAsFixed(2)}',
+      if (_esMiTienda && promo != null)
+        '${ingles ? 'Promo' : 'Promocional'} \$${promo.toStringAsFixed(2)}',
+    ].join('\n');
+  }
+
+  Widget _textoPrecioTarjeta(String textoPrecio) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 6),
+      decoration: BoxDecoration(
+        color: const Color(0xFFEFF2FF),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Text(
+        textoPrecio,
+        maxLines: 4,
+        overflow: TextOverflow.ellipsis,
+        textAlign: TextAlign.center,
+        style: const TextStyle(
+          color: Color(0xFF12248B),
+          fontSize: 10,
+          height: 1.18,
+          fontWeight: FontWeight.w900,
+        ),
       ),
     );
   }
@@ -612,11 +668,11 @@ Este producto no es medicina, no diagnostica, no trata, no cura ni previene enfe
     final ingles = IdiomaService.actual.value == IdiomaApp.ingles;
     final precioPromocional = precioPromocionalMiTienda(producto.nombre);
     final seleccionado = _seleccionMultiple.contains(producto.nombre);
-    final textoPrecio = _esMiTienda
-        ? '${ingles ? 'Promo' : 'Promocional'} \$${(precioPromocional ?? producto.afiliado).toStringAsFixed(2)} | LP ${producto.lp ?? 0}'
-        : precioPromocional == null
-            ? '${ingles ? 'Member' : 'Afiliado'} \$${producto.afiliado.toStringAsFixed(2)} | LP ${producto.lp ?? 0}'
-            : '${ingles ? 'Member' : 'Afiliado'} \$${producto.afiliado.toStringAsFixed(2)} | Promo \$${precioPromocional.toStringAsFixed(2)}';
+    final textoPrecio = _textoPrecioCatalogo(
+      producto,
+      precioPromocional: precioPromocional,
+      ingles: ingles,
+    );
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -625,7 +681,7 @@ Este producto no es medicina, no diagnostica, no trata, no cura ni previene enfe
             ? _alternarSeleccionMultiple(producto)
             : _abrirProducto(producto),
         child: Container(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
             color: const Color(0xFFFBFBFE),
             borderRadius: BorderRadius.circular(26),
@@ -687,35 +743,18 @@ Este producto no es medicina, no diagnostica, no trata, no cura ni previene enfe
               const SizedBox(height: 10),
               Text(
                 producto.nombre,
-                maxLines: 1,
+                maxLines: 2,
                 overflow: TextOverflow.ellipsis,
                 textAlign: TextAlign.center,
                 style: const TextStyle(
                   color: Color(0xFF18215E),
-                  fontSize: 13,
+                  fontSize: 12,
                   height: 1.1,
                   fontWeight: FontWeight.w900,
                 ),
               ),
               const SizedBox(height: 6),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFEFF2FF),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  textoPrecio,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    color: Color(0xFF12248B),
-                    fontSize: 11,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-              ),
+              _textoPrecioTarjeta(textoPrecio),
             ],
           ),
         ),
@@ -734,12 +773,6 @@ Este producto no es medicina, no diagnostica, no trata, no cura ni previene enfe
   }) {
     final ingles = IdiomaService.actual.value == IdiomaApp.ingles;
     final secciones = _seccionesResultadoProducto(resultado);
-    final guionCapsula = _textoCapsulaAudioProducto(
-      titulo: productoIdentificado ?? titulo,
-      resultado: resultado,
-      secciones: secciones,
-      ingles: ingles,
-    );
     return Dialog(
       backgroundColor: Colors.white,
       insetPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 24),
@@ -841,11 +874,6 @@ Este producto no es medicina, no diagnostica, no trata, no cura ni previene enfe
                         },
                       ),
                       const SizedBox(height: 16),
-                      _capsulaAudioProducto(
-                        guion: guionCapsula,
-                        ingles: ingles,
-                      ),
-                      const SizedBox(height: 4),
                       for (final seccion in secciones)
                         _seccionResultadoProducto(seccion.key, seccion.value),
                     ],
@@ -855,18 +883,6 @@ Este producto no es medicina, no diagnostica, no trata, no cura ni previene enfe
               const SizedBox(height: 12),
               Row(
                 children: [
-                  IconButton(
-                    tooltip: ingles ? "Listen to answer" : "Escuchar respuesta",
-                    icon: const Icon(Icons.volume_up_rounded),
-                    color: const Color(0xFF12248B),
-                    onPressed: () => ServicioTextoVoz.reproducir(resultado),
-                  ),
-                  IconButton(
-                    tooltip: ingles ? "Stop audio" : "Detener audio",
-                    icon: const Icon(Icons.stop_circle_outlined),
-                    color: const Color(0xFF12248B),
-                    onPressed: ServicioTextoVoz.detener,
-                  ),
                   IconButton(
                     tooltip: ingles ? "Copy" : "Copiar",
                     icon: const Icon(Icons.copy_rounded),
@@ -905,111 +921,6 @@ Este producto no es medicina, no diagnostica, no trata, no cura ni previene enfe
             ],
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _capsulaAudioProducto({
-    required String guion,
-    required bool ingles,
-  }) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF4F6FF),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFDDE3FF)),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 46,
-            height: 46,
-            decoration: BoxDecoration(
-              color: const Color(0xFF12248B),
-              borderRadius: BorderRadius.circular(13),
-            ),
-            child: const Icon(
-              Icons.podcasts_rounded,
-              color: Colors.white,
-              size: 26,
-            ),
-          ),
-          const SizedBox(width: 13),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  ingles ? 'Quick audio capsule' : 'Capsula de audio',
-                  style: const TextStyle(
-                    color: Color(0xFF12248B),
-                    fontSize: 16,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-                const SizedBox(height: 5),
-                Text(
-                  ingles
-                      ? 'Cellular education and product function in a short podcast-style track.'
-                      : 'Educacion celular y funcionamiento del producto en formato agil tipo podcast.',
-                  style: const TextStyle(
-                    color: Color(0xFF27315F),
-                    fontSize: 13.5,
-                    height: 1.35,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    FilledButton.icon(
-                      style: FilledButton.styleFrom(
-                        backgroundColor: const Color(0xFF12248B),
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 14,
-                          vertical: 11,
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      icon: const Icon(Icons.play_arrow_rounded, size: 22),
-                      label: Text(
-                        ingles ? 'Play capsule' : 'Reproducir capsula',
-                        style: const TextStyle(fontWeight: FontWeight.w800),
-                      ),
-                      onPressed: () => ServicioTextoVoz.reproducir(guion),
-                    ),
-                    OutlinedButton.icon(
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: const Color(0xFF12248B),
-                        side: const BorderSide(color: Color(0xFFBFC8FF)),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 11,
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      icon: const Icon(Icons.stop_circle_outlined, size: 22),
-                      label: Text(
-                        ingles ? 'Stop' : 'Detener',
-                        style: const TextStyle(fontWeight: FontWeight.w800),
-                      ),
-                      onPressed: ServicioTextoVoz.detener,
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -1268,66 +1179,6 @@ Este producto no es medicina, no diagnostica, no trata, no cura ni previene enfe
         .map((entry) => MapEntry(entry.key, entry.value.join('\n')))
         .where((entry) => entry.value.trim().isNotEmpty)
         .toList();
-  }
-
-  String _textoCapsulaAudioProducto({
-    required String titulo,
-    required String resultado,
-    required List<MapEntry<String, String>> secciones,
-    required bool ingles,
-  }) {
-    String seccion(List<String> claves) {
-      for (final entry in secciones) {
-        final tituloNormalizado = normalizarTexto(entry.key);
-        for (final clave in claves) {
-          if (tituloNormalizado.contains(normalizarTexto(clave))) {
-            return entry.value.trim();
-          }
-        }
-      }
-      return '';
-    }
-
-    final descripcion = seccion(['Descripcion', 'Description']);
-    final componentes = seccion([
-      'Ingredientes o componentes principales',
-      'Main ingredients or components',
-    ]);
-    final uso = seccion(['Indicaciones de uso', 'Directions for use']);
-    final dosis = seccion(['Dosis sugerida', 'Suggested dosage']);
-    final precauciones = seccion([
-      'Contraindicaciones o precauciones',
-      'Contraindications or precautions',
-    ]);
-    final nota = seccion(['Nota', 'Note']);
-    final base = descripcion.isEmpty && componentes.isEmpty
-        ? resultado
-        : [
-            if (descripcion.isNotEmpty) descripcion,
-            if (componentes.isNotEmpty) componentes,
-            if (uso.isNotEmpty) uso,
-            if (dosis.isNotEmpty) dosis,
-            if (precauciones.isNotEmpty) precauciones,
-            if (nota.isNotEmpty) nota,
-          ].join('\n');
-
-    if (ingles) {
-      return '''
-Audio capsule about $titulo.
-In this quick cellular education track, review the product while you read its information.
-$base
-Remember: this is wellness education, not medical advice. This product is not medicine and does not replace guidance from a healthcare professional.
-'''
-          .trim();
-    }
-
-    return '''
-Capsula de audio sobre $titulo.
-En esta pista breve de educacion celular, revisa el producto mientras lees su informacion.
-$base
-Recuerda: esto es educacion de bienestar, no consejo medico. Este producto no es medicina y no reemplaza la indicacion de un profesional de salud.
-'''
-        .trim();
   }
 
   Widget _seccionResultadoProducto(String titulo, String contenido) {

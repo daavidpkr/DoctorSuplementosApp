@@ -17,10 +17,13 @@ class _PaginaInventarioLocalState extends State<PaginaInventarioLocal> {
   final TextEditingController _busquedaController = TextEditingController();
   Map<String, int> _stock = {};
   bool _cargando = true;
+  late List<String> _ordenProductos;
 
   @override
   void initState() {
     super.initState();
+    _ordenProductos = productosConPrecio4Life.map((p) => p.nombre).toList()
+      ..sort();
     _cargarInventario();
   }
 
@@ -78,6 +81,19 @@ class _PaginaInventarioLocalState extends State<PaginaInventarioLocal> {
   Future<void> _ajustarStock(ProductoPrecio producto, int cambio) {
     final actual = _stock[producto.nombre] ?? 0;
     return _actualizarStock(producto, actual + cambio);
+  }
+
+  Future<void> _limpiarInventario() async {
+    setState(() {
+      _stock = {
+        for (final producto in productosConPrecio4Life) producto.nombre: 0,
+      };
+    });
+    await _guardarInventario();
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(_t('Inventario limpiado', 'Inventory cleared'))),
+    );
   }
 
   Future<void> _editarStock(ProductoPrecio producto) async {
@@ -168,12 +184,13 @@ class _PaginaInventarioLocalState extends State<PaginaInventarioLocal> {
 
   List<ProductoPrecio> get _productos {
     final busqueda = normalizarTexto(_busquedaController.text);
-    final productos = [...productosConPrecio4Life]..sort((a, b) {
-        final stockA = _stock[a.nombre] ?? 0;
-        final stockB = _stock[b.nombre] ?? 0;
-        if (stockA != stockB) return stockB.compareTo(stockA);
-        return a.nombre.compareTo(b.nombre);
-      });
+    final porNombre = {
+      for (final producto in productosConPrecio4Life) producto.nombre: producto,
+    };
+    final productos = [
+      for (final nombre in _ordenProductos)
+        if (porNombre[nombre] != null) porNombre[nombre]!,
+    ];
 
     if (busqueda.isEmpty) return productos;
     return productos
@@ -404,7 +421,6 @@ class _PaginaInventarioLocalState extends State<PaginaInventarioLocal> {
               _datoResumen(_t('Unidades', 'Units'), '$_unidadesTotales'),
               _datoResumen('LP', '$_lpDisponible'),
               _datoResumen(_t('Afiliado', 'Member'), _precio(_valorAfiliado)),
-              _datoResumen(_t('Disponible', 'Available'), '$_productosActivos'),
               _datoResumen(_t('Publico', 'Retail'), _precio(_valorPublico)),
             ],
           ),
@@ -543,6 +559,14 @@ class _PaginaInventarioLocalState extends State<PaginaInventarioLocal> {
               icono: Icons.share_rounded,
               texto: _t('Compartir', 'Share'),
               onTap: _compartirInventario,
+            ),
+          ),
+          Container(width: 1, height: 42, color: const Color(0xFFE0E3EF)),
+          Expanded(
+            child: _accionInventario(
+              icono: Icons.delete_sweep_rounded,
+              texto: _t('Limpiar', 'Clear'),
+              onTap: _limpiarInventario,
             ),
           ),
         ],

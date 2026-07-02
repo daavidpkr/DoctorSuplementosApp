@@ -1,4 +1,4 @@
-﻿part of '../main.dart';
+part of '../main.dart';
 
 class PaginaImpacto4LifeNueva extends StatefulWidget {
   const PaginaImpacto4LifeNueva({super.key});
@@ -36,6 +36,20 @@ class _PaginaImpacto4LifeNuevaState extends State<PaginaImpacto4LifeNueva> {
           claves.isNotEmpty ? claves.first : _claveMes(DateTime.now());
       _cargando = false;
     });
+  }
+
+  Future<void> _limpiarImpacto() async {
+    await ImpactoService.limpiar();
+    if (!mounted) return;
+    setState(() {
+      _eventos = [];
+      _mesSeleccionado = _claveMes(DateTime.now());
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(txtApp('Impacto 4Life limpiado', '4Life Impact cleared')),
+      ),
+    );
   }
 
   DateTime? _fechaEvento(Map<String, dynamic> evento) {
@@ -234,6 +248,8 @@ class _PaginaImpacto4LifeNuevaState extends State<PaginaImpacto4LifeNueva> {
                           onSeleccionar: (item) =>
                               setState(() => _mesSeleccionado = item),
                         ),
+                        const SizedBox(height: 14),
+                        _BotonLimpiarImpactoNuevo(onTap: _limpiarImpacto),
                         const SizedBox(height: 14),
                         _CardResumenImpactoNuevo(resumen: resumen),
                         const SizedBox(height: 14),
@@ -440,6 +456,48 @@ class _SelectorMesImpactoNuevo extends StatelessWidget {
             },
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _BotonLimpiarImpactoNuevo extends StatelessWidget {
+  final VoidCallback onTap;
+
+  const _BotonLimpiarImpactoNuevo({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return _CardImpactoNuevo(
+      padding: const EdgeInsets.fromLTRB(18, 14, 18, 14),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(14),
+        onTap: onTap,
+        child: Row(
+          children: [
+            const _IconoSuaveImpacto(
+              icono: Icons.delete_sweep_rounded,
+              color: _PaginaImpacto4LifeNuevaState._naranja,
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Text(
+                txtApp(
+                    'Limpiar todo el impacto 4Life', 'Clear all 4Life Impact'),
+                style: const TextStyle(
+                  color: _PaginaImpacto4LifeNuevaState._tinta,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ),
+            const Icon(
+              Icons.chevron_right_rounded,
+              color: _PaginaImpacto4LifeNuevaState._azulVivo,
+              size: 30,
+            ),
+          ],
+        ),
       ),
     );
   }

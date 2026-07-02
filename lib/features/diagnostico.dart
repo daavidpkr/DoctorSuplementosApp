@@ -361,8 +361,10 @@ class _FormularioPacienteState extends State<FormularioPaciente> {
                 ),
               ),
             ),
-            _buildCampo(txtApp("Síntomas actuales", "Current symptoms"),
-                historialController, txtApp("Describe qué siente...", "Describe how they feel..."),
+            _buildCampo(
+                txtApp("Síntomas actuales", "Current symptoms"),
+                historialController,
+                txtApp("Describe qué siente...", "Describe how they feel..."),
                 lineas: 4),
             const SizedBox(height: 20),
             cargando
@@ -721,30 +723,77 @@ class _FormularioPacienteState extends State<FormularioPaciente> {
   }
 
   Widget _selectorGeneroDiagnostico() {
-    return DropdownButtonFormField<String>(
-      initialValue: _generoSeleccionado,
-      icon: const Icon(Icons.keyboard_arrow_down_rounded,
-          color: Color(0xFF12248B), size: 32),
-      decoration: _inputDecoracionDiagnostico(
-        hint: txtApp("Selecciona una opcion", "Select an option"),
-      ),
-      hint: Text(
-        txtApp("Selecciona una opcion", "Select an option"),
-        style: const TextStyle(
-          color: Color(0xFF6B7192),
-          fontSize: 17,
-          fontWeight: FontWeight.w500,
+    return _selectorVisualDiagnostico(
+      valor: _generoSeleccionado,
+      placeholder: txtApp("Selecciona una opcion", "Select an option"),
+      icono: Icons.wc_rounded,
+      opciones: const ['Hombre', 'Mujer'],
+      etiqueta: (valor) => valor == 'Hombre'
+          ? txtApp('Hombre', 'Male')
+          : txtApp('Mujer', 'Female'),
+      onChanged: (nuevoValor) =>
+          setState(() => _generoSeleccionado = nuevoValor),
+    );
+  }
+
+  Widget _selectorVisualDiagnostico({
+    required String? valor,
+    required String placeholder,
+    required IconData icono,
+    required List<String> opciones,
+    required String Function(String valor) etiqueta,
+    required ValueChanged<String> onChanged,
+  }) {
+    return PopupMenuButton<String>(
+      initialValue: valor,
+      onSelected: onChanged,
+      offset: const Offset(0, 58),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      itemBuilder: (context) => [
+        for (final opcion in opciones)
+          PopupMenuItem(value: opcion, child: Text(etiqueta(opcion))),
+      ],
+      child: Container(
+        height: 64,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: const Color(0xFFE1E4F0), width: 1.4),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 38,
+              height: 38,
+              decoration: BoxDecoration(
+                color: const Color(0xFFF0F2FF),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(icono, color: const Color(0xFF172394), size: 22),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Text(
+                valor == null ? placeholder : etiqueta(valor),
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: valor == null
+                      ? const Color(0xFF6B7192)
+                      : const Color(0xFF18215E),
+                  fontSize: 16,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+            const Icon(
+              Icons.keyboard_arrow_down_rounded,
+              color: Color(0xFF2839C7),
+              size: 28,
+            ),
+          ],
         ),
       ),
-      items: const [
-        DropdownMenuItem(value: 'Hombre', child: Text('Hombre')),
-        DropdownMenuItem(value: 'Mujer', child: Text('Mujer')),
-      ],
-      onChanged: (String? nuevoValor) {
-        setState(() {
-          _generoSeleccionado = nuevoValor;
-        });
-      },
     );
   }
 
