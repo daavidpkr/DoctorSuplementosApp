@@ -492,65 +492,25 @@ class _PaginaPerfilState extends State<PaginaPerfil> {
             ),
           ),
           const SizedBox(height: 14),
-          PopupMenuButton<IdiomaApp>(
-            initialValue: _idioma,
-            onSelected: _cambiarIdioma,
-            offset: const Offset(0, 56),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(14),
-            ),
-            itemBuilder: (context) => const [
-              PopupMenuItem(
-                value: IdiomaApp.espanol,
-                child: Text('Español'),
+          SelectorEstilizado<IdiomaApp>(
+            valor: _idioma,
+            placeholder:
+                ingles ? 'Select your language' : 'Selecciona tu idioma',
+            icono: Icons.language_rounded,
+            alto: 62,
+            opciones: const [
+              OpcionSelectorEstilizado(
+                valor: IdiomaApp.espanol,
+                texto: 'Español',
+                icono: Icons.language_rounded,
               ),
-              PopupMenuItem(
-                value: IdiomaApp.ingles,
-                child: Text('English'),
+              OpcionSelectorEstilizado(
+                valor: IdiomaApp.ingles,
+                texto: 'English',
+                icono: Icons.language_rounded,
               ),
             ],
-            child: Container(
-              height: 62,
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: const Color(0xFFE1E4F0), width: 1.4),
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    width: 38,
-                    height: 38,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF0F2FF),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Icon(
-                      Icons.language_rounded,
-                      color: Color(0xFF172394),
-                      size: 22,
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Text(
-                      _idioma.etiqueta,
-                      style: const TextStyle(
-                        color: Color(0xFF18215E),
-                        fontSize: 16,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                  ),
-                  const Icon(
-                    Icons.keyboard_arrow_down_rounded,
-                    color: Color(0xFF2839C7),
-                    size: 28,
-                  ),
-                ],
-              ),
-            ),
+            onChanged: _cambiarIdioma,
           ),
         ],
       ),
@@ -715,65 +675,28 @@ class _PaginaPerfilState extends State<PaginaPerfil> {
             ),
           ),
           const SizedBox(height: 14),
-          PopupMenuButton<PaisApp>(
-            initialValue: _pais,
-            onSelected: _cambiarPais,
-            offset: const Offset(0, 56),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(14),
-            ),
-            itemBuilder: (context) => const [
-              PopupMenuItem(
-                value: PaisApp.ecuador,
-                child: Text('Ecuador'),
+          SelectorEstilizado<PaisApp>(
+            valor: _pais,
+            placeholder: ingles ? 'Select your country' : 'Selecciona tu pais',
+            icono: Icons.public_rounded,
+            alto: 62,
+            opciones: [
+              OpcionSelectorEstilizado(
+                valor: PaisApp.ecuador,
+                texto: ingles
+                    ? PaisApp.ecuador.etiquetaIngles
+                    : PaisApp.ecuador.etiqueta,
+                icono: Icons.public_rounded,
               ),
-              PopupMenuItem(
-                value: PaisApp.estadosUnidos,
-                child: Text('Estados Unidos'),
+              OpcionSelectorEstilizado(
+                valor: PaisApp.estadosUnidos,
+                texto: ingles
+                    ? PaisApp.estadosUnidos.etiquetaIngles
+                    : PaisApp.estadosUnidos.etiqueta,
+                icono: Icons.public_rounded,
               ),
             ],
-            child: Container(
-              height: 62,
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: const Color(0xFFE1E4F0), width: 1.4),
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    width: 38,
-                    height: 38,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF0F2FF),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Icon(
-                      Icons.public_rounded,
-                      color: Color(0xFF172394),
-                      size: 22,
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Text(
-                      ingles ? _pais.etiquetaIngles : _pais.etiqueta,
-                      style: const TextStyle(
-                        color: Color(0xFF18215E),
-                        fontSize: 16,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                  ),
-                  const Icon(
-                    Icons.keyboard_arrow_down_rounded,
-                    color: Color(0xFF2839C7),
-                    size: 28,
-                  ),
-                ],
-              ),
-            ),
+            onChanged: _cambiarPais,
           ),
         ],
       ),

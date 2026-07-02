@@ -159,7 +159,7 @@ Este producto no es medicina, no diagnostica, no trata, no cura ni previene enfe
                       crossAxisCount: columnas,
                       mainAxisSpacing: ancho < 420 ? 12 : 20,
                       crossAxisSpacing: ancho < 420 ? 10 : 18,
-                      childAspectRatio: ancho < 420 ? 0.55 : 0.72,
+                      childAspectRatio: ancho < 420 ? 0.58 : 0.76,
                     ),
                     itemCount: _productosCatalogo.length,
                     itemBuilder: (context, index) {
@@ -510,12 +510,18 @@ Este producto no es medicina, no diagnostica, no trata, no cura ni previene enfe
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              SizedBox(
-                width: 62,
-                height: 62,
+              Container(
+                width: 76,
+                height: 76,
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF5F7FC),
+                  borderRadius: BorderRadius.circular(10),
+                ),
                 child: Image.asset(
                   imagenesProducto4Life[producto.nombre] ?? '',
                   fit: BoxFit.contain,
+                  filterQuality: FilterQuality.high,
                   errorBuilder: (_, __, ___) =>
                       const Icon(Icons.inventory_2_outlined),
                 ),
@@ -702,42 +708,49 @@ Este producto no es medicina, no diagnostica, no trata, no cura ni previene enfe
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              if (_modoMultiple)
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: Icon(
-                    seleccionado
-                        ? Icons.check_circle_rounded
-                        : Icons.radio_button_unchecked_rounded,
-                    color: seleccionado
-                        ? const Color(0xFF12248B)
-                        : const Color(0xFF9AA2C0),
-                    size: 24,
-                  ),
-                ),
               Expanded(
-                child: Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF5F7FC),
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: imagen == null
-                      ? const Icon(
-                          Icons.inventory_2_outlined,
-                          color: Color(0xFF12248B),
-                          size: 46,
-                        )
-                      : Image.asset(
-                          imagen,
-                          fit: BoxFit.contain,
-                          filterQuality: FilterQuality.high,
-                          errorBuilder: (_, __, ___) => const Icon(
-                            Icons.inventory_2_outlined,
-                            color: Color(0xFF12248B),
-                            size: 46,
-                          ),
+                child: Stack(
+                  children: [
+                    Positioned.fill(
+                      child: Container(
+                        padding: const EdgeInsets.all(3),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF5F7FC),
+                          borderRadius: BorderRadius.circular(8),
                         ),
+                        child: imagen == null
+                            ? const Icon(
+                                Icons.inventory_2_outlined,
+                                color: Color(0xFF12248B),
+                                size: 46,
+                              )
+                            : Image.asset(
+                                imagen,
+                                fit: BoxFit.contain,
+                                filterQuality: FilterQuality.high,
+                                errorBuilder: (_, __, ___) => const Icon(
+                                  Icons.inventory_2_outlined,
+                                  color: Color(0xFF12248B),
+                                  size: 46,
+                                ),
+                              ),
+                      ),
+                    ),
+                    if (_modoMultiple)
+                      Positioned(
+                        top: 4,
+                        right: 4,
+                        child: Icon(
+                          seleccionado
+                              ? Icons.check_circle_rounded
+                              : Icons.radio_button_unchecked_rounded,
+                          color: seleccionado
+                              ? const Color(0xFF12248B)
+                              : const Color(0xFF9AA2C0),
+                          size: 24,
+                        ),
+                      ),
+                  ],
                 ),
               ),
               const SizedBox(height: 10),

@@ -26,6 +26,7 @@ import 'dart:math' as math;
 part 'core/catalogo_productos.dart';
 part 'core/servicios_app.dart';
 part 'core/servicios_historial.dart';
+part 'ui/selector_estilizado.dart';
 part 'features/inicio.dart';
 part 'features/inicio_legacy.dart';
 part 'features/perfil.dart';

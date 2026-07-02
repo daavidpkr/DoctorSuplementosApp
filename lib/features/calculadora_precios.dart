@@ -885,16 +885,7 @@ class _PaginaCalculadoraPreciosState extends State<PaginaCalculadoraPrecios> {
                         ),
                       ),
                       const SizedBox(height: 4),
-                      Text(
-                        "Afiliado ${_precio(linea.producto.afiliado)}  |  "
-                        "Público ${_precio(linea.producto.publico)}  |  "
-                        "LP ${linea.producto.lp ?? 0}",
-                        style: const TextStyle(
-                          color: Color(0xFF687092),
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
+                      _detallePrecioProducto(linea),
                     ],
                   ),
                 ),
@@ -946,6 +937,43 @@ class _PaginaCalculadoraPreciosState extends State<PaginaCalculadoraPrecios> {
             color: const Color(0xFF17218D),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _detallePrecioProducto(LineaProductoPrecio linea) {
+    return Wrap(
+      spacing: 6,
+      runSpacing: 6,
+      children: [
+        _chipPrecioSeleccionado(
+          txtApp('Afiliado', 'Member'),
+          _precio(linea.producto.afiliado),
+        ),
+        _chipPrecioSeleccionado(
+          txtApp('Publico', 'Retail'),
+          _precio(linea.producto.publico),
+        ),
+        _chipPrecioSeleccionado('LP', '${linea.producto.lp ?? 0}'),
+      ],
+    );
+  }
+
+  Widget _chipPrecioSeleccionado(String etiqueta, String valor) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+      decoration: BoxDecoration(
+        color: const Color(0xFFEFF2FF),
+        borderRadius: BorderRadius.circular(9),
+        border: Border.all(color: const Color(0xFFDDE3FF)),
+      ),
+      child: Text(
+        '$etiqueta $valor',
+        style: const TextStyle(
+          color: Color(0xFF12248B),
+          fontSize: 12,
+          fontWeight: FontWeight.w800,
+        ),
       ),
     );
   }

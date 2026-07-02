@@ -18,6 +18,7 @@ class _PaginaInventarioLocalState extends State<PaginaInventarioLocal> {
   Map<String, int> _stock = {};
   bool _cargando = true;
   late List<String> _ordenProductos;
+  Timer? _reordenarTimer;
 
   @override
   void initState() {
@@ -29,6 +30,7 @@ class _PaginaInventarioLocalState extends State<PaginaInventarioLocal> {
 
   @override
   void dispose() {
+    _reordenarTimer?.cancel();
     _busquedaController.dispose();
     super.dispose();
   }
@@ -59,6 +61,7 @@ class _PaginaInventarioLocalState extends State<PaginaInventarioLocal> {
     if (!mounted) return;
     setState(() {
       _stock = inventario;
+      _ordenarProductosPorStock();
       _cargando = false;
     });
   }
@@ -76,6 +79,7 @@ class _PaginaInventarioLocalState extends State<PaginaInventarioLocal> {
       };
     });
     await _guardarInventario();
+    _programarReordenInventario();
   }
 
   Future<void> _ajustarStock(ProductoPrecio producto, int cambio) {
@@ -90,6 +94,7 @@ class _PaginaInventarioLocalState extends State<PaginaInventarioLocal> {
       };
     });
     await _guardarInventario();
+    _reordenarInventarioAhora();
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(_t('Inventario limpiado', 'Inventory cleared'))),
@@ -132,6 +137,31 @@ class _PaginaInventarioLocalState extends State<PaginaInventarioLocal> {
 
     if (cantidad == null) return;
     await _actualizarStock(producto, cantidad);
+    _reordenarInventarioAhora();
+  }
+
+  void _programarReordenInventario() {
+    _reordenarTimer?.cancel();
+    _reordenarTimer = Timer(const Duration(milliseconds: 900), () {
+      if (mounted) _reordenarInventarioAhora();
+    });
+  }
+
+  void _reordenarInventarioAhora() {
+    _reordenarTimer?.cancel();
+    if (!mounted) return;
+    setState(_ordenarProductosPorStock);
+  }
+
+  void _ordenarProductosPorStock() {
+    _ordenProductos = productosConPrecio4Life.map((p) => p.nombre).toList()
+      ..sort((a, b) {
+        final cantidadB = _stock[b] ?? 0;
+        final cantidadA = _stock[a] ?? 0;
+        final porCantidad = cantidadB.compareTo(cantidadA);
+        if (porCantidad != 0) return porCantidad;
+        return normalizarTexto(a).compareTo(normalizarTexto(b));
+      });
   }
 
   Future<void> _copiarInventario() async {

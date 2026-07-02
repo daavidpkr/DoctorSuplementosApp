@@ -744,56 +744,19 @@ class _FormularioPacienteState extends State<FormularioPaciente> {
     required String Function(String valor) etiqueta,
     required ValueChanged<String> onChanged,
   }) {
-    return PopupMenuButton<String>(
-      initialValue: valor,
-      onSelected: onChanged,
-      offset: const Offset(0, 58),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-      itemBuilder: (context) => [
+    return SelectorEstilizado<String>(
+      valor: valor,
+      placeholder: placeholder,
+      icono: icono,
+      opciones: [
         for (final opcion in opciones)
-          PopupMenuItem(value: opcion, child: Text(etiqueta(opcion))),
+          OpcionSelectorEstilizado(
+            valor: opcion,
+            texto: etiqueta(opcion),
+            icono: icono,
+          ),
       ],
-      child: Container(
-        height: 64,
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: const Color(0xFFE1E4F0), width: 1.4),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 38,
-              height: 38,
-              decoration: BoxDecoration(
-                color: const Color(0xFFF0F2FF),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(icono, color: const Color(0xFF172394), size: 22),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Text(
-                valor == null ? placeholder : etiqueta(valor),
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  color: valor == null
-                      ? const Color(0xFF6B7192)
-                      : const Color(0xFF18215E),
-                  fontSize: 16,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-            ),
-            const Icon(
-              Icons.keyboard_arrow_down_rounded,
-              color: Color(0xFF2839C7),
-              size: 28,
-            ),
-          ],
-        ),
-      ),
+      onChanged: onChanged,
     );
   }
 

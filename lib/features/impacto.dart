@@ -439,21 +439,25 @@ class _SelectorMesImpactoNuevo extends StatelessWidget {
               ],
             ),
           ),
-          PopupMenuButton<String>(
-            tooltip: txtApp('Cambiar mes', 'Change month'),
-            icon: const Icon(Icons.keyboard_arrow_down_rounded,
-                color: _PaginaImpacto4LifeNuevaState._azulVivo, size: 36),
-            onSelected: onSeleccionar,
-            itemBuilder: (context) {
-              final opciones = claves.isEmpty ? [claveSeleccionada] : claves;
-              return [
-                for (final clave in opciones)
-                  PopupMenuItem(
-                    value: clave,
-                    child: Text(nombreClave(clave)),
+          SizedBox(
+            width: 74,
+            child: SelectorEstilizado<String>(
+              valor: claveSeleccionada,
+              placeholder: txtApp('Cambiar mes', 'Change month'),
+              icono: Icons.calendar_month_outlined,
+              alto: 56,
+              soloIcono: true,
+              opciones: [
+                for (final clave
+                    in claves.isEmpty ? [claveSeleccionada] : claves)
+                  OpcionSelectorEstilizado(
+                    valor: clave,
+                    texto: nombreClave(clave),
+                    icono: Icons.calendar_month_outlined,
                   ),
-              ];
-            },
+              ],
+              onChanged: onSeleccionar,
+            ),
           ),
         ],
       ),
@@ -468,35 +472,47 @@ class _BotonLimpiarImpactoNuevo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return _CardImpactoNuevo(
-      padding: const EdgeInsets.fromLTRB(18, 14, 18, 14),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(14),
-        onTap: onTap,
-        child: Row(
-          children: [
-            const _IconoSuaveImpacto(
-              icono: Icons.delete_sweep_rounded,
-              color: _PaginaImpacto4LifeNuevaState._naranja,
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Text(
+    return Align(
+      alignment: Alignment.centerRight,
+      child: OutlinedButton.icon(
+        onPressed: () async {
+          final confirmar = await showDialog<bool>(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: Text(txtApp('Limpiar impacto', 'Clear Impact')),
+              content: Text(
                 txtApp(
-                    'Limpiar todo el impacto 4Life', 'Clear all 4Life Impact'),
-                style: const TextStyle(
-                  color: _PaginaImpacto4LifeNuevaState._tinta,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w900,
+                  'Esta accion borra el historial de impacto guardado en este dispositivo.',
+                  'This clears the Impact history saved on this device.',
                 ),
               ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context, false),
+                  child: Text(txtApp('Cancelar', 'Cancel')),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.pop(context, true),
+                  child: Text(txtApp('Limpiar', 'Clear')),
+                ),
+              ],
             ),
-            const Icon(
-              Icons.chevron_right_rounded,
-              color: _PaginaImpacto4LifeNuevaState._azulVivo,
-              size: 30,
-            ),
-          ],
+          );
+          if (confirmar == true) onTap();
+        },
+        style: OutlinedButton.styleFrom(
+          foregroundColor: _PaginaImpacto4LifeNuevaState._textoSuave,
+          side: const BorderSide(color: Color(0xFFDDE2F2)),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+          visualDensity: VisualDensity.compact,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+        icon: const Icon(Icons.delete_outline_rounded, size: 18),
+        label: Text(
+          txtApp('Limpiar', 'Clear'),
+          style: const TextStyle(fontWeight: FontWeight.w800),
         ),
       ),
     );
