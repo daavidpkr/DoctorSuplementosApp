@@ -502,12 +502,12 @@ class _PaginaPerfilState extends State<PaginaPerfil> {
               OpcionSelectorEstilizado(
                 valor: IdiomaApp.espanol,
                 texto: 'Español',
-                icono: Icons.language_rounded,
+                emoji: '🇪🇨',
               ),
               OpcionSelectorEstilizado(
                 valor: IdiomaApp.ingles,
                 texto: 'English',
-                icono: Icons.language_rounded,
+                emoji: '🇺🇸',
               ),
             ],
             onChanged: _cambiarIdioma,
@@ -686,14 +686,14 @@ class _PaginaPerfilState extends State<PaginaPerfil> {
                 texto: ingles
                     ? PaisApp.ecuador.etiquetaIngles
                     : PaisApp.ecuador.etiqueta,
-                icono: Icons.public_rounded,
+                emoji: '🇪🇨',
               ),
               OpcionSelectorEstilizado(
                 valor: PaisApp.estadosUnidos,
                 texto: ingles
                     ? PaisApp.estadosUnidos.etiquetaIngles
                     : PaisApp.estadosUnidos.etiqueta,
-                icono: Icons.public_rounded,
+                emoji: '🇺🇸',
               ),
             ],
             onChanged: _cambiarPais,

@@ -147,7 +147,6 @@ Este producto no es medicina, no diagnostica, no trata, no cura ni previene enfe
               child: LayoutBuilder(
                 builder: (context, constraints) {
                   final ancho = constraints.maxWidth;
-                  final columnas = ancho >= 900 ? 4 : 3;
                   return GridView.builder(
                     padding: EdgeInsets.fromLTRB(
                       ancho < 420 ? 12 : 24,
@@ -156,10 +155,10 @@ Este producto no es medicina, no diagnostica, no trata, no cura ni previene enfe
                       28,
                     ),
                     gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: columnas,
+                      crossAxisCount: 2,
                       mainAxisSpacing: ancho < 420 ? 12 : 20,
                       crossAxisSpacing: ancho < 420 ? 10 : 18,
-                      childAspectRatio: ancho < 420 ? 0.58 : 0.76,
+                      childAspectRatio: ancho < 420 ? 0.70 : 0.92,
                     ),
                     itemCount: _productosCatalogo.length,
                     itemBuilder: (context, index) {

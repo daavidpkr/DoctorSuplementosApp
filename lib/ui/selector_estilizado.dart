@@ -4,11 +4,13 @@ class OpcionSelectorEstilizado<T> {
   final T valor;
   final String texto;
   final IconData? icono;
+  final String? emoji;
 
   const OpcionSelectorEstilizado({
     required this.valor,
     required this.texto,
     this.icono,
+    this.emoji,
   });
 }
 
@@ -65,7 +67,10 @@ class SelectorEstilizado<T> extends StatelessWidget {
           mainAxisAlignment:
               soloIcono ? MainAxisAlignment.center : MainAxisAlignment.start,
           children: [
-            _IconoSelectorEstilizado(icono: seleccion?.icono ?? icono),
+            _IconoSelectorEstilizado(
+              icono: seleccion?.icono ?? icono,
+              emoji: seleccion?.emoji,
+            ),
             if (!soloIcono) ...[
               const SizedBox(width: 16),
               Expanded(
@@ -200,6 +205,7 @@ class _OpcionSelectorEstilizado<T> extends StatelessWidget {
             children: [
               _IconoSelectorEstilizado(
                 icono: opcion.icono ?? Icons.check_rounded,
+                emoji: opcion.emoji,
                 activo: seleccionada,
               ),
               const SizedBox(width: 14),
@@ -229,10 +235,12 @@ class _OpcionSelectorEstilizado<T> extends StatelessWidget {
 
 class _IconoSelectorEstilizado extends StatelessWidget {
   final IconData icono;
+  final String? emoji;
   final bool activo;
 
   const _IconoSelectorEstilizado({
     required this.icono,
+    this.emoji,
     this.activo = true,
   });
 
@@ -245,11 +253,19 @@ class _IconoSelectorEstilizado extends StatelessWidget {
         color: activo ? const Color(0xFFF0F2FF) : const Color(0xFFF8F9FF),
         borderRadius: BorderRadius.circular(12),
       ),
-      child: Icon(
-        icono,
-        color: activo ? const Color(0xFF172394) : const Color(0xFF8F96B4),
-        size: 22,
-      ),
+      child: emoji == null
+          ? Icon(
+              icono,
+              color:
+                  activo ? const Color(0xFF172394) : const Color(0xFF8F96B4),
+              size: 22,
+            )
+          : Center(
+              child: Text(
+                emoji!,
+                style: const TextStyle(fontSize: 22, height: 1),
+              ),
+            ),
     );
   }
 }

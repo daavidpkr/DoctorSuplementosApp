@@ -478,24 +478,125 @@ class _BotonLimpiarImpactoNuevo extends StatelessWidget {
         onPressed: () async {
           final confirmar = await showDialog<bool>(
             context: context,
-            builder: (context) => AlertDialog(
-              title: Text(txtApp('Limpiar impacto', 'Clear Impact')),
-              content: Text(
-                txtApp(
-                  'Esta accion borra el historial de impacto guardado en este dispositivo.',
-                  'This clears the Impact history saved on this device.',
+            builder: (context) => Dialog(
+              backgroundColor: Colors.transparent,
+              insetPadding:
+                  const EdgeInsets.symmetric(horizontal: 22, vertical: 24),
+              child: Container(
+                padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(22),
+                  boxShadow: [
+                    BoxShadow(
+                      color:
+                          const Color(0xFF07125E).withValues(alpha: 0.18),
+                      blurRadius: 26,
+                      offset: const Offset(0, 12),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          width: 46,
+                          height: 46,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF0F2FF),
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          child: const Icon(
+                            Icons.delete_outline_rounded,
+                            color: Color(0xFF172394),
+                            size: 26,
+                          ),
+                        ),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Text(
+                            txtApp('Limpiar impacto', 'Clear Impact'),
+                            style: const TextStyle(
+                              color: Color(0xFF172394),
+                              fontSize: 21,
+                              height: 1.08,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF8F9FF),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: const Color(0xFFE1E4F0)),
+                      ),
+                      child: Text(
+                        txtApp(
+                          'Esta accion borra todo el historial de impacto guardado en este dispositivo.',
+                          'This clears all Impact history saved on this device.',
+                        ),
+                        style: const TextStyle(
+                          color: Color(0xFF465074),
+                          fontSize: 15,
+                          height: 1.35,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: () => Navigator.pop(context, false),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: const Color(0xFF111B59),
+                              side:
+                                  const BorderSide(color: Color(0xFFDDE2F2)),
+                              padding: const EdgeInsets.symmetric(vertical: 13),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(14),
+                              ),
+                            ),
+                            child: Text(
+                              txtApp('Cancelar', 'Cancel'),
+                              style:
+                                  const TextStyle(fontWeight: FontWeight.w900),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: () => Navigator.pop(context, true),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF172394),
+                              foregroundColor: Colors.white,
+                              elevation: 0,
+                              padding: const EdgeInsets.symmetric(vertical: 13),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(14),
+                              ),
+                            ),
+                            child: Text(
+                              txtApp('Limpiar todo', 'Clear all'),
+                              style:
+                                  const TextStyle(fontWeight: FontWeight.w900),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
               ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context, false),
-                  child: Text(txtApp('Cancelar', 'Cancel')),
-                ),
-                TextButton(
-                  onPressed: () => Navigator.pop(context, true),
-                  child: Text(txtApp('Limpiar', 'Clear')),
-                ),
-              ],
             ),
           );
           if (confirmar == true) onTap();
