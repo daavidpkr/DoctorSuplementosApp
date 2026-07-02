@@ -15,6 +15,9 @@ class ConsultaProductoPagina extends StatefulWidget {
 }
 
 class _ConsultaProductoPaginaState extends State<ConsultaProductoPagina> {
+  bool _modoMultiple = false;
+  final Set<String> _seleccionMultiple = {};
+
   bool get _esMiTienda => widget.tipo == TipoCatalogoProducto.miTienda;
 
   String get _tituloCatalogo => _esMiTienda
@@ -29,6 +32,27 @@ class _ConsultaProductoPaginaState extends State<ConsultaProductoPagina> {
       (a, b) => normalizarTexto(a.nombre).compareTo(normalizarTexto(b.nombre)),
     );
     return productos;
+  }
+
+  List<ProductoPrecio> get _productosSeleccionados => _productosCatalogo
+      .where((producto) => _seleccionMultiple.contains(producto.nombre))
+      .toList();
+
+  void _alternarSeleccionMultiple(ProductoPrecio producto) {
+    setState(() {
+      if (_seleccionMultiple.contains(producto.nombre)) {
+        _seleccionMultiple.remove(producto.nombre);
+      } else {
+        _seleccionMultiple.add(producto.nombre);
+      }
+    });
+  }
+
+  void _cambiarModoMultiple(bool activo) {
+    setState(() {
+      _modoMultiple = activo;
+      if (!activo) _seleccionMultiple.clear();
+    });
   }
 
   Future<void> _abrirProducto(ProductoPrecio producto) async {
@@ -118,6 +142,7 @@ Este producto no es medicina, no diagnostica, no trata, no cura ni previene enfe
         child: Column(
           children: [
             _encabezadoConsulta(),
+            _selectorModoConsulta(),
             Expanded(
               child: LayoutBuilder(
                 builder: (context, constraints) {
@@ -145,6 +170,7 @@ Este producto no es medicina, no diagnostica, no trata, no cura ni previene enfe
                 },
               ),
             ),
+            if (_modoMultiple) _barraSeleccionMultiple(),
           ],
         ),
       ),
@@ -181,10 +207,411 @@ Este producto no es medicina, no diagnostica, no trata, no cura ni previene enfe
     );
   }
 
+  Widget _selectorModoConsulta() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 0, 24, 14),
+      child: Container(
+        height: 46,
+        padding: const EdgeInsets.all(4),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF0F3FF),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: const Color(0xFFDDE3FF)),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: _opcionModoConsulta(
+                activo: !_modoMultiple,
+                icono: Icons.touch_app_rounded,
+                texto: txtApp('Individual', 'Single'),
+                onTap: () => _cambiarModoMultiple(false),
+              ),
+            ),
+            Expanded(
+              child: _opcionModoConsulta(
+                activo: _modoMultiple,
+                icono: Icons.checklist_rounded,
+                texto: txtApp('Multiple', 'Multiple'),
+                onTap: () => _cambiarModoMultiple(true),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _opcionModoConsulta({
+    required bool activo,
+    required IconData icono,
+    required String texto,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(11),
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 160),
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: activo ? Colors.white : Colors.transparent,
+          borderRadius: BorderRadius.circular(11),
+          boxShadow: activo
+              ? [
+                  BoxShadow(
+                    color: const Color(0xFF0B176B).withValues(alpha: 0.08),
+                    blurRadius: 9,
+                    offset: const Offset(0, 4),
+                  ),
+                ]
+              : const [],
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              icono,
+              color: activo ? const Color(0xFF12248B) : const Color(0xFF5C6592),
+              size: 19,
+            ),
+            const SizedBox(width: 7),
+            Text(
+              texto,
+              style: TextStyle(
+                color:
+                    activo ? const Color(0xFF12248B) : const Color(0xFF5C6592),
+                fontSize: 13,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _barraSeleccionMultiple() {
+    final cantidad = _seleccionMultiple.length;
+    return Container(
+      padding: const EdgeInsets.fromLTRB(18, 10, 18, 14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF12248B).withValues(alpha: 0.10),
+            blurRadius: 18,
+            offset: const Offset(0, -6),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              txtApp(
+                '$cantidad producto(s) seleccionados',
+                '$cantidad selected product(s)',
+              ),
+              style: const TextStyle(
+                color: Color(0xFF12248B),
+                fontSize: 15,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ),
+          TextButton(
+            onPressed:
+                cantidad == 0 ? null : () => setState(_seleccionMultiple.clear),
+            child: Text(txtApp('Limpiar', 'Clear')),
+          ),
+          const SizedBox(width: 8),
+          ElevatedButton.icon(
+            onPressed: cantidad == 0 ? null : _abrirConsultaMultiple,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF12248B),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            icon: const Icon(Icons.fact_check_rounded),
+            label: Text(txtApp('Consultar', 'Review')),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _abrirConsultaMultiple() async {
+    final productos = _productosSeleccionados;
+    if (productos.isEmpty) return;
+    await ImpactoService.registrar(
+      tipo: _esMiTienda ? 'catalogo_mitienda_multiple' : 'catalogo_multiple',
+      titulo: txtApp('Consulta multiple', 'Multiple review'),
+      datos: {
+        'productos': productos.map((producto) => producto.nombre).toList(),
+      },
+    );
+    if (!mounted) return;
+    showDialog(
+      context: context,
+      builder: (dialogContext) => _dialogoConsultaMultiple(
+        dialogContext,
+        productos,
+      ),
+    );
+  }
+
+  Widget _dialogoConsultaMultiple(
+    BuildContext dialogContext,
+    List<ProductoPrecio> productos,
+  ) {
+    final ingles = IdiomaService.actual.value == IdiomaApp.ingles;
+    final totalLp = productos.fold<int>(
+      0,
+      (total, producto) => total + (producto.lp ?? 0),
+    );
+    final totalAfiliado = productos.fold<double>(
+      0,
+      (total, producto) => total + producto.afiliado,
+    );
+    return Dialog(
+      backgroundColor: Colors.white,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 24),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 560),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(18, 18, 18, 12),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      txtApp('Consulta multiple', 'Multiple review'),
+                      style: const TextStyle(
+                        color: Color(0xFF12248B),
+                        fontSize: 22,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    tooltip: ingles ? 'Close' : 'Cerrar',
+                    onPressed: () => Navigator.pop(dialogContext),
+                    icon: const Icon(Icons.close_rounded),
+                  ),
+                ],
+              ),
+              Wrap(
+                spacing: 10,
+                runSpacing: 10,
+                children: [
+                  _resumenMultiple('LP', '$totalLp'),
+                  _resumenMultiple(
+                    ingles ? 'Member' : 'Afiliado',
+                    '\$${totalAfiliado.toStringAsFixed(2)}',
+                  ),
+                  _resumenMultiple(
+                    ingles ? 'Products' : 'Productos',
+                    '${productos.length}',
+                  ),
+                ],
+              ),
+              const SizedBox(height: 14),
+              Flexible(
+                child: SingleChildScrollView(
+                  child: Column(
+                    children: [
+                      for (final producto in productos)
+                        _filaProductoMultiple(producto),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  IconButton(
+                    tooltip: ingles ? 'Copy' : 'Copiar',
+                    icon: const Icon(Icons.copy_rounded),
+                    color: const Color(0xFF12248B),
+                    onPressed: () {
+                      Clipboard.setData(
+                        ClipboardData(text: _textoConsultaMultiple(productos)),
+                      );
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text(ingles ? 'Copied' : 'Copiado')),
+                      );
+                    },
+                  ),
+                  IconButton(
+                    tooltip: ingles ? 'Share' : 'Compartir',
+                    icon: const Icon(Icons.share_rounded),
+                    color: const Color(0xFF12248B),
+                    onPressed: () => _compartirConsultaMultiple(productos),
+                  ),
+                  const Spacer(),
+                  TextButton(
+                    onPressed: () => Navigator.pop(dialogContext),
+                    child: Text(ingles ? 'Close' : 'Cerrar'),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _resumenMultiple(String etiqueta, String valor) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF0F3FF),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Text(
+        '$etiqueta: $valor',
+        style: const TextStyle(
+          color: Color(0xFF12248B),
+          fontSize: 13,
+          fontWeight: FontWeight.w900,
+        ),
+      ),
+    );
+  }
+
+  Widget _filaProductoMultiple(ProductoPrecio producto) {
+    final info = informacionProductoCatalogo(producto.nombre);
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8F9FF),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFE1E4F0)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 62,
+            height: 62,
+            child: Image.asset(
+              imagenesProducto4Life[producto.nombre] ?? '',
+              fit: BoxFit.contain,
+              errorBuilder: (_, __, ___) =>
+                  const Icon(Icons.inventory_2_outlined),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  producto.nombre,
+                  style: const TextStyle(
+                    color: Color(0xFF111B59),
+                    fontSize: 15,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '${txtApp('Afiliado', 'Member')} \$${producto.afiliado.toStringAsFixed(2)} | LP ${producto.lp ?? 0}',
+                  style: const TextStyle(
+                    color: Color(0xFF465074),
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  info.descripcion,
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Color(0xFF27315F),
+                    fontSize: 13,
+                    height: 1.3,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _textoConsultaMultiple(List<ProductoPrecio> productos) {
+    final buffer = StringBuffer(
+      txtApp('Consulta multiple de productos 4Life\n\n',
+          'Multiple 4Life product review\n\n'),
+    );
+    for (final producto in productos) {
+      final info = informacionProductoCatalogo(producto.nombre);
+      buffer.writeln(producto.nombre);
+      buffer.writeln(
+          '${txtApp('Afiliado', 'Member')}: \$${producto.afiliado.toStringAsFixed(2)}');
+      buffer.writeln(
+          '${txtApp('Publico', 'Retail')}: \$${producto.publico.toStringAsFixed(2)}');
+      buffer.writeln('LP: ${producto.lp ?? 0}');
+      buffer.writeln(
+          '${txtApp('Descripcion', 'Description')}: ${info.descripcion}\n');
+    }
+    return buffer.toString();
+  }
+
+  Future<void> _compartirConsultaMultiple(List<ProductoPrecio> productos) {
+    final ingles = IdiomaService.actual.value == IdiomaApp.ingles;
+    return ServicioCompartir.mostrarOpciones(
+      context,
+      DocumentoCompartible(
+        titulo: ingles
+            ? 'MULTIPLE PRODUCT REVIEW'
+            : 'CONSULTA MULTIPLE DE PRODUCTOS',
+        nombreArchivo:
+            ingles ? 'MULTIPLE PRODUCT REVIEW' : 'CONSULTA MULTIPLE PRODUCTOS',
+        fecha: DateTime.now(),
+        secciones: [
+          SeccionDocumento(
+            titulo: ingles ? 'Summary' : 'Resumen',
+            contenido: _textoConsultaMultiple(productos),
+          ),
+        ],
+        productos: productos
+            .map(
+              (producto) => ProductoDocumento(
+                nombre: producto.nombre,
+                imagenAsset: imagenesProducto4Life[producto.nombre],
+                indicaciones: [
+                  '${ingles ? 'Member' : 'Afiliado'}: \$${producto.afiliado.toStringAsFixed(2)}',
+                  '${ingles ? 'Retail' : 'Publico'}: \$${producto.publico.toStringAsFixed(2)}',
+                  'LP: ${producto.lp ?? 0}',
+                ],
+                detalle:
+                    informacionProductoCatalogo(producto.nombre).descripcion,
+              ),
+            )
+            .toList(),
+      ),
+      ingles: ingles,
+    );
+  }
+
   Widget _tarjetaProductoCatalogo(ProductoPrecio producto) {
     final imagen = imagenesProducto4Life[producto.nombre];
     final ingles = IdiomaService.actual.value == IdiomaApp.ingles;
     final precioPromocional = precioPromocionalMiTienda(producto.nombre);
+    final seleccionado = _seleccionMultiple.contains(producto.nombre);
     final textoPrecio = _esMiTienda
         ? '${ingles ? 'Promo' : 'Promocional'} \$${(precioPromocional ?? producto.afiliado).toStringAsFixed(2)} | LP ${producto.lp ?? 0}'
         : precioPromocional == null
@@ -194,13 +621,20 @@ Este producto no es medicina, no diagnostica, no trata, no cura ni previene enfe
       color: Colors.transparent,
       child: InkWell(
         borderRadius: BorderRadius.circular(26),
-        onTap: () => _abrirProducto(producto),
+        onTap: () => _modoMultiple
+            ? _alternarSeleccionMultiple(producto)
+            : _abrirProducto(producto),
         child: Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             color: const Color(0xFFFBFBFE),
             borderRadius: BorderRadius.circular(26),
-            border: Border.all(color: const Color(0xFFE0E3EF), width: 1.6),
+            border: Border.all(
+              color: seleccionado
+                  ? const Color(0xFF12248B)
+                  : const Color(0xFFE0E3EF),
+              width: seleccionado ? 2.2 : 1.6,
+            ),
             boxShadow: [
               BoxShadow(
                 color: const Color(0xFF12248B).withValues(alpha: 0.06),
@@ -212,6 +646,19 @@ Este producto no es medicina, no diagnostica, no trata, no cura ni previene enfe
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              if (_modoMultiple)
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: Icon(
+                    seleccionado
+                        ? Icons.check_circle_rounded
+                        : Icons.radio_button_unchecked_rounded,
+                    color: seleccionado
+                        ? const Color(0xFF12248B)
+                        : const Color(0xFF9AA2C0),
+                    size: 24,
+                  ),
+                ),
               Expanded(
                 child: Container(
                   padding: const EdgeInsets.all(8),

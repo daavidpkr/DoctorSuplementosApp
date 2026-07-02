@@ -182,6 +182,14 @@ class IdiomaService {
       'es': 'Genera paquetes maestros desde una meta mínima de LP.',
       'en': 'Build master packs from a minimum LP goal.',
     },
+    'accelerated_optimizer': {
+      'es': 'Optimizador de paquetes acelerados',
+      'en': 'Accelerated Pack Optimizer',
+    },
+    'accelerated_optimizer_desc': {
+      'es': 'Consulta paquetes acelerados con meta fija de 400 LP.',
+      'en': 'Review accelerated packs with a fixed 400 LP goal.',
+    },
     'local_inventory': {
       'es': 'Inventario local',
       'en': 'My Local Inventory',

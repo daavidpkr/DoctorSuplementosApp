@@ -71,8 +71,9 @@ class _PaginaChatbotState extends State<PaginaChatbot> {
   final TextEditingController _controller = TextEditingController();
   final AudioRecorder _audioRecorder = AudioRecorder();
   final List<Map<String, String>> mensajes = [];
-  ArchivoAdjuntoIA? _adjunto;
+  final List<ArchivoAdjuntoIA> _adjuntos = [];
   bool enviando = false;
+  bool _modoCientifico = false;
   bool _grabandoAudio = false;
   bool _iniciandoGrabacionVoz = false;
   bool _presionandoMicrofono = false;
@@ -85,6 +86,9 @@ class _PaginaChatbotState extends State<PaginaChatbot> {
   late String _conversacionId;
 
   bool get _ingles => IdiomaService.actual.value == IdiomaApp.ingles;
+  bool get _tieneAdjuntos => _adjuntos.isNotEmpty;
+  bool get _adjuntosSoloAudio =>
+      _adjuntos.isNotEmpty && _adjuntos.every((adjunto) => adjunto.esAudio);
 
   String _txt(String es, String en) => _ingles ? en : es;
 
@@ -200,11 +204,11 @@ class _PaginaChatbotState extends State<PaginaChatbot> {
 
   Future<void> enviarMensaje() async {
     final textoUsuario = _controller.text.trim();
-    if ((textoUsuario.isEmpty && _adjunto == null) || enviando) return;
+    if ((textoUsuario.isEmpty && !_tieneAdjuntos) || enviando) return;
     final textoVisible = textoUsuario.isEmpty
-        ? (_adjunto?.esAudio == true
+        ? (_adjuntosSoloAudio
             ? "Analiza esta nota de voz."
-            : "Analiza el archivo adjunto.")
+            : "Analiza los archivos adjuntos.")
         : textoUsuario;
 
     setState(() {
@@ -223,9 +227,11 @@ class _PaginaChatbotState extends State<PaginaChatbot> {
         .map((mensaje) =>
             "${mensaje['rol'] == 'ia' ? 'Asesor IA' : 'Socio'}: ${mensaje['texto']}")
         .join("\n");
-    final consultaSobreComponente = _consultaEsSobreComponente(textoVisible);
-    final productoCoincidente =
-        consultaSobreComponente ? null : buscarProductoPermitido(textoVisible);
+    final consultaSobreComponente =
+        !_modoCientifico && _consultaEsSobreComponente(textoVisible);
+    final productoCoincidente = consultaSobreComponente || _modoCientifico
+        ? null
+        : buscarProductoPermitido(textoVisible);
     final instruccionProducto = productoCoincidente == null
         ? ""
         : "Si la consulta menciona un producto mal escrito, responde directamente sobre $productoCoincidente. No digas que fue una coincidencia ni que estaba mal escrito.";
@@ -239,23 +245,39 @@ class _PaginaChatbotState extends State<PaginaChatbot> {
         ? "La consulta parece ser sobre un componente, ingrediente o concepto de bienestar, no sobre un producto especifico. Explica que es, para que sirve, como se interpreta y que precauciones generales considerar. No conviertas la respuesta en una recomendacion de producto y no metas un producto 4Life si el usuario no pidio un producto."
         : "";
     final instruccionIdioma = await IdiomaService.instruccionIa();
-
-    final promptLimpioParaChatbot = """
-    IDIOMA OBLIGATORIO:
-    $instruccionIdioma
-
-    Eres un asesor IA para socios de 4Life.
-    Responde de manera clara, conversacional, sumamente ordenada y amigable.
-    IMPORTANTE: No uses asteriscos (*), no uses almohadillas (#), ni guiones extranos para dar formato.
-    Usa saltos de linea normales y texto limpio.
-    Responde preguntas libres sobre suplementos, productos 4Life, habitos saludables, ventas y seguimiento de clientes.
-    Prioriza respuestas explicativas y completas cuando eso evite confusiones; no respondas demasiado corto si la pregunta requiere contexto.
-    $instruccionVozHumana
+    final instruccionModoCientifico = _modoCientifico
+        ? """
+    MODO CIENTIFICO OBLIGATORIO:
+    Actua unicamente como investigador de enfermedades y educador cientifico.
+    Tu tarea es explicar enfermedades, sintomas, mecanismos biologicos, factores de riesgo, diagnostico medico habitual, pruebas comunes, evolucion, prevencion general, senales de alarma y opciones de manejo reconocidas por la medicina.
+    No recomiendes, no menciones, no compares y no sugieras productos 4Life, suplementos, ventas, rutinas comerciales ni nombres del catalogo.
+    Si el usuario pide productos o suplementos, responde que en modo cientifico solo puedes hablar de la enfermedad y su contexto medico general.
+    Mantén lenguaje claro, responsable y profundo, diferenciando informacion educativa de diagnostico medico. Recomienda acudir a un profesional de salud cuando haya sintomas, urgencia, diagnostico pendiente o tratamiento.
+    """
+        : "";
+    final reglaProductos = _modoCientifico
+        ? "REGLA DE PRODUCTOS DESACTIVADA POR MODO CIENTIFICO: no hables de productos, suplementos ni catalogos."
+        : """
     REGLA OBLIGATORIA DE PRODUCTOS: Cuando recomiendes, compares, armes rutinas o sugieras productos,
     usa UNICAMENTE estos nombres del catalogo autorizado: $catalogoPermitido4Life.
     Si el socio pide algo que requiera un producto fuera de esa lista, explica que solo puedes recomendar
     productos del catalogo autorizado y ofrece alternativas dentro de esa lista.
     No inventes nombres, presentaciones ni productos adicionales.
+    """;
+
+    final promptLimpioParaChatbot = """
+    IDIOMA OBLIGATORIO:
+    $instruccionIdioma
+
+    ${_modoCientifico ? 'Eres un investigador cientifico de enfermedades.' : 'Eres un asesor IA para socios de 4Life.'}
+    Responde de manera clara, conversacional, sumamente ordenada y amigable.
+    IMPORTANTE: No uses asteriscos (*), no uses almohadillas (#), ni guiones extranos para dar formato.
+    Usa saltos de linea normales y texto limpio.
+    ${_modoCientifico ? 'Responde preguntas sobre enfermedades con enfoque educativo, cientifico y responsable.' : 'Responde preguntas libres sobre suplementos, productos 4Life, habitos saludables, ventas y seguimiento de clientes.'}
+    Prioriza respuestas explicativas y completas cuando eso evite confusiones; no respondas demasiado corto si la pregunta requiere contexto.
+    $instruccionVozHumana
+    $instruccionModoCientifico
+    $reglaProductos
     REGLA OBLIGATORIA SOBRE COMPONENTES O INGREDIENTES: Si el usuario pregunta por un componente, ingrediente,
     nutriente o concepto general, explica el componente en si y NO lo conviertas automaticamente en un producto.
     Ejemplos de componentes/conceptos: ${_terminosComponentesBienestar.join(', ')}.
@@ -275,17 +297,19 @@ class _PaginaChatbotState extends State<PaginaChatbot> {
     """;
 
     try {
+      final textoAdjuntos = _tieneAdjuntos
+          ? (_adjuntosSoloAudio
+              ? "$promptLimpioParaChatbot\n\nAnaliza las notas de voz adjuntas como contexto temporal. Extrae la consulta y responde con base en el audio. No menciones que fueron guardadas, porque no se guardan en la app."
+              : "$promptLimpioParaChatbot\n\nAnaliza todos los archivos adjuntos como contexto temporal. Cruza la informacion entre documentos e imagenes cuando sea util. No menciones que fueron guardados, porque no se guardan en la app.")
+          : promptLimpioParaChatbot;
       final response = await model.generateContent([
-        if (_adjunto == null)
+        if (!_tieneAdjuntos)
           Content.text(promptLimpioParaChatbot)
         else
           Content.multi([
-            TextPart(
-              _adjunto!.esAudio
-                  ? "$promptLimpioParaChatbot\n\nAnaliza la nota de voz adjunta como contexto temporal. Extrae la consulta y responde con base en el audio. No menciones que fue guardado, porque no se guarda en la app."
-                  : "$promptLimpioParaChatbot\n\nAnaliza el archivo adjunto como contexto temporal. No menciones que fue guardado, porque no se guarda en la app.",
-            ),
-            DataPart(_adjunto!.mimeType, _adjunto!.bytes),
+            TextPart(textoAdjuntos),
+            for (final adjunto in _adjuntos)
+              DataPart(adjunto.mimeType, adjunto.bytes),
           ]),
       ]);
       final respuestaIA = response.text ?? "No pude generar una respuesta.";
@@ -293,7 +317,7 @@ class _PaginaChatbotState extends State<PaginaChatbot> {
       if (!mounted) return;
       setState(() {
         mensajes.add({"rol": "ia", "texto": respuestaIA});
-        _adjunto = null;
+        _adjuntos.clear();
         if (widget.modoLlamada) {
           _estadoLlamada = _txt(
             "DoctorSuplementos esta respondiendo...",
@@ -372,10 +396,12 @@ class _PaginaChatbotState extends State<PaginaChatbot> {
     final bytes = await imagen.readAsBytes();
     if (!mounted) return;
     setState(() {
-      _adjunto = ArchivoAdjuntoIA(
-        nombre: imagen.name,
-        mimeType: imagen.mimeType ?? 'image/jpeg',
-        bytes: bytes,
+      _adjuntos.add(
+        ArchivoAdjuntoIA(
+          nombre: imagen.name,
+          mimeType: imagen.mimeType ?? 'image/jpeg',
+          bytes: bytes,
+        ),
       );
     });
   }
@@ -384,27 +410,34 @@ class _PaginaChatbotState extends State<PaginaChatbot> {
     final resultado = await FilePicker.platform.pickFiles(
       type: FileType.custom,
       allowedExtensions: ['pdf', 'png', 'jpg', 'jpeg', 'webp'],
+      allowMultiple: true,
       withData: true,
     );
-    final archivo = resultado?.files.single;
-    final bytes = archivo?.bytes;
-    if (archivo == null || bytes == null) return;
-
-    final extension = (archivo.extension ?? '').toLowerCase();
-    final mime = switch (extension) {
-      'pdf' => 'application/pdf',
-      'png' => 'image/png',
-      'webp' => 'image/webp',
-      _ => 'image/jpeg',
-    };
+    final archivos = resultado?.files ?? const <PlatformFile>[];
+    final adjuntos = <ArchivoAdjuntoIA>[];
+    for (final archivo in archivos) {
+      final bytes = archivo.bytes;
+      if (bytes == null || bytes.isEmpty) continue;
+      final extension = (archivo.extension ?? '').toLowerCase();
+      final mime = switch (extension) {
+        'pdf' => 'application/pdf',
+        'png' => 'image/png',
+        'webp' => 'image/webp',
+        _ => 'image/jpeg',
+      };
+      adjuntos.add(
+        ArchivoAdjuntoIA(
+          nombre: archivo.name,
+          mimeType: mime,
+          bytes: bytes,
+        ),
+      );
+    }
+    if (adjuntos.isEmpty) return;
 
     if (!mounted) return;
     setState(() {
-      _adjunto = ArchivoAdjuntoIA(
-        nombre: archivo.name,
-        mimeType: mime,
-        bytes: bytes,
-      );
+      _adjuntos.addAll(adjuntos);
     });
   }
 
@@ -421,11 +454,15 @@ class _PaginaChatbotState extends State<PaginaChatbot> {
       if (bytes.isEmpty || !mounted) return;
 
       setState(() {
-        _adjunto = ArchivoAdjuntoIA(
-          nombre: 'Nota de voz para el asesor.m4a',
-          mimeType: 'audio/mp4',
-          bytes: bytes,
-        );
+        _adjuntos
+          ..clear()
+          ..add(
+            ArchivoAdjuntoIA(
+              nombre: 'Nota de voz para el asesor.m4a',
+              mimeType: 'audio/mp4',
+              bytes: bytes,
+            ),
+          );
       });
       return;
     }
@@ -543,17 +580,25 @@ class _PaginaChatbotState extends State<PaginaChatbot> {
     }
 
     setState(() {
-      _adjunto = ArchivoAdjuntoIA(
-        nombre: 'Pregunta de voz.m4a',
-        mimeType: 'audio/mp4',
-        bytes: bytes,
-      );
+      _adjuntos
+        ..clear()
+        ..add(
+          ArchivoAdjuntoIA(
+            nombre: 'Pregunta de voz.m4a',
+            mimeType: 'audio/mp4',
+            bytes: bytes,
+          ),
+        );
     });
     await enviarMensaje();
   }
 
-  void quitarAdjuntoChat() {
-    setState(() => _adjunto = null);
+  void quitarAdjuntoChat(ArchivoAdjuntoIA adjunto) {
+    setState(() => _adjuntos.remove(adjunto));
+  }
+
+  void cambiarModoCientifico(bool activo) {
+    setState(() => _modoCientifico = activo);
   }
 
   @override
@@ -1469,48 +1514,17 @@ extension _PaginaChatbotUi on _PaginaChatbotState {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          if (_adjunto != null) ...[
-            Container(
-              margin: const EdgeInsets.only(bottom: 10),
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-              decoration: BoxDecoration(
-                color: const Color(0xFFF5F7FF),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0xFFE1E4F0)),
-              ),
-              child: Row(
+          _selectorModoAsesor(),
+          const SizedBox(height: 10),
+          if (_adjuntos.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: Column(
                 children: [
-                  Icon(
-                    _adjunto!.esAudio
-                        ? Icons.mic_none_rounded
-                        : _adjunto!.esPdf
-                            ? Icons.picture_as_pdf_rounded
-                            : Icons.image_outlined,
-                    color: const Color(0xFF4059EA),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      _adjunto!.nombre,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: Color(0xFF27315F),
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                  ),
-                  IconButton(
-                    tooltip: txtApp("Quitar archivo", "Remove file"),
-                    visualDensity: VisualDensity.compact,
-                    onPressed: quitarAdjuntoChat,
-                    icon: const Icon(Icons.close_rounded),
-                    color: const Color(0xFF12248B),
-                  ),
+                  for (final adjunto in _adjuntos) _chipAdjunto(adjunto),
                 ],
               ),
             ),
-          ],
           Container(
             padding: const EdgeInsets.fromLTRB(18, 6, 8, 6),
             decoration: BoxDecoration(
@@ -1556,8 +1570,12 @@ extension _PaginaChatbotUi on _PaginaChatbotState {
                     onSubmitted: (_) => enviarMensaje(),
                     decoration: InputDecoration(
                       hintText: txtApp(
-                        "Pregunta lo que sea...",
-                        "Ask anything...",
+                        _modoCientifico
+                            ? "Pregunta sobre una enfermedad..."
+                            : "Pregunta lo que sea...",
+                        _modoCientifico
+                            ? "Ask about a disease..."
+                            : "Ask anything...",
                       ),
                       hintStyle: const TextStyle(
                         color: Color(0xFF8C91A8),
@@ -1638,6 +1656,135 @@ extension _PaginaChatbotUi on _PaginaChatbotState {
                 ),
               ),
             ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _selectorModoAsesor() {
+    return Container(
+      height: 46,
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF0F3FF),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFDDE3FF)),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: _opcionModoAsesor(
+              activo: !_modoCientifico,
+              icono: Icons.auto_awesome_rounded,
+              texto: txtApp("Asesor 4Life", "4Life Adviser"),
+              onTap: () => cambiarModoCientifico(false),
+            ),
+          ),
+          Expanded(
+            child: _opcionModoAsesor(
+              activo: _modoCientifico,
+              icono: Icons.science_rounded,
+              texto: txtApp("Modo cientifico", "Scientific mode"),
+              onTap: () => cambiarModoCientifico(true),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _opcionModoAsesor({
+    required bool activo,
+    required IconData icono,
+    required String texto,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(11),
+      onTap: enviando ? null : onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 160),
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: activo ? Colors.white : Colors.transparent,
+          borderRadius: BorderRadius.circular(11),
+          boxShadow: activo
+              ? [
+                  BoxShadow(
+                    color: const Color(0xFF0B176B).withValues(alpha: 0.08),
+                    blurRadius: 9,
+                    offset: const Offset(0, 4),
+                  ),
+                ]
+              : const [],
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              icono,
+              color: activo ? const Color(0xFF172394) : const Color(0xFF5C6592),
+              size: 19,
+            ),
+            const SizedBox(width: 7),
+            Flexible(
+              child: Text(
+                texto,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: activo
+                      ? const Color(0xFF172394)
+                      : const Color(0xFF5C6592),
+                  fontSize: 13,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _chipAdjunto(ArchivoAdjuntoIA adjunto) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 7),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF5F7FF),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFE1E4F0)),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            adjunto.esAudio
+                ? Icons.mic_none_rounded
+                : adjunto.esPdf
+                    ? Icons.picture_as_pdf_rounded
+                    : Icons.image_outlined,
+            color: const Color(0xFF4059EA),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              adjunto.nombre,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: Color(0xFF27315F),
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ),
+          IconButton(
+            tooltip: txtApp("Quitar archivo", "Remove file"),
+            visualDensity: VisualDensity.compact,
+            onPressed: () => quitarAdjuntoChat(adjunto),
+            icon: const Icon(Icons.close_rounded),
+            color: const Color(0xFF12248B),
           ),
         ],
       ),

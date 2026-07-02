@@ -54,6 +54,12 @@ cat << EOF > request.json
             }
           },
           {
+            "inlineData": { //pdf de prueba 2
+              "mimeType": "application/pdf",
+              "data": "<Drive file: 18YnJTWraNwFuKEzA0r2VhPhd5TNWTEHG>"
+            }
+          },
+          {
             "text": "INSERT_INPUT_HERE"
           }
         ]

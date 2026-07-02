@@ -82,6 +82,15 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
                     ),
                     _tarjetaMenu(
                       context,
+                      titulo: IdiomaService.texto('accelerated_optimizer'),
+                      descripcion:
+                          IdiomaService.texto('accelerated_optimizer_desc'),
+                      icono: Icons.rocket_launch_rounded,
+                      colores: const [Color(0xFF172394), Color(0xFF0B6B88)],
+                      destino: const PaginaOptimizadorAcelerado(),
+                    ),
+                    _tarjetaMenu(
+                      context,
                       titulo: IdiomaService.texto('local_inventory'),
                       descripcion: IdiomaService.texto('local_inventory_desc'),
                       icono: Icons.inventory_2_rounded,

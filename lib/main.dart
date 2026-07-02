@@ -35,6 +35,7 @@ part 'features/cambio_fisico.dart';
 part 'features/consulta_productos.dart';
 part 'features/calculadora_precios.dart';
 part 'features/optimizador_consumo.dart';
+part 'features/optimizador_acelerado.dart';
 part 'features/inventario_local.dart';
 part 'features/comparador_ab.dart';
 part 'features/testimonios.dart';

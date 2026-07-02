@@ -42,5 +42,24 @@ void main() {
       expect(producto?.lp, 22);
       expect(precioPromocionalMiTienda('Aloe Vera Stix Tropical'), 42.72);
     });
+
+    test('distingue Transfer factor MAX y Riovida Jugo', () {
+      final max = buscarProductoConPrecio('1 max');
+      final jugo = buscarProductoConPrecio('jugo');
+
+      expect(buscarProductoPermitido('tf max'), 'Transfer factor MAX');
+      expect(max?.nombre, 'Transfer factor MAX');
+      expect(max?.afiliado, 109.25);
+      expect(max?.publico, 145.30);
+      expect(max?.lp, 75);
+      expect(precioPromocionalMiTienda('Transfer factor MAX'), 116.24);
+
+      expect(buscarProductoPermitido('riovida jugo'), 'Riovida Jugo');
+      expect(jugo?.nombre, 'Riovida Jugo');
+      expect(jugo?.afiliado, 54.68);
+      expect(jugo?.publico, 72.73);
+      expect(jugo?.lp, 32);
+      expect(precioPromocionalMiTienda('Riovida Jugo'), 58.18);
+    });
   });
 }

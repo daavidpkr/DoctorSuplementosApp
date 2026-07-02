@@ -24,9 +24,11 @@ const List<String> productosPermitidos4Life = [
   'Recall',
   'Renuvo',
   'Riovida burst',
+  'Riovida Jugo',
   'Riovida stix',
   'Suero',
   'TF Boost',
+  'Transfer factor MAX',
   'Tonico',
   'Transfer factor plus',
   'Transfer factor tri factor',
@@ -56,9 +58,17 @@ const List<String> productosCambioFisico4Life = [
 final String catalogoCambioFisico4Life = productosCambioFisico4Life.join(', ');
 
 const Map<String, List<String>> _diferenciadoresProducto4Life = {
+  'Transfer factor MAX': [
+    'transfer factor max',
+    'tf max',
+    'max',
+    '1 max',
+    'factor max',
+  ],
   'Transfer factor plus': ['plus'],
   'Transfer factor tri factor': ['tri factor', 'trifactor'],
   'Riovida burst': ['riovida burst', 'burst'],
+  'Riovida Jugo': ['riovida jugo', 'rio vida jugo', 'jugo'],
   'Riovida stix': ['riovida stix', 'riovida'],
   'Energy go stix': ['energy go', 'energy', 'go stix'],
   'Aloe Vera Stix Tropical': ['aloe', 'aloe vera', 'aloe stix'],
@@ -69,6 +79,9 @@ const Map<String, String> imagenesProducto4Life = {
       'assets/productos/productos-ec/aloe_vera_stix_tropical.webp',
   'Transfer factor plus':
       'assets/productos/productos-ec/trasnfer_factor_plus.webp',
+  'Transfer factor MAX':
+      'assets/productos/productos-ec/transfer_factor_max.png',
+  'Riovida Jugo': 'assets/productos/productos-ec/riovida_jugo.png',
   'Riovida stix': 'assets/productos/productos-ec/riovida_stix.webp',
   'Energy go stix': 'assets/productos/productos-ec/energy_go_stix.webp',
   'Renuvo': 'assets/productos/productos-ec/renuvo.webp',
@@ -167,6 +180,10 @@ const List<ProductoPrecio> productosConPrecio4Life = [
   ProductoPrecio(
       nombre: 'Transfer factor plus', afiliado: 83.17, publico: 110.98, lp: 55),
   ProductoPrecio(
+      nombre: 'Transfer factor MAX', afiliado: 109.25, publico: 145.30, lp: 75),
+  ProductoPrecio(
+      nombre: 'Riovida Jugo', afiliado: 54.68, publico: 72.73, lp: 32),
+  ProductoPrecio(
       nombre: 'Riovida stix', afiliado: 43.36, publico: 57.67, lp: 20),
   ProductoPrecio(
       nombre: 'Energy go stix', afiliado: 69.82, publico: 92.41, lp: 36),
@@ -229,8 +246,10 @@ const Map<String, double> preciosPromocionalesMiTienda4Life = {
   'Recall': 77.22,
   'Renuvo': 73.93,
   'Riovida burst': 56.68,
+  'Riovida Jugo': 58.18,
   'Riovida stix': 46.14,
   'TF Boost': 29.57,
+  'Transfer factor MAX': 116.24,
   'Transfer factor plus': 88.72,
   'Transfer factor tri factor': 70.65,
   'Vistari': 73.10,
@@ -271,6 +290,17 @@ const Map<String, InformacionProductoCatalogo> informacionProductos4Life = {
     precauciones:
         'Consultar con un profesional si hay condiciones medicas, alergias, embarazo, lactancia o uso de medicamentos.',
     dosis: 'Seguir la indicacion de la etiqueta oficial vigente.',
+  ),
+  'Transfer factor MAX': InformacionProductoCatalogo(
+    descripcion:
+        'Suplemento de apoyo inmunologico avanzado con una formula mas concentrada dentro de la familia Transfer Factor. Esta orientado a personas que buscan un respaldo diario mas potente para la educacion, reconocimiento y memoria del sistema inmune.',
+    componentes:
+        '- Factores de transferencia de calostro bovino y yema de huevo.\n- Formula MAX con componentes de apoyo inmunologico segun etiqueta oficial vigente.',
+    uso:
+        'Puede usarse como apoyo de bienestar inmunitario avanzado dentro de una rutina responsable de descanso, nutricion e hidratacion.',
+    precauciones:
+        'Consultar con un profesional de salud si hay embarazo, lactancia, alergias al huevo o lacteos, medicacion inmunologica o una condicion medica diagnosticada.',
+    dosis: 'Seguir la dosis indicada en la etiqueta oficial vigente.',
   ),
   'Aloe Vera Stix Tropical': InformacionProductoCatalogo(
     descripcion:
@@ -515,6 +545,17 @@ const Map<String, InformacionProductoCatalogo> informacionProductos4Life = {
     precauciones:
         'Revisar ingredientes si hay sensibilidad a frutas, edulcorantes o componentes especificos.',
     dosis: 'Seguir la etiqueta oficial.',
+  ),
+  'Riovida Jugo': InformacionProductoCatalogo(
+    descripcion:
+        'Bebida nutricional RioVida en presentacion de jugo, enfocada en antioxidantes y fitonutrientes para apoyar el bienestar diario, la hidratacion y una rutina de nutricion celular.',
+    componentes:
+        '- Mezcla RioVida de frutas, antioxidantes y fitonutrientes segun etiqueta oficial.\n- Componentes propios de la presentacion liquida o jugo.',
+    uso:
+        'Consumir como bebida de bienestar diario de acuerdo con la etiqueta, especialmente cuando se busca una opcion antioxidante distinta a los stix o burst.',
+    precauciones:
+        'Revisar ingredientes si hay sensibilidad a frutas, edulcorantes o restricciones de azucar. Consultar ante embarazo, lactancia, medicacion o condicion medica.',
+    dosis: 'Seguir la porcion y frecuencia indicadas en la etiqueta oficial.',
   ),
   'Riovida stix': InformacionProductoCatalogo(
     descripcion:

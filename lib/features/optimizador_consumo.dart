@@ -35,41 +35,7 @@ class _PaginaOptimizadorConsumoState extends State<PaginaOptimizadorConsumo> {
   int get _metaLp => int.tryParse(_metaController.text.trim()) ?? 150;
   String _t(String es, String en) => txtApp(es, en);
 
-  Future<bool> _confirmarExceso150() async {
-    final meta = _metaLp;
-    final lpFijo = _productosObligatorios.fold<int>(
-      0,
-      (total, producto) => total + (producto.lp ?? 0),
-    );
-    if (meta <= 150 && lpFijo <= 150) return true;
-
-    final continuar = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(_t('Se paso de 150 LP', 'Over 150 LP')),
-        content: Text(
-          _t(
-            'La meta o los productos escogidos superan los 150 LP. Estas seguro de continuar?',
-            'The goal or selected products are over 150 LP. Are you sure you want to continue?',
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: Text(_t('Cancelar', 'Cancel')),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: Text(_t('Continuar', 'Continue')),
-          ),
-        ],
-      ),
-    );
-    return continuar ?? false;
-  }
-
-  Future<void> _generarPaquetesDesdeBoton() async {
-    if (!await _confirmarExceso150()) return;
+  void _generarPaquetesDesdeBoton() {
     _variacionPaquetes++;
     _generarPaquetes();
   }
@@ -958,6 +924,8 @@ class _OptimizadorConsumo {
   }
 
   static int _compararPaquetes(PaqueteConsumo a, PaqueteConsumo b) {
+    final costo = a.totalAfiliado.compareTo(b.totalAfiliado);
+    if (costo != 0) return costo;
     final excedente = a.excedenteLp.compareTo(b.excedenteLp);
     if (excedente != 0) return excedente;
     final lineas = a.lineas.length.compareTo(b.lineas.length);

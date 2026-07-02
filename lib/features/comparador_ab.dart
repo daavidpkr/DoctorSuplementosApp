@@ -24,7 +24,7 @@ class _PaginaComparadorABState extends State<PaginaComparadorAB> {
       orElse: () => productosConPrecio4Life.first,
     );
     _productoB = productosConPrecio4Life.firstWhere(
-      (producto) => producto.nombre == 'Transfer factor tri factor',
+      (producto) => producto.nombre == 'Transfer factor MAX',
       orElse: () => productosConPrecio4Life.length > 1
           ? productosConPrecio4Life[1]
           : productosConPrecio4Life.first,
@@ -122,6 +122,8 @@ class _PaginaComparadorABState extends State<PaginaComparadorAB> {
     buffer.writeln('LP: ${_productoB.lp ?? 0}\n');
     buffer.writeln(
         '${_t('Decisión rápida', 'Quick decision')}: ${_decisionRapida()}');
+    buffer.writeln(
+        '\n${_t('Lectura comparativa', 'Comparative reading')}: ${_lecturaComparativa()}');
     return buffer.toString();
   }
 
@@ -162,6 +164,21 @@ class _PaginaComparadorABState extends State<PaginaComparadorAB> {
     return _t(
       'Ambos productos están cercanos; decide según preferencia del cliente, formato y objetivo de bienestar.',
       'Both products are close; decide by client preference, format, and wellness goal.',
+    );
+  }
+
+  String _lecturaComparativa() {
+    final precioA = _productoA.afiliado;
+    final precioB = _productoB.afiliado;
+    final lpA = _productoA.lp ?? 0;
+    final lpB = _productoB.lp ?? 0;
+    final costoLpA = lpA == 0 ? double.infinity : precioA / lpA;
+    final costoLpB = lpB == 0 ? double.infinity : precioB / lpB;
+    final masEconomicoLp = costoLpA <= costoLpB ? _productoA : _productoB;
+    final mayorLp = lpA >= lpB ? _productoA : _productoB;
+    return _t(
+      '${_productoA.nombre} se interpreta como una opcion de ${_enfoqueProducto(_productoA).toLowerCase()}, con $lpA LP y precio afiliado de ${_precio(precioA)}. ${_productoB.nombre} se interpreta como una opcion de ${_enfoqueProducto(_productoB).toLowerCase()}, con $lpB LP y precio afiliado de ${_precio(precioB)}. Si el objetivo principal es maximizar volumen LP, destaca ${mayorLp.nombre}; si el objetivo es cuidar el costo por LP, destaca ${masEconomicoLp.nombre}. Para decidir con un cliente, cruza esta informacion con necesidad real, presupuesto, tolerancia y formato preferido.',
+      '${_productoA.nombre} reads as a ${_enfoqueProducto(_productoA).toLowerCase()} option, with $lpA LP and a member price of ${_precio(precioA)}. ${_productoB.nombre} reads as a ${_enfoqueProducto(_productoB).toLowerCase()} option, with $lpB LP and a member price of ${_precio(precioB)}. If the main goal is maximizing LP volume, ${mayorLp.nombre} stands out; if the goal is controlling cost per LP, ${masEconomicoLp.nombre} stands out. To decide with a client, cross this with real need, budget, tolerance, and preferred format.',
     );
   }
 
@@ -250,6 +267,8 @@ class _PaginaComparadorABState extends State<PaginaComparadorAB> {
                   _tablaMetricas(),
                   const SizedBox(height: 16),
                   _decisionCard(),
+                  const SizedBox(height: 16),
+                  _lecturaCard(),
                   const SizedBox(height: 16),
                   _acciones(),
                 ],
@@ -648,6 +667,48 @@ class _PaginaComparadorABState extends State<PaginaComparadorAB> {
                     fontSize: 15,
                     height: 1.32,
                     fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _lecturaCard() {
+    return _contenedorTarjeta(
+      padding: const EdgeInsets.all(18),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const CircleAvatar(
+            radius: 24,
+            backgroundColor: Color(0xFF1487A8),
+            child: Icon(Icons.notes_rounded, color: Colors.white, size: 27),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  _t('Lectura comparativa', 'Comparative reading'),
+                  style: const TextStyle(
+                    color: _azul,
+                    fontSize: 17,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  _lecturaComparativa(),
+                  style: const TextStyle(
+                    color: _tinta,
+                    fontSize: 14.5,
+                    height: 1.38,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
               ],
