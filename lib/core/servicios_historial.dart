@@ -63,6 +63,7 @@ class ChatHistoryService {
     String id,
     List<Map<String, String>> mensajes, {
     String tipo = 'asesor_4life',
+    String modoAsesor = 'asesor_ia',
   }) async {
     if (mensajes.isEmpty) return;
 
@@ -85,6 +86,7 @@ class ChatHistoryService {
           ? '${tituloNormalizado.substring(0, 45)}...'
           : tituloNormalizado,
       'tipo': tipo,
+      'modoAsesor': modoAsesor,
       'mensajes': mensajes,
     };
 

@@ -170,9 +170,9 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
                     _tarjetaCategoria(
                       context,
                       id: 'catalogos',
-                      titulo: txtApp('Catalogos', 'Catalogs'),
+                      titulo: txtApp('Catálogos', 'Catalogs'),
                       descripcion: txtApp(
-                        'Catalogo afiliado y Catalogo MiTienda.',
+                        'Catálogo afiliado y Catálogo MiTienda.',
                         'Member Catalog and MyStore Catalog.',
                       ),
                       icono: Icons.view_list_rounded,
@@ -199,9 +199,9 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
                     _tarjetaCategoria(
                       context,
                       id: 'diagnosticos',
-                      titulo: txtApp('Diagnosticos', 'Diagnoses'),
+                      titulo: txtApp('Diagnósticos', 'Diagnoses'),
                       descripcion: txtApp(
-                        'Diagnostico, cambio fisico e historial.',
+                        'Diagnóstico, cambio físico e historial.',
                         'Diagnosis, body transformation, and history.',
                       ),
                       icono: Icons.assignment_turned_in_rounded,
@@ -212,7 +212,7 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
                       context,
                       id: 'analisis_control',
                       titulo:
-                          txtApp('Analisis y Control', 'Analysis and Control'),
+                          txtApp('Análisis y Control', 'Analysis and Control'),
                       descripcion: txtApp(
                         'Inventario local y comparador A/B.',
                         'Local inventory and A/B comparator.',
@@ -249,19 +249,6 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
                       fichas: [testimonios, diccionario],
                     ),
                     _tarjetaMenu(context, ficha: perfil),
-                    const SizedBox(height: 8),
-                    Padding(
-                      padding: const EdgeInsets.only(left: 8, bottom: 10),
-                      child: Text(
-                        IdiomaService.texto('quick_access'),
-                        style: const TextStyle(
-                          color: Color(0xFF0A1552),
-                          fontSize: 13,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                    ),
-                    _accesosRapidos(context),
                   ],
                 ),
               ),
@@ -567,25 +554,56 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
         ),
         AnimatedCrossFade(
           firstChild: const SizedBox.shrink(),
-          secondChild: Padding(
-            padding: const EdgeInsets.fromLTRB(12, 4, 0, 12),
-            child: Container(
-              padding: const EdgeInsets.fromLTRB(10, 8, 0, 2),
-              decoration: const BoxDecoration(
-                border: Border(
-                  left: BorderSide(color: Color(0xFF2839C7), width: 3),
-                ),
+          secondChild: TweenAnimationBuilder<double>(
+            tween: Tween(begin: 0, end: 1),
+            duration: const Duration(milliseconds: 220),
+            curve: Curves.easeOutCubic,
+            builder: (context, valor, child) => Opacity(
+              opacity: valor,
+              child: Transform.translate(
+                offset: Offset(0, 8 * (1 - valor)),
+                child: child,
               ),
-              child: Column(
-                children: fichas
-                    .map(
-                      (ficha) => _tarjetaMenu(
-                        context,
-                        ficha: ficha,
-                        margin: const EdgeInsets.only(top: 8),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(12, 4, 0, 12),
+              child: IntrinsicHeight(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    TweenAnimationBuilder<double>(
+                      tween: Tween(begin: 0, end: 1),
+                      duration: const Duration(milliseconds: 260),
+                      curve: Curves.easeOutCubic,
+                      builder: (context, valor, child) => Transform.scale(
+                        scaleY: valor,
+                        alignment: Alignment.topCenter,
+                        child: Opacity(opacity: valor, child: child),
                       ),
-                    )
-                    .toList(),
+                      child: Container(
+                        width: 3,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF2839C7),
+                          borderRadius: BorderRadius.circular(99),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        children: fichas
+                            .map(
+                              (ficha) => _tarjetaMenu(
+                                context,
+                                ficha: ficha,
+                                margin: const EdgeInsets.only(top: 8),
+                              ),
+                            )
+                            .toList(),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -594,79 +612,6 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
           duration: const Duration(milliseconds: 180),
         ),
       ],
-    );
-  }
-
-  Widget _accesosRapidos(BuildContext context) {
-    return Container(
-      height: 58,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF0E1A5F).withValues(alpha: 0.06),
-            blurRadius: 13,
-            offset: const Offset(0, 6),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          _accesoRapido(
-            context,
-            IdiomaService.texto('catalog'),
-            Icons.article_outlined,
-            const ConsultaProductoPagina(),
-          ),
-          _accesoRapido(
-            context,
-            IdiomaService.texto('prices'),
-            Icons.calculate_outlined,
-            const PaginaCalculadoraPrecios(),
-          ),
-          _accesoRapido(
-            context,
-            IdiomaService.texto('diagnoses'),
-            Icons.assignment_turned_in_outlined,
-            const PaginaHistorial(),
-          ),
-          _accesoRapido(
-            context,
-            IdiomaService.texto('chats'),
-            Icons.school_outlined,
-            const PaginaHistorialChatbot(),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _accesoRapido(
-      BuildContext context, String texto, IconData icono, Widget destino) {
-    return Expanded(
-      child: InkWell(
-        borderRadius: BorderRadius.circular(12),
-        onTap: () => Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => destino),
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icono, color: const Color(0xFF1B2A99), size: 20),
-            const SizedBox(height: 4),
-            Text(
-              texto,
-              style: const TextStyle(
-                color: Color(0xFF18215E),
-                fontSize: 10,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 

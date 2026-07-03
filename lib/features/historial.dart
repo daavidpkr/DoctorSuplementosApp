@@ -164,14 +164,14 @@ class _PaginaHistorialState extends State<PaginaHistorial> {
       builder: (context) => AlertDialog(
         title: Text(
           esCambio
-              ? txtApp("Ajustar cambio fisico", "Adjust body change")
+              ? txtApp("Ajustar cambio físico", "Adjust body change")
               : txtApp("Re-evaluar a $nombre", "Re-evaluate $nombre"),
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              "${esCambio ? txtApp('Guia anterior', 'Previous guide') : txtApp('Diagnostico anterior', 'Previous diagnosis')}:\n$resultado",
+              "${esCambio ? txtApp('Guía anterior', 'Previous guide') : txtApp('Diagnóstico anterior', 'Previous diagnosis')}:\n$resultado",
               maxLines: 4,
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(fontSize: 12, color: Colors.grey),
@@ -198,7 +198,7 @@ class _PaginaHistorialState extends State<PaginaHistorial> {
           ElevatedButton(
             onPressed: () {
               final nuevaConsultaIA =
-                  "Tomando como base ${esCambio ? 'la guia de cambio fisico anterior' : 'el diagnostico anterior'} de este paciente: $resultado. "
+                  "Tomando como base ${esCambio ? 'la guía de cambio físico anterior' : 'el diagnóstico anterior'} de este paciente: $resultado. "
                   "El paciente ahora presenta lo siguiente o se requiere ajustar esto: ${nuevaPreguntaController.text}";
 
               Navigator.pop(context);
@@ -236,9 +236,9 @@ class _PaginaHistorialState extends State<PaginaHistorial> {
       MaterialPageRoute(
         builder: (context) => PantallaResultadoFicha(
           titulo: esCambio
-              ? 'Resultado de Cambio Fisico'
-              : 'Resultado del Diagnostico',
-          tipoFicha: esCambio ? 'Cambio fisico' : 'Diagnostico',
+              ? 'Resultado de Cambio Físico'
+              : 'Resultado del Diagnóstico',
+          tipoFicha: esCambio ? 'Cambio físico' : 'Diagnóstico',
           paciente: nombre,
           nombreAsesor: perfilAsesor.nombre,
           especialidad: esCambio
@@ -314,13 +314,13 @@ class _PaginaHistorialState extends State<PaginaHistorial> {
     }
     if (_esCambioFisico(registro)) {
       return _EstadoPaciente(
-        texto: txtApp('Cambio fisico completo', 'Body change complete'),
+        texto: txtApp('Cambio físico completo', 'Body change complete'),
         icono: Icons.fitness_center_rounded,
         color: Color(0xFF14983E),
       );
     }
     return _EstadoPaciente(
-      texto: txtApp('Diagnostico completo', 'Diagnosis complete'),
+      texto: txtApp('Diagnóstico completo', 'Diagnosis complete'),
       icono: Icons.check_circle_outline,
       color: Color(0xFF14983E),
     );
@@ -384,14 +384,14 @@ class _PaginaHistorialState extends State<PaginaHistorial> {
         children: [
           Expanded(
             child: _opcionTipoHistorial(
-              texto: txtApp('Diagnosticos', 'Diagnoses'),
+              texto: txtApp('Diagnósticos', 'Diagnoses'),
               icono: Icons.medical_services_outlined,
               tipo: 'diagnostico',
             ),
           ),
           Expanded(
             child: _opcionTipoHistorial(
-              texto: txtApp('Cambios fisicos', 'Body changes'),
+              texto: txtApp('Cambios físicos', 'Body changes'),
               icono: Icons.fitness_center_rounded,
               tipo: 'cambio_fisico',
             ),
@@ -566,8 +566,8 @@ class _PaginaHistorialState extends State<PaginaHistorial> {
                           Expanded(
                             child: Text(
                               _tipoSeleccionado == 'cambio_fisico'
-                                  ? txtApp('Cambios fisicos', 'Body changes')
-                                  : txtApp('Diagnosticos', 'Diagnoses'),
+                                  ? txtApp('Cambios físicos', 'Body changes')
+                                  : txtApp('Diagnósticos', 'Diagnoses'),
                               style: const TextStyle(
                                 color: Color(0xFF646B88),
                                 fontSize: 20,
@@ -638,7 +638,7 @@ class _PaginaHistorialState extends State<PaginaHistorial> {
                         Text(
                           _tipoSeleccionado == 'cambio_fisico'
                               ? txtApp('Nuevo cambio', 'New change')
-                              : txtApp('Nuevo diagnostico', 'New diagnosis'),
+                              : txtApp('Nuevo diagnóstico', 'New diagnosis'),
                           style: TextStyle(
                             color: azul,
                             fontSize: 13,
@@ -694,7 +694,7 @@ class _PaginaHistorialState extends State<PaginaHistorial> {
               Expanded(
                 child: _ItemNavegacionHistorial(
                   icono: Icons.bar_chart,
-                  texto: txtApp('Estadisticas', 'Statistics'),
+                  texto: txtApp('Estadísticas', 'Statistics'),
                   onTap: () => Navigator.push(
                     context,
                     MaterialPageRoute(
@@ -1171,6 +1171,24 @@ class _PaginaHistorialChatbotState extends State<PaginaHistorialChatbot> {
     );
   }
 
+  _CategoriaChat _modoPara(Map<String, dynamic> chat) {
+    final modo = chat['modoAsesor']?.toString() ?? 'asesor_ia';
+    if (modo == 'modo_cientifico') {
+      return _CategoriaChat(
+        texto: txtApp('Modo científico', 'Scientific mode'),
+        icono: Icons.science_rounded,
+        color: const Color(0xFF6A4DE8),
+        fondo: const Color(0xFFEDE8FF),
+      );
+    }
+    return _CategoriaChat(
+      texto: txtApp('Asesor IA', 'AI adviser'),
+      icono: Icons.auto_awesome_rounded,
+      color: const Color(0xFF1487A8),
+      fondo: const Color(0xFFE3F6FA),
+    );
+  }
+
   void _nuevoChat() {
     Navigator.push(
       context,
@@ -1455,6 +1473,7 @@ class _PaginaHistorialChatbotState extends State<PaginaHistorialChatbot> {
                                   titulo: titulo,
                                   fecha: _fechaLegible(chat['fecha']),
                                   categoria: _categoriaPara(titulo),
+                                  modo: _modoPara(chat),
                                   onAbrir: () => _abrirChat(chat),
                                   onEliminar:
                                       id.isEmpty ? null : () => _eliminar(id),
@@ -1539,7 +1558,7 @@ class _PaginaHistorialChatbotState extends State<PaginaHistorialChatbot> {
               Expanded(
                 child: _ItemNavegacionHistorial(
                   icono: Icons.bar_chart,
-                  texto: txtApp('Estadisticas', 'Statistics'),
+                  texto: txtApp('Estadísticas', 'Statistics'),
                   onTap: () => Navigator.push(
                     context,
                     MaterialPageRoute(
@@ -1574,6 +1593,7 @@ class _TarjetaConversacion extends StatelessWidget {
   final String titulo;
   final String fecha;
   final _CategoriaChat categoria;
+  final _CategoriaChat modo;
   final VoidCallback onAbrir;
   final VoidCallback? onEliminar;
 
@@ -1581,6 +1601,7 @@ class _TarjetaConversacion extends StatelessWidget {
     required this.titulo,
     required this.fecha,
     required this.categoria,
+    required this.modo,
     required this.onAbrir,
     required this.onEliminar,
   });
@@ -1660,34 +1681,13 @@ class _TarjetaConversacion extends StatelessWidget {
                       const SizedBox(height: 9),
                       Align(
                         alignment: Alignment.centerLeft,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 5,
-                          ),
-                          decoration: BoxDecoration(
-                            color: categoria.fondo,
-                            borderRadius: BorderRadius.circular(13),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                categoria.icono,
-                                color: categoria.color,
-                                size: 17,
-                              ),
-                              const SizedBox(width: 5),
-                              Text(
-                                categoria.texto,
-                                style: TextStyle(
-                                  color: categoria.color,
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w800,
-                                ),
-                              ),
-                            ],
-                          ),
+                        child: Wrap(
+                          spacing: 8,
+                          runSpacing: 6,
+                          children: [
+                            _chipCategoria(categoria),
+                            _chipCategoria(modo),
+                          ],
                         ),
                       ),
                     ],
@@ -1720,6 +1720,38 @@ class _TarjetaConversacion extends StatelessWidget {
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _chipCategoria(_CategoriaChat categoria) {
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: 10,
+        vertical: 5,
+      ),
+      decoration: BoxDecoration(
+        color: categoria.fondo,
+        borderRadius: BorderRadius.circular(13),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            categoria.icono,
+            color: categoria.color,
+            size: 17,
+          ),
+          const SizedBox(width: 5),
+          Text(
+            categoria.texto,
+            style: TextStyle(
+              color: categoria.color,
+              fontSize: 13,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ],
       ),
     );
   }

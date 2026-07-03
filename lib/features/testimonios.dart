@@ -393,7 +393,14 @@ class _PaginaTestimonios4LifeState extends State<PaginaTestimonios4Life> {
                           return _tarjetaVideo(resultados[index], ingles);
                         },
                       ),
-                    const SizedBox(height: 24),
+                    SizedBox(
+                      height: resultados.length <= 3
+                          ? math.max(
+                              24,
+                              MediaQuery.of(context).size.height * 0.26,
+                            )
+                          : 24,
+                    ),
                     _ayudaTestimonios(ingles),
                     if (_miniPlayer) const SizedBox(height: 126),
                   ],
@@ -846,7 +853,7 @@ class _PaginaTestimonios4LifeState extends State<PaginaTestimonios4Life> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            'Descripcion',
+            'Descripción',
             style: TextStyle(
               color: Color(0xFF07136E),
               fontSize: 15,

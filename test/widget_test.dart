@@ -18,7 +18,7 @@ void main() {
     expect(find.text(IdiomaService.texto('diagnosis')), findsOneWidget);
     expect(find.text(IdiomaService.texto('history')), findsOneWidget);
     expect(find.text(IdiomaService.texto('ai_adviser')), findsOneWidget);
-    expect(find.text(IdiomaService.texto('quick_access')), findsOneWidget);
+    expect(find.text(IdiomaService.texto('quick_access')), findsNothing);
   });
 
   testWidgets('fresh install starts on adviser profile', (tester) async {

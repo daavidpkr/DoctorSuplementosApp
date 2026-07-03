@@ -72,8 +72,8 @@ class _FormularioPacienteState extends State<FormularioPaciente> {
     final perfilAsesor = await PerfilService.cargar();
     final instruccionIdioma = await IdiomaService.instruccionIa();
     final saludoAsesor = perfilAsesor.tieneNombre
-        ? "Inicia el reporte con este saludo personalizado: Hola, como estas, mi nombre es ${perfilAsesor.nombre.trim()}. Luego continua con el diagnostico."
-        : "Inicia con un saludo empatico breve y luego continua con el diagnostico.";
+        ? "Inicia el reporte con este saludo personalizado: Hola, ¿cómo estás?, mi nombre es ${perfilAsesor.nombre.trim()}. Luego continúa con el diagnóstico."
+        : "Inicia con un saludo empático breve y luego continúa con el diagnóstico.";
 
     final prompt = """
     IDIOMA OBLIGATORIO:
@@ -97,6 +97,13 @@ class _FormularioPacienteState extends State<FormularioPaciente> {
     4. DOSIFICACIÓN EXACTA Y DETALLADA: Para cada producto recomendado, debes dar la dosis exacta en una lista independiente, clara y legible. Queda estrictamente prohibido agrupar o mezclar las dosis en un solo párrafo de texto corrido.
     5. TONO Y SEGURIDAD: Mantén un tono científico pero accesible. No uses lenguaje de ventas exagerado ni prometas "curas milagrosas". Incluye siempre de forma sutil que los suplementos respaldan las funciones fisiológicas y el sistema inmunitario, y que no sustituyen ningún tratamiento médico.
 
+    FORMATO Y EXPLICACIÓN OBLIGATORIA:
+    - Usa títulos claros en *negrita*, listas numeradas o viñetas, y _subrayado_ para advertencias o puntos importantes.
+    - Evita respuestas en un solo párrafo; separa el diagnóstico en bloques fáciles de leer.
+    - Para cada producto elegido, explica con precisión por qué encaja con los síntomas, edad, género, antecedentes, señales del caso y objetivo de bienestar.
+    - No basta decir que un producto "es bueno"; conecta el producto con el razonamiento del caso.
+    - Cuando generes un diagnóstico, desarrolla la explicación con al menos 1000 palabras si el contexto entregado lo permite.
+
     REGLA ADICIONAL DE CANTIDAD DE PRODUCTOS:
     Recomienda normalmente un maximo de 3 o 4 productos. Solo en casos extremos,
     complejos o especiales donde el contexto realmente lo justifique puedes usar
@@ -105,6 +112,11 @@ class _FormularioPacienteState extends State<FormularioPaciente> {
     3 o 4 productos como limite.
 
     Estructura requerida para la respuesta:
+
+    *LECTURA CLÍNICA ORIENTATIVA*
+    - [Qué podría estar pasando según los síntomas]
+    - [Factores que se deben vigilar]
+    - [Qué información faltaría confirmar con un profesional]
 
     *SALUDO Y ANÁLISIS DEL CASO*
     [Breve introducción empática analizando los datos del paciente]
@@ -115,12 +127,14 @@ class _FormularioPacienteState extends State<FormularioPaciente> {
     - *Dosis mañana:* [Cantidad exacta]
     - *Dosis tarde:* [Cantidad exacta]
     - *Dosis noche:* [Cantidad exacta]
+    - *Por qué se elige:* [Explicación precisa conectada con el caso]
     - *Beneficio clave:* [Breve explicación técnica de cómo actúa en el organismo]
 
     *2. [Nombre del Producto 4Life]*
     - *Dosis mañana:* [Cantidad exacta]
     - *Dosis tarde:* [Cantidad exacta]
     - *Dosis noche:* [Cantidad exacta]
+    - *Por qué se elige:* [Explicación precisa conectada con el caso]
     - *Beneficio clave:* [Breve explicación técnica]
 
     [Repetir estructura si se requiere un 3er o 4to producto, máximo y si no requiere no incluir el texto "No se requiere" o "No aplica"] 
@@ -139,8 +153,8 @@ class _FormularioPacienteState extends State<FormularioPaciente> {
           Content.multi([
             TextPart(
               _adjunto!.esAudio
-                  ? "$prompt\n\nAnaliza la nota de voz adjunta. Extrae los sintomas, contexto y datos relevantes mencionados por el paciente para orientar la recomendacion; no guardes ni menciones que el audio fue almacenado."
-                  : "$prompt\n\nAnaliza tambien el archivo adjunto. Extrae solo la informacion relevante para orientar la recomendacion y usala como contexto complementario; no afirmes diagnosticos medicos definitivos.",
+                  ? "$prompt\n\nAnaliza la nota de voz adjunta. Extrae los síntomas, contexto y datos relevantes mencionados por el paciente para orientar la recomendación; no guardes ni menciones que el audio fue almacenado."
+                  : "$prompt\n\nAnaliza también el archivo adjunto. Extrae solo la información relevante para orientar la recomendación y úsala como contexto complementario; no afirmes diagnósticos médicos definitivos.",
             ),
             DataPart(_adjunto!.mimeType, _adjunto!.bytes),
           ]),
@@ -155,7 +169,7 @@ class _FormularioPacienteState extends State<FormularioPaciente> {
         'genero': _generoSeleccionado!,
         'sintomas':
             historialController.text.trim().isEmpty && _adjunto?.esAudio == true
-                ? 'Sintomas enviados por nota de voz (audio no guardado)'
+                ? 'Síntomas enviados por nota de voz (audio no guardado)'
                 : historialController.text,
       });
 
@@ -253,7 +267,7 @@ class _FormularioPacienteState extends State<FormularioPaciente> {
 
       setState(() {
         _adjunto = ArchivoAdjuntoIA(
-          nombre: 'Nota de voz para diagnostico.m4a',
+          nombre: 'Nota de voz para diagnóstico.m4a',
           mimeType: 'audio/mp4',
           bytes: bytes,
         );
@@ -263,8 +277,8 @@ class _FormularioPacienteState extends State<FormularioPaciente> {
 
     if (!await _audioRecorder.hasPermission()) {
       _mostrarDialogoSimple(
-        "Permiso de microfono",
-        "Activa el permiso del microfono para grabar la nota de voz.",
+        "Permiso de micrófono",
+        "Activa el permiso del micrófono para grabar la nota de voz.",
       );
       return;
     }
@@ -444,19 +458,19 @@ class _FormularioPacienteState extends State<FormularioPaciente> {
                       hint: txtApp("Ingresa tu edad", "Enter your age"),
                       prefixIcon: Icons.calendar_month_outlined,
                       keyboardType: TextInputType.number,
-                      suffixText: txtApp("Anos", "Years"),
+                      suffixText: txtApp("Años", "Years"),
                       textInputAction: TextInputAction.next,
                     ),
                   ),
                   const SizedBox(height: 16),
                   _tarjetaCampoDiagnostico(
-                    titulo: txtApp("Genero", "Gender"),
+                    titulo: txtApp("Género", "Gender"),
                     icono: Icons.transgender_rounded,
                     child: _selectorGeneroDiagnostico(),
                   ),
                   const SizedBox(height: 16),
                   _tarjetaCampoDiagnostico(
-                    titulo: txtApp("Sintomas actuales", "Current symptoms"),
+                    titulo: txtApp("Síntomas actuales", "Current symptoms"),
                     icono: Icons.medical_services_outlined,
                     child: _campoSintomasDiagnostico(),
                   ),
@@ -492,7 +506,7 @@ class _FormularioPacienteState extends State<FormularioPaciente> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                txtApp("Formulario de Diagnostico", "Diagnosis Form"),
+                txtApp("Formulario de Diagnóstico", "Diagnosis Form"),
                 style: const TextStyle(
                   color: Colors.white,
                   fontSize: 30,
@@ -503,7 +517,7 @@ class _FormularioPacienteState extends State<FormularioPaciente> {
               const SizedBox(height: 10),
               Text(
                 txtApp(
-                  "Completa los datos para un diagnostico preciso",
+                  "Completa los datos para un diagnóstico preciso",
                   "Complete the details for an accurate diagnosis",
                 ),
                 style: const TextStyle(
@@ -597,7 +611,7 @@ class _FormularioPacienteState extends State<FormularioPaciente> {
                     const SizedBox(height: 14),
                     Text(
                       txtApp(
-                        "Proporciona informacion precisa para mejores resultados.",
+                        "Proporciona información precisa para mejores resultados.",
                         "Provide accurate information for better results.",
                       ),
                       style: const TextStyle(
@@ -768,11 +782,11 @@ class _FormularioPacienteState extends State<FormularioPaciente> {
           controller: historialController,
           minLines: 6,
           maxLines: 6,
-          maxLength: 500,
+          maxLength: 1000,
           textInputAction: TextInputAction.newline,
           decoration: _inputDecoracionDiagnostico(
             hint: txtApp(
-              "Describe tus sintomas actuales...",
+              "Describe tus síntomas actuales...",
               "Describe your current symptoms...",
             ),
             alignLabelWithHint: true,
@@ -782,7 +796,7 @@ class _FormularioPacienteState extends State<FormularioPaciente> {
           right: 18,
           bottom: 16,
           child: Text(
-            "$conteo/500",
+            "$conteo/1000",
             style: const TextStyle(
               color: Color(0xFF4C5687),
               fontSize: 15,
@@ -810,7 +824,7 @@ class _FormularioPacienteState extends State<FormularioPaciente> {
                 child: OutlinedButton.icon(
                   onPressed: _tomarFotoDiagnostico,
                   icon: const Icon(Icons.photo_camera_rounded),
-                  label: Text(txtApp("Camara", "Camera")),
+                  label: Text(txtApp("Cámara", "Camera")),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: const Color(0xFF12248B),
                     minimumSize: const Size(0, 48),
@@ -1026,7 +1040,7 @@ class _FormularioPacienteState extends State<FormularioPaciente> {
               children: [
                 Text(
                   txtApp(
-                    "Tu informacion es confidencial",
+                    "Tu información es confidencial",
                     "Your information is confidential",
                   ),
                   style: const TextStyle(
@@ -1038,7 +1052,7 @@ class _FormularioPacienteState extends State<FormularioPaciente> {
                 const SizedBox(height: 12),
                 Text(
                   txtApp(
-                    "Todos los datos ingresados estan protegidos y se utilizan unicamente para generar tu diagnostico personalizado.",
+                    "Todos los datos ingresados están protegidos y se utilizan únicamente para generar tu diagnóstico personalizado.",
                     "All entered data is protected and used only to generate your personalized diagnosis.",
                   ),
                   style: const TextStyle(
@@ -1093,7 +1107,7 @@ class _FormularioPacienteState extends State<FormularioPaciente> {
                         color: Colors.white, size: 34),
                     const SizedBox(width: 18),
                     Text(
-                      txtApp("GENERAR DIAGNOSTICO", "GENERATE DIAGNOSIS"),
+                      txtApp("GENERAR DIAGNÓSTICO", "GENERATE DIAGNOSIS"),
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 20,
@@ -1114,7 +1128,7 @@ class _FormularioPacienteState extends State<FormularioPaciente> {
         title: Text(txtApp("Ayuda", "Help")),
         content: Text(
           txtApp(
-            "Completa nombre, edad, genero y sintomas actuales. Mientras mas claro sea el contexto, mas util sera el diagnostico generado.",
+            "Completa nombre, edad, género y síntomas actuales. Mientras más claro sea el contexto, más útil será el diagnóstico generado.",
             "Complete name, age, gender, and current symptoms. The clearer the context, the more useful the generated diagnosis will be.",
           ),
         ),

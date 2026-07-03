@@ -19,11 +19,11 @@ class _FormularioCambioFisicoState extends State<FormularioCambioFisico> {
 
   static const Map<String, String> _contexturas = {
     'Ectomorfo':
-        'Complexion delgada, extremidades largas y huesos finos. Metabolismo rapido; les cuesta subir de peso y ganar masa muscular.',
+        'Complexión delgada, extremidades largas y huesos finos. Metabolismo rápido; les cuesta subir de peso y ganar masa muscular.',
     'Mesomorfo':
-        'Complexion atletica, naturalmente musculoso y fuerte. Metabolismo eficiente; ganan masa muscular con facilidad y mantienen un peso estable rapidamente.',
+        'Complexión atlética, naturalmente musculoso y fuerte. Metabolismo eficiente; ganan masa muscular con facilidad y mantienen un peso estable rápidamente.',
     'Endomorfo':
-        'Estructura osea mas ancha, cuerpo suave y redondeado. Metabolismo lento; tienden a acumular grasa con mayor facilidad, pero tambien pueden desarrollar buena masa muscular.',
+        'Estructura ósea más ancha, cuerpo suave y redondeado. Metabolismo lento; tienden a acumular grasa con mayor facilidad, pero también pueden desarrollar buena masa muscular.',
   };
 
   @override
@@ -62,7 +62,7 @@ class _FormularioCambioFisicoState extends State<FormularioCambioFisico> {
     if (_camposCompletos < 7) {
       _mostrarDialogoSimple(
         "Datos incompletos",
-        "Completa todos los campos para generar la recomendacion.",
+        "Completa todos los campos para generar la recomendación.",
       );
       return;
     }
@@ -77,8 +77,8 @@ class _FormularioCambioFisicoState extends State<FormularioCambioFisico> {
     final perfilAsesor = await PerfilService.cargar();
     final instruccionIdioma = await IdiomaService.instruccionIa();
     final saludoAsesor = perfilAsesor.tieneNombre
-        ? "Inicia el reporte con este saludo personalizado: Hola, como estas, mi nombre es ${perfilAsesor.nombre.trim()}. Luego continua con la guia."
-        : "Inicia con un saludo empatico breve y luego continua con la guia.";
+        ? "Inicia el reporte con este saludo personalizado: Hola, ¿cómo estás?, mi nombre es ${perfilAsesor.nombre.trim()}. Luego continúa con la guía."
+        : "Inicia con un saludo empático breve y luego continúa con la guía.";
 
     final prompt = """
     IDIOMA OBLIGATORIO:
@@ -87,14 +87,14 @@ class _FormularioCambioFisicoState extends State<FormularioCambioFisico> {
     DATOS PARA CAMBIO FISICO:
     Nombre: ${nombreController.text}
     Edad: ${edadController.text}
-    Genero: $_generoSeleccionado
+    Género: $_generoSeleccionado
     Peso: ${pesoController.text} kg
     Altura: ${alturaController.text} m
     Contextura: $_contexturaSeleccionada - ${_contexturas[_contexturaSeleccionada] ?? ''}
-    Objetivo fisico: ${objetivoController.text}
+    Objetivo físico: ${objetivoController.text}
     $saludoAsesor
 
-    Actua como asesor profesional de bienestar, composicion corporal y suplementos 4Life. Genera una guia responsable, clara y lista para compartir por WhatsApp.
+    Actúa como asesor profesional de bienestar, composición corporal y suplementos 4Life. Genera una guía responsable, clara y lista para compartir por WhatsApp.
 
     REGLA CRITICA DE PRODUCTOS:
     - Debes recomendar UNICAMENTE productos de esta lista: $catalogoCambioFisico4Life.
@@ -104,22 +104,32 @@ class _FormularioCambioFisicoState extends State<FormularioCambioFisico> {
 
     Instrucciones:
     1. Usa asteriscos para titulos en negrita de WhatsApp.
-    2. Enfoca el analisis en peso, altura, genero, contextura y objetivo fisico.
+    2. Enfoca el análisis en peso, altura, género, contextura y objetivo físico.
     3. No prometas resultados exactos ni milagrosos.
     4. Para cada producto incluye dosis general por horario si corresponde.
-    5. Agrega 3 recomendaciones de habitos: alimentacion, entrenamiento y descanso.
+    5. Agrega 3 recomendaciones de hábitos: alimentación, entrenamiento y descanso.
+    6. Usa títulos en *negrita*, listas claras y _subrayado_ para puntos clave o advertencias.
+    7. No des productos "por dar"; justifica cada producto con el objetivo físico, contextura, peso, altura, edad y hábitos implícitos del caso.
+    8. Arma un plan bien pensado: prioridad del objetivo, estrategia nutricional general, apoyo de entrenamiento, descanso, seguimiento y señales para ajustar.
+    9. Desarrolla la explicación con al menos 1000 palabras si el objetivo entregado tiene suficiente contexto.
 
     Estructura obligatoria:
 
-    *SALUDO Y ANALISIS FISICO*
-    [Analisis breve del perfil y objetivo]
+    *SALUDO Y ANÁLISIS FÍSICO*
+    [Análisis breve del perfil y objetivo]
 
-    *PLAN DE APOYO 4LIFE (Max. 3-4 productos; mas solo si el caso es extremo/especial)*
+    *PLANIFICACIÓN DEL CASO*
+    - [Prioridad principal del objetivo]
+    - [Qué se debe cuidar por la contextura]
+    - [Cómo medir avance y cuándo ajustar]
+
+    *PLAN DE APOYO 4LIFE (Máx. 3-4 productos; más solo si el caso es extremo/especial)*
 
     *1. [Nombre exacto del producto]*
     - *Dosis manana:* [Cantidad]
     - *Dosis tarde:* [Cantidad, si aplica]
     - *Dosis noche:* [Cantidad, si aplica]
+    - *Por qué se elige:* [Razón precisa conectada con el caso]
     - *Apoyo principal:* [Explicacion breve]
 
     [Repetir solo hasta 3 o 4 productos]
@@ -129,14 +139,14 @@ class _FormularioCambioFisicoState extends State<FormularioCambioFisico> {
     - [Consejo de entrenamiento]
     - [Consejo de descanso/seguimiento]
 
-    *Nota responsable:* Esta guia es de apoyo general para bienestar y composicion corporal; no sustituye una evaluacion medica, nutricional o deportiva profesional.""";
+    *Nota responsable:* Esta guía es de apoyo general para bienestar y composición corporal; no sustituye una evaluación médica, nutricional o deportiva profesional.""";
 
     try {
       final response = await model.generateContent([Content.text(prompt)]);
       final textoFinal = response.text ?? "Sin respuesta";
 
       await HistorialService.guardar(
-        "Cambio fisico: ${nombreController.text}",
+        "Cambio físico: ${nombreController.text}",
         textoFinal,
         {
           'nombre': nombreController.text,
@@ -240,13 +250,13 @@ class _FormularioCambioFisicoState extends State<FormularioCambioFisico> {
                       hint: txtApp("Ingresa tu edad", "Enter your age"),
                       prefixIcon: Icons.calendar_month_outlined,
                       keyboardType: TextInputType.number,
-                      suffixText: txtApp("Anos", "Years"),
+                      suffixText: txtApp("Años", "Years"),
                       textInputAction: TextInputAction.next,
                     ),
                   ),
                   const SizedBox(height: 16),
                   _tarjetaCampo(
-                    titulo: txtApp("Genero", "Gender"),
+                    titulo: txtApp("Género", "Gender"),
                     icono: Icons.transgender_rounded,
                     child: _selectorGenero(),
                   ),
@@ -286,7 +296,7 @@ class _FormularioCambioFisicoState extends State<FormularioCambioFisico> {
                   ),
                   const SizedBox(height: 16),
                   _tarjetaCampo(
-                    titulo: txtApp("Objetivo fisico", "Body goal"),
+                    titulo: txtApp("Objetivo físico", "Body goal"),
                     icono: Icons.flag_outlined,
                     child: _campoObjetivo(),
                   ),
@@ -331,7 +341,7 @@ class _FormularioCambioFisicoState extends State<FormularioCambioFisico> {
               const SizedBox(height: 10),
               Text(
                 txtApp(
-                  "Completa los datos para una guia corporal personalizada",
+                  "Completa los datos para una guía corporal personalizada",
                   "Complete the details for a personalized body guide",
                 ),
                 style: const TextStyle(
@@ -396,7 +406,7 @@ class _FormularioCambioFisicoState extends State<FormularioCambioFisico> {
                     const SizedBox(height: 14),
                     Text(
                       txtApp(
-                        "La guia se adapta al perfil fisico y objetivo.",
+                        "La guía se adapta al perfil físico y objetivo.",
                         "The guide adapts to the body profile and goal.",
                       ),
                       style: const TextStyle(
@@ -544,6 +554,27 @@ class _FormularioCambioFisicoState extends State<FormularioCambioFisico> {
           etiqueta: (valor) => valor,
           onChanged: (valor) => setState(() => _contexturaSeleccionada = valor),
         ),
+        const SizedBox(height: 10),
+        Align(
+          alignment: Alignment.centerRight,
+          child: TextButton.icon(
+            onPressed: _mostrarAyudaContexturas,
+            icon: const Icon(Icons.help_outline_rounded, size: 20),
+            label: Text(
+              txtApp(
+                "¿Qué significa cada contextura?",
+                "What does each body frame mean?",
+              ),
+            ),
+            style: TextButton.styleFrom(
+              foregroundColor: const Color(0xFF2839C7),
+              textStyle: const TextStyle(
+                fontSize: 13.5,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ),
+        ),
         if (descripcion != null) ...[
           const SizedBox(height: 12),
           Text(
@@ -584,6 +615,39 @@ class _FormularioCambioFisicoState extends State<FormularioCambioFisico> {
     );
   }
 
+  void _mostrarAyudaContexturas() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(txtApp("Contexturas", "Body frames")),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            for (final entrada in _contexturas.entries) ...[
+              Text(
+                entrada.key,
+                style: const TextStyle(
+                  color: Color(0xFF12248B),
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(entrada.value),
+              const SizedBox(height: 12),
+            ],
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(txtApp("Entendido", "Got it")),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _campoObjetivo() {
     final conteo = objetivoController.text.characters.length;
     return Stack(
@@ -592,11 +656,11 @@ class _FormularioCambioFisicoState extends State<FormularioCambioFisico> {
           controller: objetivoController,
           minLines: 6,
           maxLines: 6,
-          maxLength: 500,
+          maxLength: 1000,
           textInputAction: TextInputAction.newline,
           decoration: _inputDecoracion(
             hint: txtApp(
-              "Describe el objetivo fisico...",
+              "Describe el objetivo físico...",
               "Describe the body goal...",
             ),
             alignLabelWithHint: true,
@@ -606,7 +670,7 @@ class _FormularioCambioFisicoState extends State<FormularioCambioFisico> {
           right: 18,
           bottom: 16,
           child: Text(
-            "$conteo/500",
+            "$conteo/1000",
             style: const TextStyle(
               color: Color(0xFF4C5687),
               fontSize: 15,
@@ -690,7 +754,7 @@ class _FormularioCambioFisicoState extends State<FormularioCambioFisico> {
           Expanded(
             child: Text(
               txtApp(
-                "La recomendacion se genera solo con los datos corporales ingresados y productos permitidos para cambio fisico.",
+                "La recomendación se genera solo con los datos corporales ingresados y productos permitidos para cambio físico.",
                 "The recommendation is generated only with the entered body data and products allowed for body transformation.",
               ),
               style: const TextStyle(

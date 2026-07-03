@@ -21,8 +21,8 @@ class _ConsultaProductoPaginaState extends State<ConsultaProductoPagina> {
   bool get _esMiTienda => widget.tipo == TipoCatalogoProducto.miTienda;
 
   String get _tituloCatalogo => _esMiTienda
-      ? txtApp('Catalogo MiTienda', 'MyStore Catalog')
-      : txtApp('Catalogo Afiliado', 'Member Catalog');
+      ? txtApp('Catálogo MiTienda', 'MyStore Catalog')
+      : txtApp('Catálogo Afiliado', 'Member Catalog');
 
   List<ProductoPrecio> get _productosCatalogo {
     final productos = _esMiTienda
@@ -56,10 +56,11 @@ class _ConsultaProductoPaginaState extends State<ConsultaProductoPagina> {
   }
 
   Future<void> _abrirProducto(ProductoPrecio producto) async {
-    final idioma = await IdiomaService.cargar();
+    final idioma = IdiomaService.actual.value;
     final resultado = _informacionPredeterminadaProducto(producto, idioma);
     final precioPromocional = precioPromocionalMiTienda(producto.nombre);
-    await ImpactoService.registrar(
+    if (!mounted) return;
+    unawaited(ImpactoService.registrar(
       tipo: _esMiTienda ? 'catalogo_mitienda' : 'catalogo_afiliado',
       titulo: producto.nombre,
       datos: {
@@ -69,9 +70,8 @@ class _ConsultaProductoPaginaState extends State<ConsultaProductoPagina> {
         'lp': producto.lp,
         if (precioPromocional != null) 'promocional': precioPromocional,
       },
-    );
-    if (!mounted) return;
-    showDialog(
+    ));
+    await showDialog(
       context: context,
       builder: (c) => _dialogoResultado(
         dialogContext: c,
@@ -114,7 +114,7 @@ This product is not medicine, does not diagnose, treat, cure, or prevent disease
     }
 
     return '''
-Descripcion:
+Descripción:
 ${info.descripcion}
 
 Ingredientes o componentes principales:
@@ -130,7 +130,7 @@ Dosis sugerida:
 ${info.dosis}
 
 Nota:
-Este producto no es medicina, no diagnostica, no trata, no cura ni previene enfermedades. Es un suplemento de bienestar y no reemplaza la indicacion de un profesional de salud.
+Este producto no es medicina, no diagnostica, no trata, no cura ni previene enfermedades. Es un suplemento de bienestar y no reemplaza la indicación de un profesional de salud.
 ''';
   }
 
@@ -540,7 +540,7 @@ Este producto no es medicina, no diagnostica, no trata, no cura ni previene enfe
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      '${txtApp('Afiliado', 'Member')} \$${producto.afiliado.toStringAsFixed(2)} | LP ${producto.lp ?? 0} | ${txtApp('Publico', 'Retail')} \$${producto.publico.toStringAsFixed(2)}',
+                      '${txtApp('Afiliado', 'Member')} \$${producto.afiliado.toStringAsFixed(2)} | LP ${producto.lp ?? 0} | ${txtApp('Público', 'Retail')} \$${producto.publico.toStringAsFixed(2)}',
                       style: const TextStyle(
                         color: Color(0xFF465074),
                         fontSize: 13,
@@ -583,7 +583,7 @@ Este producto no es medicina, no diagnostica, no trata, no cura ni previene enfe
     return [
       '${ingles ? 'Member' : 'Afiliado'} \$${producto.afiliado.toStringAsFixed(2)}',
       'LP ${producto.lp ?? 0}',
-      '${ingles ? 'Retail' : 'Publico'} \$${producto.publico.toStringAsFixed(2)}',
+      '${ingles ? 'Retail' : 'Público'} \$${producto.publico.toStringAsFixed(2)}',
       if (_esMiTienda && promo != null)
         '${ingles ? 'Promo' : 'Promocional'} \$${promo.toStringAsFixed(2)}',
     ].join('\n');
@@ -623,10 +623,10 @@ Este producto no es medicina, no diagnostica, no trata, no cura ni previene enfe
       buffer.writeln(
           '${txtApp('Afiliado', 'Member')}: \$${producto.afiliado.toStringAsFixed(2)}');
       buffer.writeln(
-          '${txtApp('Publico', 'Retail')}: \$${producto.publico.toStringAsFixed(2)}');
+          '${txtApp('Público', 'Retail')}: \$${producto.publico.toStringAsFixed(2)}');
       buffer.writeln('LP: ${producto.lp ?? 0}');
       buffer.writeln(
-          '${txtApp('Descripcion', 'Description')}: ${info.descripcion}\n');
+          '${txtApp('Descripción', 'Description')}: ${info.descripcion}\n');
     }
     return buffer.toString();
   }
@@ -655,7 +655,7 @@ Este producto no es medicina, no diagnostica, no trata, no cura ni previene enfe
                 imagenAsset: imagenesProducto4Life[producto.nombre],
                 indicaciones: [
                   '${ingles ? 'Member' : 'Afiliado'}: \$${producto.afiliado.toStringAsFixed(2)}',
-                  '${ingles ? 'Retail' : 'Publico'}: \$${producto.publico.toStringAsFixed(2)}',
+                  '${ingles ? 'Retail' : 'Público'}: \$${producto.publico.toStringAsFixed(2)}',
                   'LP: ${producto.lp ?? 0}',
                 ],
                 detalle:
@@ -993,7 +993,7 @@ Este producto no es medicina, no diagnostica, no trata, no cura ni previene enfe
     final idioma = await IdiomaService.cargar();
     final notaNoMedicina = idioma == IdiomaApp.ingles
         ? 'This product is not medicine, does not diagnose, treat, cure, or prevent diseases. It is a wellness supplement and does not replace guidance from a healthcare professional.'
-        : 'Este producto no es medicina, no diagnostica, no trata, no cura ni previene enfermedades. Es un suplemento de bienestar y no reemplaza la indicacion de un profesional de salud.';
+        : 'Este producto no es medicina, no diagnostica, no trata, no cura ni previene enfermedades. Es un suplemento de bienestar y no reemplaza la indicación de un profesional de salud.';
     final secciones = _seccionesResultadoProducto(resultado);
     final dosis = secciones
         .where(
@@ -1019,7 +1019,7 @@ Este producto no es medicina, no diagnostica, no trata, no cura ni previene enfe
       ...dosis,
       if (precioProducto != null) ...[
         '${idioma == IdiomaApp.ingles ? 'Member price' : 'Precio afiliado'}: \$${precioProducto.afiliado.toStringAsFixed(2)}',
-        '${idioma == IdiomaApp.ingles ? 'Retail price' : 'Precio publico'}: \$${precioProducto.publico.toStringAsFixed(2)}',
+        '${idioma == IdiomaApp.ingles ? 'Retail price' : 'Precio público'}: \$${precioProducto.publico.toStringAsFixed(2)}',
         'LP: ${precioProducto.lp ?? 0}',
       ],
       if (precioPromocional != null)
@@ -1148,7 +1148,7 @@ Este producto no es medicina, no diagnostica, no trata, no cura ni previene enfe
     const titulos = [
       'Producto identificado',
       'Product identified',
-      'Descripcion',
+      'Descripción',
       'Description',
       'Ingredientes o componentes principales',
       'Main ingredients or components',
@@ -1197,7 +1197,7 @@ Este producto no es medicina, no diagnostica, no trata, no cura ni previene enfe
     final iconos = <String, IconData>{
       'Producto identificado': Icons.description_outlined,
       'Product identified': Icons.description_outlined,
-      'Descripcion': Icons.assignment_outlined,
+      'Descripción': Icons.assignment_outlined,
       'Description': Icons.assignment_outlined,
       'Ingredientes o componentes principales': Icons.science_outlined,
       'Main ingredients or components': Icons.science_outlined,

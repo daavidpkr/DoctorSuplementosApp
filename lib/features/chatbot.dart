@@ -170,9 +170,7 @@ class _PaginaChatbotState extends State<PaginaChatbot> {
     }
     _controller.text = widget.consultaInicial ?? "";
     if (widget.modoLlamada) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _iniciarLlamada();
-      });
+      unawaited(_iniciarLlamada());
     }
   }
 
@@ -180,14 +178,14 @@ class _PaginaChatbotState extends State<PaginaChatbot> {
     if (!mounted) return;
     setState(
       () => _estadoLlamada = _txt(
-        "Hola, soy DoctorSuplementos. En que te puedo ayudar?",
+        "Hola, soy DoctorSuplementos. ¿En qué te puedo ayudar?",
         "Hi, I am DoctorSuplementos. How can I help you?",
       ),
     );
     if (_bienvenidaChatLiveReproducida) return;
     _bienvenidaChatLiveReproducida = true;
     final bienvenida = _txt(
-      "Hola, soy DoctorSuplementos. En que te puedo ayudar?",
+      "Hola, soy DoctorSuplementos. ¿En qué te puedo ayudar?",
       "Hi, I am DoctorSuplementos. How can I help you?",
     );
     _iniciarAnimacionRespuestaBot(bienvenida);
@@ -196,7 +194,7 @@ class _PaginaChatbotState extends State<PaginaChatbot> {
     _detenerAnimacionRespuestaBot();
     setState(
       () => _estadoLlamada = _txt(
-        "Manten pulsado el microfono para hablar",
+        "Mantén pulsado el micrófono para hablar",
         "Hold the microphone to talk",
       ),
     );
@@ -237,22 +235,23 @@ class _PaginaChatbotState extends State<PaginaChatbot> {
         : "Si la consulta menciona un producto mal escrito, responde directamente sobre $productoCoincidente. No digas que fue una coincidencia ni que estaba mal escrito.";
     final instruccionVozHumana = _ingles
         ? "Voice style: Act like a professional narrator with a warm, close and conversational tone. Sound like a real human explaining something to a friend, not a robot reading a document. Keep a natural rhythm, emphasize key words, use commas and periods as breathing pauses, pronounce technical terms clearly, avoid abbreviations, and write with punctuation that helps the voice sound expressive."
-        : "Configuracion de voz: Actua como un locutor profesional con un tono cercano, calido y conversacional. Suena como un humano real que explica algo a un amigo, no como un robot leyendo un documento. Mantén ritmo natural, enfasis en palabras clave, pausas coherentes con comas y puntos, claridad en terminos tecnicos, evita abreviaturas y usa signos de pregunta o exclamacion cuando ayuden a la entonacion.";
+        : "Configuración de voz: Actúa como un locutor profesional con un tono cercano, cálido y conversacional. Suena como un humano real que explica algo a un amigo, no como un robot leyendo un documento. Mantén ritmo natural, énfasis en palabras clave, pausas coherentes con comas y puntos, claridad en términos técnicos, evita abreviaturas y usa signos de pregunta o exclamación cuando ayuden a la entonación.";
     final instruccionVoz = widget.modoLlamada
         ? "Esta es una llamada de voz. Responde de forma natural, explicativa y suficientemente completa para evitar confusiones. No seas demasiado corto si la pregunta necesita contexto, pasos o advertencias. Puedes usar ejemplos sencillos, pero no saludes de nuevo en cada respuesta. Escribe frases respirables, separadas con comas y puntos, para que la voz se entienda completa."
         : "";
     final instruccionComponente = consultaSobreComponente
-        ? "La consulta parece ser sobre un componente, ingrediente o concepto de bienestar, no sobre un producto especifico. Explica que es, para que sirve, como se interpreta y que precauciones generales considerar. No conviertas la respuesta en una recomendacion de producto y no metas un producto 4Life si el usuario no pidio un producto."
+        ? "La consulta parece ser sobre un componente, ingrediente o concepto de bienestar, no sobre un producto específico. Explica qué es, para qué sirve, cómo se interpreta y qué precauciones generales considerar. No conviertas la respuesta en una recomendación de producto y no metas un producto 4Life si el usuario no pidió un producto."
         : "";
     final instruccionIdioma = await IdiomaService.instruccionIa();
     final instruccionModoCientifico = _modoCientifico
         ? """
-    MODO CIENTIFICO OBLIGATORIO:
-    Actua unicamente como investigador de enfermedades y educador cientifico.
-    Tu tarea es explicar enfermedades, sintomas, mecanismos biologicos, factores de riesgo, diagnostico medico habitual, pruebas comunes, evolucion, prevencion general, senales de alarma y opciones de manejo reconocidas por la medicina.
-    No recomiendes, no menciones, no compares y no sugieras productos 4Life, suplementos, ventas, rutinas comerciales ni nombres del catalogo.
-    Si el usuario pide productos o suplementos, responde que en modo cientifico solo puedes hablar de la enfermedad y su contexto medico general.
-    Mantén lenguaje claro, responsable y profundo, diferenciando informacion educativa de diagnostico medico. Recomienda acudir a un profesional de salud cuando haya sintomas, urgencia, diagnostico pendiente o tratamiento.
+    MODO CIENTÍFICO OBLIGATORIO:
+    Actúa únicamente como investigador de enfermedades y educador científico.
+    Busca explicar la enfermedad lo mejor posible con la información disponible: definición, causas probables, mecanismos biológicos, síntomas, factores de riesgo, diagnóstico médico habitual, pruebas comunes, evolución, prevención general, señales de alarma y opciones de manejo reconocidas por la medicina.
+    Ordena la respuesta para que ayude a comprender el cuadro clínico: primero explica qué es, luego cómo puede manifestarse, después qué se suele evaluar y al final qué puntos deben vigilarse.
+    No recomiendes, no menciones, no compares y no sugieras productos 4Life, suplementos, ventas, rutinas comerciales ni nombres del catálogo.
+    Si el usuario pide productos o suplementos, responde que en modo científico solo puedes hablar de la enfermedad y su contexto médico general.
+    Mantén lenguaje claro, responsable y profundo, diferenciando información educativa de diagnóstico médico. Recomienda acudir a un profesional de salud cuando haya síntomas, urgencia, diagnóstico pendiente o tratamiento.
     """
         : "";
     final reglaProductos = _modoCientifico
@@ -269,12 +268,17 @@ class _PaginaChatbotState extends State<PaginaChatbot> {
     IDIOMA OBLIGATORIO:
     $instruccionIdioma
 
-    ${_modoCientifico ? 'Eres un investigador cientifico de enfermedades.' : 'Eres un asesor IA para socios de 4Life.'}
+    ${_modoCientifico ? 'Eres un investigador científico de enfermedades.' : 'Eres un asesor IA para socios de 4Life.'}
     Responde de manera clara, conversacional, sumamente ordenada y amigable.
-    IMPORTANTE: No uses asteriscos (*), no uses almohadillas (#), ni guiones extranos para dar formato.
-    Usa saltos de linea normales y texto limpio.
-    ${_modoCientifico ? 'Responde preguntas sobre enfermedades con enfoque educativo, cientifico y responsable.' : 'Responde preguntas libres sobre suplementos, productos 4Life, habitos saludables, ventas y seguimiento de clientes.'}
+    FORMATO OBLIGATORIO:
+    - Usa títulos claros con negrita de WhatsApp, por ejemplo: *Resumen*, *Puntos importantes*, *Recomendación*.
+    - Usa listas numeradas o viñetas cuando expliques varios puntos.
+    - Usa _subrayado_ en datos críticos, advertencias o ideas que el lector no debe pasar por alto.
+    - Evita bloques largos de texto corrido; separa la respuesta en secciones breves y fáciles de leer.
+    - No uses almohadillas (#) ni símbolos extraños.
+    ${_modoCientifico ? 'Responde preguntas sobre enfermedades con enfoque educativo, científico y responsable.' : 'Responde preguntas libres sobre suplementos, productos 4Life, hábitos saludables, ventas y seguimiento de clientes.'}
     Prioriza respuestas explicativas y completas cuando eso evite confusiones; no respondas demasiado corto si la pregunta requiere contexto.
+    Cuando consulten uno o más productos, extrae toda la información disponible del material/catálogo cargado en esta IA: vitaminas, componentes, ingredientes, beneficios funcionales, modo de uso, dosis, precauciones, contraindicaciones, público objetivo, diferencias entre productos y cualquier dato relevante. Para comparación A/B, organiza similitudes, diferencias, ventajas de cada uno y cuándo conviene elegir cada producto.
     $instruccionVozHumana
     $instruccionModoCientifico
     $reglaProductos
@@ -287,7 +291,7 @@ class _PaginaChatbotState extends State<PaginaChatbot> {
     $instruccionProducto
     $instruccionComponente
     $instruccionVoz
-    Manten un tono claro, practico y responsable. Si la pregunta parece medica, recomienda consultar a un profesional de salud.
+    Mantén un tono claro, práctico y responsable. Si la pregunta parece médica, recomienda consultar a un profesional de salud.
 
     Conversacion actual:
     $historialPrevio
@@ -300,7 +304,7 @@ class _PaginaChatbotState extends State<PaginaChatbot> {
       final textoAdjuntos = _tieneAdjuntos
           ? (_adjuntosSoloAudio
               ? "$promptLimpioParaChatbot\n\nAnaliza las notas de voz adjuntas como contexto temporal. Extrae la consulta y responde con base en el audio. No menciones que fueron guardadas, porque no se guardan en la app."
-              : "$promptLimpioParaChatbot\n\nAnaliza todos los archivos adjuntos como contexto temporal. Cruza la informacion entre documentos e imagenes cuando sea util. No menciones que fueron guardados, porque no se guardan en la app.")
+              : "$promptLimpioParaChatbot\n\nAnaliza todos los archivos adjuntos como contexto temporal. Cruza la información entre documentos e imágenes cuando sea útil. No menciones que fueron guardados, porque no se guardan en la app.")
           : promptLimpioParaChatbot;
       final response = await model.generateContent([
         if (!_tieneAdjuntos)
@@ -320,7 +324,7 @@ class _PaginaChatbotState extends State<PaginaChatbot> {
         _adjuntos.clear();
         if (widget.modoLlamada) {
           _estadoLlamada = _txt(
-            "DoctorSuplementos esta respondiendo...",
+            "DoctorSuplementos está respondiendo...",
             "DoctorSuplementos is answering...",
           );
         }
@@ -329,6 +333,7 @@ class _PaginaChatbotState extends State<PaginaChatbot> {
         _conversacionId,
         mensajes,
         tipo: widget.modoLlamada ? 'chat_live_voz' : 'asesor_4life',
+        modoAsesor: _modoCientifico ? 'modo_cientifico' : 'asesor_ia',
       );
       if (widget.modoLlamada) {
         _iniciarAnimacionRespuestaBot(respuestaIA);
@@ -336,7 +341,7 @@ class _PaginaChatbotState extends State<PaginaChatbot> {
         if (mounted) {
           setState(() {
             _estadoLlamada = _txt(
-              "Manten pulsado el microfono para hablar",
+              "Mantén pulsado el micrófono para hablar",
               "Hold the microphone to talk",
             );
           });
@@ -364,6 +369,7 @@ class _PaginaChatbotState extends State<PaginaChatbot> {
         _conversacionId,
         mensajes,
         tipo: widget.modoLlamada ? 'chat_live_voz' : 'asesor_4life',
+        modoAsesor: _modoCientifico ? 'modo_cientifico' : 'asesor_ia',
       );
     } finally {
       if (mounted) {
@@ -472,10 +478,10 @@ class _PaginaChatbotState extends State<PaginaChatbot> {
       showDialog(
         context: context,
         builder: (context) => AlertDialog(
-          title: Text(txtApp("Permiso de microfono", "Microphone permission")),
+          title: Text(txtApp("Permiso de micrófono", "Microphone permission")),
           content: Text(
             txtApp(
-              "Activa el permiso del microfono para grabar la nota de voz.",
+              "Activa el permiso del micrófono para grabar la nota de voz.",
               "Enable microphone permission to record the voice note.",
             ),
           ),
@@ -512,10 +518,10 @@ class _PaginaChatbotState extends State<PaginaChatbot> {
           context: context,
           builder: (context) => AlertDialog(
             title:
-                Text(txtApp("Permiso de microfono", "Microphone permission")),
+                Text(txtApp("Permiso de micrófono", "Microphone permission")),
             content: Text(
               txtApp(
-                "Activa el permiso del microfono para conversar con DoctorSuplementos.",
+                "Activa el permiso del micrófono para conversar con DoctorSuplementos.",
                 "Enable microphone permission to talk with DoctorSuplementos.",
               ),
             ),
@@ -560,7 +566,7 @@ class _PaginaChatbotState extends State<PaginaChatbot> {
     });
     if (path == null) {
       setState(
-        () => _estadoLlamada = _txt("Manten pulsado el microfono para hablar",
+        () => _estadoLlamada = _txt("Mantén pulsado el micrófono para hablar",
             "Hold the microphone to talk"),
       );
       return;
@@ -572,7 +578,7 @@ class _PaginaChatbotState extends State<PaginaChatbot> {
     if (bytes.isEmpty || !mounted) {
       if (mounted) {
         setState(
-          () => _estadoLlamada = _txt("Manten pulsado el microfono para hablar",
+          () => _estadoLlamada = _txt("Mantén pulsado el micrófono para hablar",
               "Hold the microphone to talk"),
         );
       }
@@ -851,7 +857,7 @@ extension _PaginaChatbotUi on _PaginaChatbotState {
                 const Spacer(),
                 Semantics(
                   button: true,
-                  label: _txt("Manten pulsado para hablar y suelta para enviar",
+                  label: _txt("Mantén pulsado para hablar y suelta para enviar",
                       "Hold to talk and release to send"),
                   child: GestureDetector(
                     onLongPressStart: ocupado
@@ -909,7 +915,7 @@ extension _PaginaChatbotUi on _PaginaChatbotState {
                   escuchando
                       ? _txt("Suelta para enviar tu pregunta",
                           "Release to send your question")
-                      : _txt("Manten pulsado para hablar", "Hold to talk"),
+                      : _txt("Mantén pulsado para hablar", "Hold to talk"),
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 16,
@@ -1619,7 +1625,7 @@ extension _PaginaChatbotUi on _PaginaChatbotState {
               Flexible(
                 child: Text(
                   txtApp(
-                    "La informacion proporcionada por la IA no sustituye el consejo de un profesional de la salud.",
+                    "La información proporcionada por la IA no sustituye el consejo de un profesional de la salud.",
                     "Information provided by AI does not replace advice from a health professional.",
                   ),
                   textAlign: TextAlign.left,
