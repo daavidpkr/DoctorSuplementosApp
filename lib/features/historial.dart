@@ -1,4 +1,4 @@
-﻿part of '../main.dart';
+part of '../main.dart';
 
 class HistorialPagina extends StatelessWidget {
   const HistorialPagina({super.key});
@@ -21,7 +21,8 @@ class HistorialPagina extends StatelessWidget {
                 return ListTile(
                   leading: const Icon(Icons.description),
                   title: Text(item['titulo']),
-                  subtitle: Text("${txtApp("Fecha", "Date")}: ${item['fecha']}"),
+                  subtitle:
+                      Text("${txtApp("Fecha", "Date")}: ${item['fecha']}"),
                   onTap: () {
                     Navigator.push(
                         context,
@@ -161,58 +162,149 @@ class _PaginaHistorialState extends State<PaginaHistorial> {
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text(
-          esCambio
-              ? txtApp("Ajustar cambio físico", "Adjust body change")
-              : txtApp("Re-evaluar a $nombre", "Re-evaluate $nombre"),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              "${esCambio ? txtApp('Guía anterior', 'Previous guide') : txtApp('Diagnóstico anterior', 'Previous diagnosis')}:\n$resultado",
-              maxLines: 4,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 12, color: Colors.grey),
-            ),
-            const SizedBox(height: 10),
-            TextField(
-              controller: nuevaPreguntaController,
-              decoration: InputDecoration(
-                labelText: txtApp(
-                  "Que cambio o que nueva duda tienes?",
-                  "What changed or what new question do you have?",
-                ),
-                border: const OutlineInputBorder(),
+      builder: (dialogContext) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 22, vertical: 24),
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 560),
+          padding: const EdgeInsets.all(22),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(26),
+            border: Border.all(color: const Color(0xFFE5E7F2)),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF111B7D).withValues(alpha: 0.18),
+                blurRadius: 30,
+                offset: const Offset(0, 14),
               ),
-              minLines: 1,
-              maxLines: 4,
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text(txtApp("Cancelar", "Cancel"))),
-          ElevatedButton(
-            onPressed: () {
-              final nuevaConsultaIA =
-                  "Tomando como base ${esCambio ? 'la guía de cambio físico anterior' : 'el diagnóstico anterior'} de este paciente: $resultado. "
-                  "El paciente ahora presenta lo siguiente o se requiere ajustar esto: ${nuevaPreguntaController.text}";
-
-              Navigator.pop(context);
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) =>
-                      PaginaChatbot(consultaInicial: nuevaConsultaIA),
-                ),
-              );
-            },
-            child: Text(txtApp("Consultar Ajuste", "Ask for adjustment")),
+            ],
           ),
-        ],
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 48,
+                    height: 48,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFEDEEFF),
+                      borderRadius: BorderRadius.circular(15),
+                    ),
+                    child: const Icon(
+                      Icons.refresh_rounded,
+                      color: Color(0xFF2839C7),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      esCambio
+                          ? txtApp(
+                              "Ajustar cambio físico",
+                              "Adjust body change",
+                            )
+                          : txtApp(
+                              "Re-evaluar a $nombre",
+                              "Re-evaluate $nombre",
+                            ),
+                      style: const TextStyle(
+                        color: Color(0xFF111B59),
+                        fontSize: 22,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF7F8FC),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: const Color(0xFFE7E9F4)),
+                ),
+                child: Text(
+                  "${esCambio ? txtApp('Guía anterior', 'Previous guide') : txtApp('Diagnóstico anterior', 'Previous diagnosis')}:\n$resultado",
+                  maxLines: 4,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 12.5,
+                    height: 1.35,
+                    color: Color(0xFF66708F),
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 14),
+              TextField(
+                controller: nuevaPreguntaController,
+                decoration: InputDecoration(
+                  labelText: txtApp(
+                    "Que cambio o que nueva duda tienes?",
+                    "What changed or what new question do you have?",
+                  ),
+                  filled: true,
+                  fillColor: const Color(0xFFFBFBFE),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: const BorderSide(color: Color(0xFFD8DCEB)),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: const BorderSide(
+                      color: Color(0xFF2839C7),
+                      width: 1.4,
+                    ),
+                  ),
+                ),
+                minLines: 1,
+                maxLines: 4,
+              ),
+              const SizedBox(height: 18),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(dialogContext),
+                    child: Text(txtApp("Cancelar", "Cancel")),
+                  ),
+                  const SizedBox(width: 8),
+                  FilledButton(
+                    onPressed: () {
+                      final nuevaConsultaIA =
+                          "Tomando como base ${esCambio ? 'la guía de cambio físico anterior' : 'el diagnóstico anterior'} de este paciente: $resultado. "
+                          "El paciente ahora presenta lo siguiente o se requiere ajustar esto: ${nuevaPreguntaController.text}";
+
+                      Navigator.pop(dialogContext);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) =>
+                              PaginaChatbot(consultaInicial: nuevaConsultaIA),
+                        ),
+                      );
+                    },
+                    style: FilledButton.styleFrom(
+                      backgroundColor: const Color(0xFF2839C7),
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                    child: Text(
+                      txtApp("Consultar Ajuste", "Ask for adjustment"),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
       ),
     ).then((_) => nuevaPreguntaController.dispose());
   }

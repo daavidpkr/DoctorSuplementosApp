@@ -127,6 +127,16 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
       colores: const [Color(0xFF1487A8), Color(0xFF087394)],
       destino: const PaginaChatbot(),
     );
+    final historialChatsIa = _FichaInicio(
+      titulo: txtApp('Historial de chats IA', 'AI chat history'),
+      descripcion: txtApp(
+        'Revisa conversaciones del Asesor IA y Chat Live.',
+        'Review AI Adviser and Chat Live conversations.',
+      ),
+      icono: Icons.forum_outlined,
+      colores: const [Color(0xFF6A4DE8), Color(0xFF3C2AAE)],
+      destino: const PaginaHistorialChatbot(),
+    );
     final testimonios = _FichaInicio(
       titulo: IdiomaService.texto('testimonials'),
       descripcion: IdiomaService.texto('testimonials_desc'),
@@ -231,7 +241,7 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
                       ),
                       icono: Icons.auto_awesome_rounded,
                       colores: const [Color(0xFF6A4DE8), Color(0xFF3C2AAE)],
-                      fichas: [chatLive, asesorIa],
+                      fichas: [chatLive, asesorIa, historialChatsIa],
                     ),
                     _tarjetaCategoria(
                       context,

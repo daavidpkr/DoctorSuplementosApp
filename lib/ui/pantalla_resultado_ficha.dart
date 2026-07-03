@@ -11,12 +11,14 @@ class ProductoResultadoFicha {
   final String nombre;
   final String? imagen;
   final List<String> dosis;
+  final String justificacion;
   final String beneficio;
 
   const ProductoResultadoFicha({
     required this.nombre,
     required this.imagen,
     required this.dosis,
+    required this.justificacion,
     required this.beneficio,
   });
 }
@@ -24,11 +26,13 @@ class ProductoResultadoFicha {
 class PrecioProductoResultadoFicha {
   final double afiliado;
   final double publico;
+  final double? promocional;
   final int? lp;
 
   const PrecioProductoResultadoFicha({
     required this.afiliado,
     required this.publico,
+    this.promocional,
     required this.lp,
   });
 }
@@ -72,6 +76,7 @@ class ContenidoResultadoFicha {
           nombre: actual!.nombre,
           imagen: actual!.imagen,
           dosis: List.unmodifiable(actual!.dosis),
+          justificacion: actual!.justificacion.join(' ').trim(),
           beneficio: actual!.beneficio.join(' ').trim(),
         ),
       );
@@ -145,11 +150,15 @@ class ContenidoResultadoFicha {
         final campo = _normalizar(contenido);
         if (campo.startsWith('dosis ') || campo.startsWith('dose ')) {
           actual!.dosis.add(contenido);
+        } else if (campo.startsWith('por que se elige') ||
+            campo.startsWith('por que se recomienda') ||
+            campo.startsWith('why it is chosen') ||
+            campo.startsWith('why it is recommended')) {
+          actual!.justificacion.add(contenido);
         } else if (campo.startsWith('beneficio clave') ||
             campo.startsWith('apoyo principal') ||
             campo.startsWith('key benefit') ||
-            campo.startsWith('main support') ||
-            actual!.beneficio.isNotEmpty) {
+            campo.startsWith('main support')) {
           actual!.beneficio.add(contenido);
         } else {
           actual!.dosis.add(contenido);
@@ -231,6 +240,7 @@ class _ProductoTemporal {
   final String nombre;
   final String? imagen;
   final List<String> dosis = [];
+  final List<String> justificacion = [];
   final List<String> beneficio = [];
 
   _ProductoTemporal({required this.nombre, required this.imagen});
@@ -815,6 +825,12 @@ class _PantallaResultadoFichaState extends State<PantallaResultadoFicha> {
                       ? violeta
                       : const Color(0xFFFFA000),
                 ),
+              if (producto.justificacion.isNotEmpty)
+                _lineaProducto(
+                  producto.justificacion,
+                  Icons.psychology_alt_outlined,
+                  violeta,
+                ),
               if (producto.beneficio.isNotEmpty)
                 _lineaProducto(
                   producto.beneficio,
@@ -840,15 +856,17 @@ class _PantallaResultadoFichaState extends State<PantallaResultadoFicha> {
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
           _datoComercial(
-            Icons.person_outline_rounded,
-            _txt('Afiliado', 'Member'),
-            '\$${precio.afiliado.toStringAsFixed(2)}',
+            Icons.groups_2_outlined,
+            _txt('Precio público', 'Retail price'),
+            '\$${precio.publico.toStringAsFixed(2)}',
           ),
           const Divider(height: 1, color: Color(0xFFE8EAF2)),
           _datoComercial(
-            Icons.groups_2_outlined,
-            _txt('Publico', 'Retail'),
-            '\$${precio.publico.toStringAsFixed(2)}',
+            Icons.local_offer_outlined,
+            _txt('Precio de promoción', 'Promotional price'),
+            precio.promocional == null
+                ? _txt('Precio a preguntar', 'Ask for price')
+                : '\$${precio.promocional!.toStringAsFixed(2)}',
           ),
           const Divider(height: 1, color: Color(0xFFE8EAF2)),
           _datoComercial(
@@ -886,12 +904,17 @@ class _PantallaResultadoFichaState extends State<PantallaResultadoFicha> {
               ),
             ),
           ),
-          Text(
-            valor,
-            style: const TextStyle(
-              color: Color(0xFF1427A2),
-              fontSize: 18,
-              fontWeight: FontWeight.w900,
+          Flexible(
+            child: Text(
+              valor,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.right,
+              style: const TextStyle(
+                color: Color(0xFF1427A2),
+                fontSize: 16,
+                fontWeight: FontWeight.w900,
+              ),
             ),
           ),
         ],
@@ -1175,15 +1198,14 @@ class _PantallaResultadoFichaState extends State<PantallaResultadoFicha> {
           nombre: producto.nombre,
           imagenAsset: producto.imagen,
           precioAfiliado: precio?.afiliado,
+          precioPublico: precio?.publico,
+          precioPromocional: precio?.promocional,
           cantidad: 1,
           puntosLP: precio?.lp ?? 0,
+          textoPrecioPromocional: _txt('Precio a preguntar', 'Ask for price'),
           indicaciones: [
             ...producto.dosis,
-            if (precio != null) ...[
-              '${_txt('Precio afiliado', 'Member price')}: \$${precio.afiliado.toStringAsFixed(2)}',
-              '${_txt('Precio publico', 'Retail price')}: \$${precio.publico.toStringAsFixed(2)}',
-              'LP: ${precio.lp ?? 0}',
-            ],
+            if (producto.justificacion.isNotEmpty) producto.justificacion,
           ],
           detalle: producto.beneficio,
         );

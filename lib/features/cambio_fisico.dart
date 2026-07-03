@@ -618,32 +618,108 @@ class _FormularioCambioFisicoState extends State<FormularioCambioFisico> {
   void _mostrarAyudaContexturas() {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text(txtApp("Contexturas", "Body frames")),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            for (final entrada in _contexturas.entries) ...[
-              Text(
-                entrada.key,
-                style: const TextStyle(
-                  color: Color(0xFF12248B),
-                  fontWeight: FontWeight.w900,
+      builder: (context) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 22, vertical: 24),
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 560),
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: const Color(0xFFE5E7F2)),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF111B7D).withValues(alpha: 0.16),
+                blurRadius: 28,
+                offset: const Offset(0, 12),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 46,
+                    height: 46,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFEDEEFF),
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: const Icon(
+                      Icons.accessibility_new_rounded,
+                      color: Color(0xFF2839C7),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      txtApp("Contexturas", "Body frames"),
+                      style: const TextStyle(
+                        color: Color(0xFF12248B),
+                        fontSize: 21,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              for (final entrada in _contexturas.entries) ...[
+                Container(
+                  width: double.infinity,
+                  margin: const EdgeInsets.only(bottom: 10),
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF7F8FC),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: const Color(0xFFE7E9F4)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        entrada.key,
+                        style: const TextStyle(
+                          color: Color(0xFF2839C7),
+                          fontSize: 15.5,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                      const SizedBox(height: 5),
+                      Text(
+                        entrada.value,
+                        style: const TextStyle(
+                          color: Color(0xFF465074),
+                          fontSize: 14,
+                          height: 1.35,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+              Align(
+                alignment: Alignment.centerRight,
+                child: FilledButton(
+                  onPressed: () => Navigator.pop(context),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: const Color(0xFF2839C7),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
+                  child: Text(txtApp("Entendido", "Got it")),
                 ),
               ),
-              const SizedBox(height: 4),
-              Text(entrada.value),
-              const SizedBox(height: 12),
             ],
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(txtApp("Entendido", "Got it")),
           ),
-        ],
+        ),
       ),
     );
   }

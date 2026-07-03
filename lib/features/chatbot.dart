@@ -169,6 +169,12 @@ class _PaginaChatbotState extends State<PaginaChatbot> {
       mensajes.addAll(widget.mensajesIniciales!);
     }
     _controller.text = widget.consultaInicial ?? "";
+    if (!widget.modoLlamada &&
+        widget.consultaInicial?.trim().isNotEmpty == true) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) unawaited(enviarMensaje());
+      });
+    }
     if (widget.modoLlamada) {
       unawaited(_iniciarLlamada());
     }
@@ -271,9 +277,9 @@ class _PaginaChatbotState extends State<PaginaChatbot> {
     ${_modoCientifico ? 'Eres un investigador científico de enfermedades.' : 'Eres un asesor IA para socios de 4Life.'}
     Responde de manera clara, conversacional, sumamente ordenada y amigable.
     FORMATO OBLIGATORIO:
-    - Usa títulos claros con negrita de WhatsApp, por ejemplo: *Resumen*, *Puntos importantes*, *Recomendación*.
+    - No uses negrita, asteriscos, subrayados ni formato tipo WhatsApp.
     - Usa listas numeradas o viñetas cuando expliques varios puntos.
-    - Usa _subrayado_ en datos críticos, advertencias o ideas que el lector no debe pasar por alto.
+    - Usa títulos simples sin símbolos de formato, por ejemplo: Resumen, Puntos importantes, Recomendación.
     - Evita bloques largos de texto corrido; separa la respuesta en secciones breves y fáciles de leer.
     - No uses almohadillas (#) ni símbolos extraños.
     ${_modoCientifico ? 'Responde preguntas sobre enfermedades con enfoque educativo, científico y responsable.' : 'Responde preguntas libres sobre suplementos, productos 4Life, hábitos saludables, ventas y seguimiento de clientes.'}
@@ -1407,6 +1413,7 @@ extension _PaginaChatbotUi on _PaginaChatbotState {
     required bool esIA,
     required String texto,
   }) {
+    final textoVisible = esIA ? _limpiarFormatoAsesorIa(texto) : texto;
     return Align(
       alignment: esIA ? Alignment.centerLeft : Alignment.centerRight,
       child: Container(
@@ -1441,7 +1448,7 @@ extension _PaginaChatbotUi on _PaginaChatbotState {
             ),
             const SizedBox(height: 8),
             Text(
-              texto,
+              textoVisible,
               style: TextStyle(
                 color: esIA ? const Color(0xFF27315F) : Colors.white,
                 fontSize: 15.5,
@@ -1500,6 +1507,13 @@ extension _PaginaChatbotUi on _PaginaChatbotState {
         ),
       ),
     );
+  }
+
+  String _limpiarFormatoAsesorIa(String texto) {
+    return texto
+        .replaceAll(RegExp(r'[*_`]'), '')
+        .replaceAll(RegExp(r'\n{3,}'), '\n\n')
+        .trim();
   }
 
   Widget _barraEntradaChat() {

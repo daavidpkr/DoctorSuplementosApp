@@ -632,6 +632,7 @@ final Map<String, PrecioProductoResultadoFicha> preciosResultado4Life = {
     producto.nombre: PrecioProductoResultadoFicha(
       afiliado: producto.afiliado,
       publico: producto.publico,
+      promocional: precioPromocionalMiTienda(producto.nombre),
       lp: producto.lp,
     ),
 };

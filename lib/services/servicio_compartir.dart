@@ -20,6 +20,9 @@ class ProductoDocumento {
   final List<String> indicaciones;
   final String detalle;
   final double? precioAfiliado;
+  final double? precioPublico;
+  final double? precioPromocional;
+  final String textoPrecioPromocional;
   final int cantidad;
   final int? puntosLP;
 
@@ -29,6 +32,9 @@ class ProductoDocumento {
     this.indicaciones = const [],
     this.detalle = '',
     this.precioAfiliado,
+    this.precioPublico,
+    this.precioPromocional,
+    this.textoPrecioPromocional = 'Precio a preguntar',
     this.cantidad = 1,
     this.puntosLP,
   });
@@ -650,6 +656,22 @@ class ServicioCompartir {
     int indice,
     pw.MemoryImage? imagen,
   ) {
+    final dosis = producto.indicaciones
+        .where((linea) =>
+            !_esLineaPrecioProducto(linea) && !_esLineaJustificacion(linea))
+        .toList();
+    final justificacion = producto.indicaciones
+        .where((linea) => _esLineaJustificacion(linea))
+        .toList();
+    final precios = <String>[
+      if (producto.precioPublico != null)
+        'Precio publico: \$${producto.precioPublico!.toStringAsFixed(2)}',
+      if (producto.precioPublico != null || producto.precioPromocional != null)
+        producto.precioPromocional == null
+            ? 'Precio de promocion: ${producto.textoPrecioPromocional}'
+            : 'Precio de promocion: \$${producto.precioPromocional!.toStringAsFixed(2)}',
+      if (producto.puntosLP != null) 'LP: ${producto.puntosLP}',
+    ];
     return pw.Container(
       padding: const pw.EdgeInsets.all(14),
       decoration: pw.BoxDecoration(
@@ -694,36 +716,18 @@ class ServicioCompartir {
                     fontWeight: pw.FontWeight.bold,
                   ),
                 ),
-                if (producto.indicaciones.isNotEmpty) pw.SizedBox(height: 8),
-                for (final indicacion in producto.indicaciones)
-                  pw.Padding(
-                    padding: const pw.EdgeInsets.only(bottom: 4),
-                    child: pw.Row(
-                      crossAxisAlignment: pw.CrossAxisAlignment.start,
-                      children: [
-                        pw.Container(
-                          margin: const pw.EdgeInsets.only(top: 4),
-                          width: 5,
-                          height: 5,
-                          decoration: const pw.BoxDecoration(
-                            color: _verde,
-                            shape: pw.BoxShape.circle,
-                          ),
-                        ),
-                        pw.SizedBox(width: 7),
-                        pw.Expanded(
-                          child: pw.Text(
-                            _textoPdf(indicacion),
-                            style: const pw.TextStyle(
-                              color: _texto,
-                              fontSize: 9.5,
-                              lineSpacing: 2,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+                if (dosis.isNotEmpty) ...[
+                  pw.SizedBox(height: 8),
+                  _subbloqueProductoPdf('Dosis', dosis),
+                ],
+                if (justificacion.isNotEmpty) ...[
+                  pw.SizedBox(height: 7),
+                  _subbloqueProductoPdf('Por que se elige', justificacion),
+                ],
+                if (precios.isNotEmpty) ...[
+                  pw.SizedBox(height: 7),
+                  _subbloqueProductoPdf('Precio', precios),
+                ],
                 if (producto.detalle.trim().isNotEmpty) ...[
                   pw.SizedBox(height: 5),
                   pw.Container(
@@ -745,6 +749,77 @@ class ServicioCompartir {
               ],
             ),
           ),
+        ],
+      ),
+    );
+  }
+
+  static bool _esLineaPrecioProducto(String texto) {
+    final linea = _textoPdf(texto).toLowerCase();
+    return linea.startsWith('precio ') || linea.startsWith('lp:');
+  }
+
+  static bool _esLineaJustificacion(String texto) {
+    final linea = _textoPdf(texto).toLowerCase();
+    return linea.startsWith('por que se elige') ||
+        linea.startsWith('por que se recomienda') ||
+        linea.startsWith('why it is chosen') ||
+        linea.startsWith('why it is recommended');
+  }
+
+  static pw.Widget _subbloqueProductoPdf(
+    String titulo,
+    List<String> lineas,
+  ) {
+    return pw.Container(
+      width: double.infinity,
+      padding: const pw.EdgeInsets.symmetric(horizontal: 9, vertical: 8),
+      decoration: pw.BoxDecoration(
+        color: const PdfColor.fromInt(0xFFF8F9FD),
+        borderRadius: pw.BorderRadius.circular(7),
+        border: pw.Border.all(color: _borde, width: 0.7),
+      ),
+      child: pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: [
+          pw.Text(
+            titulo.toUpperCase(),
+            style: pw.TextStyle(
+              color: _violeta,
+              fontSize: 8.5,
+              fontWeight: pw.FontWeight.bold,
+            ),
+          ),
+          pw.SizedBox(height: 4),
+          for (final linea in lineas)
+            pw.Padding(
+              padding: const pw.EdgeInsets.only(bottom: 3),
+              child: pw.Row(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  pw.Container(
+                    margin: const pw.EdgeInsets.only(top: 4),
+                    width: 4.5,
+                    height: 4.5,
+                    decoration: const pw.BoxDecoration(
+                      color: _verde,
+                      shape: pw.BoxShape.circle,
+                    ),
+                  ),
+                  pw.SizedBox(width: 7),
+                  pw.Expanded(
+                    child: pw.Text(
+                      _textoPdf(linea),
+                      style: const pw.TextStyle(
+                        color: _texto,
+                        fontSize: 9.3,
+                        lineSpacing: 2,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
         ],
       ),
     );
