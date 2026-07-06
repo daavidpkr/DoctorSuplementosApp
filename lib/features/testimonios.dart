@@ -90,7 +90,7 @@ class _PaginaTestimonios4LifeState extends State<PaginaTestimonios4Life> {
   Future<void> _cargarTestimonios() async {
     try {
       final contenido =
-          await rootBundle.loadString('assets/testimonios/testimonios.json');
+          await rootBundle.loadString('assets/enlaces/testimonios.json');
       final datos = jsonDecode(contenido) as List;
       final testimonios = datos
           .whereType<Map>()

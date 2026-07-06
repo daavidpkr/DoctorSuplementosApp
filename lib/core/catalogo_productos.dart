@@ -182,9 +182,9 @@ const List<ProductoPrecio> productosConPrecio4Life = [
   ProductoPrecio(
       nombre: 'Transfer factor MAX', afiliado: 109.25, publico: 145.30, lp: 75),
   ProductoPrecio(
-      nombre: 'Riovida Jugo', afiliado: 54.68, publico: 72.73, lp: 32),
+      nombre: 'Riovida Jugo', afiliado: 54.68, publico: 72.73, lp: 57),
   ProductoPrecio(
-      nombre: 'Riovida stix', afiliado: 43.36, publico: 57.67, lp: 20),
+      nombre: 'Riovida stix', afiliado: 43.36, publico: 57.67, lp: 44),
   ProductoPrecio(
       nombre: 'Energy go stix', afiliado: 69.82, publico: 92.41, lp: 36),
   ProductoPrecio(nombre: 'Renuvo', afiliado: 69.82, publico: 92.41, lp: 42),
@@ -198,10 +198,10 @@ const List<ProductoPrecio> productosConPrecio4Life = [
       afiliado: 66.74,
       publico: 88.30,
       lp: 40),
-  ProductoPrecio(nombre: 'Nutrastart', afiliado: 73.93, publico: 98.57, lp: 30),
+  ProductoPrecio(nombre: 'Nutrastart', afiliado: 73.93, publico: 98.57, lp: 80),
   ProductoPrecio(
-      nombre: 'Riovida burst', afiliado: 53.39, publico: 70.85, lp: 27),
-  ProductoPrecio(nombre: 'Protf', afiliado: 90.36, publico: 120.13, lp: 26),
+      nombre: 'Riovida burst', afiliado: 53.39, publico: 70.85, lp: 52),
+  ProductoPrecio(nombre: 'Protf', afiliado: 90.36, publico: 120.13, lp: 100),
   ProductoPrecio(nombre: 'Bioefa', afiliado: 33.11, publico: 44.04, lp: 18),
   ProductoPrecio(nombre: 'Belle vie', afiliado: 67.77, publico: 90.36, lp: 43),
   ProductoPrecio(
@@ -219,9 +219,9 @@ const List<ProductoPrecio> productosConPrecio4Life = [
   ProductoPrecio(
       nombre: 'Crema humectante', afiliado: 36.96, publico: 49.29, lp: 19),
   ProductoPrecio(
-      nombre: 'Pasta de dientes', afiliado: 16.43, publico: 21.56, lp: 5),
+      nombre: 'Pasta de dientes', afiliado: 16.43, publico: 21.56, lp: 15),
   ProductoPrecio(
-      nombre: 'Crema cuerpo', afiliado: 25.67, publico: 33.88, lp: 8),
+      nombre: 'Crema cuerpo', afiliado: 25.67, publico: 33.88, lp: 18),
   ProductoPrecio(nombre: 'Recall', afiliado: 72.90, publico: 96.52, lp: 42),
   ProductoPrecio(nombre: 'TF Boost', afiliado: 27.72, publico: 36.96, lp: 15),
 ];

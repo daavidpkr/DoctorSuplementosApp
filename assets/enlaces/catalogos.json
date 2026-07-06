@@ -1,0 +1,16 @@
+[
+  {
+    "id": "catalogo_ecuador",
+    "titulo": "Catalogo 4Life Ecuador",
+    "descripcion": "Catalogo fisico oficial de productos 4Life Ecuador en PDF, listo para revisar o compartir.",
+    "url": "https://res.cloudinary.com/dyopany6o/image/upload/v1783376218/CATALOGO-4LIFE-EC.pdf",
+    "pais": "Ecuador"
+  },
+  {
+    "id": "catalogo_estados_unidos",
+    "titulo": "Catalogo 4Life Estados Unidos",
+    "descripcion": "Catalogo fisico oficial de productos 4Life Estados Unidos en PDF, listo para revisar o compartir.",
+    "url": "https://res.cloudinary.com/dyopany6o/image/upload/v1783376432/CATALOGO-4LIFE-US.pdf",
+    "pais": "Estados Unidos"
+  }
+]

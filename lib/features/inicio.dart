@@ -54,6 +54,16 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
         tipo: TipoCatalogoProducto.miTienda,
       ),
     );
+    final catalogosPdf = _FichaInicio(
+      titulo: txtApp('Catálogos PDF', 'PDF Catalogs'),
+      descripcion: txtApp(
+        'Consulta y comparte los catálogos oficiales en PDF.',
+        'View and share the official PDF catalogs.',
+      ),
+      icono: Icons.picture_as_pdf_rounded,
+      colores: const [Color(0xFF2E3192), Color(0xFF151B7C)],
+      destino: const PaginaCatalogosPdf4Life(),
+    );
     final calculadoraPrecios = _FichaInicio(
       titulo: IdiomaService.texto('price_calculator'),
       descripcion: IdiomaService.texto('price_calculator_desc'),
@@ -182,12 +192,16 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
                       id: 'catalogos',
                       titulo: txtApp('Catálogos', 'Catalogs'),
                       descripcion: txtApp(
-                        'Catálogo afiliado y Catálogo MiTienda.',
-                        'Member Catalog and MyStore Catalog.',
+                        'Galerías de productos y catálogos PDF.',
+                        'Product galleries and PDF catalogs.',
                       ),
                       icono: Icons.view_list_rounded,
                       colores: const [Color(0xFF2E3192), Color(0xFF151B7C)],
-                      fichas: [catalogoAfiliado, catalogoMiTienda],
+                      fichas: [
+                        catalogoAfiliado,
+                        catalogoMiTienda,
+                        catalogosPdf,
+                      ],
                     ),
                     _tarjetaCategoria(
                       context,

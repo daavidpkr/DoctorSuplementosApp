@@ -34,6 +34,7 @@ part 'features/impacto.dart';
 part 'features/diagnostico.dart';
 part 'features/cambio_fisico.dart';
 part 'features/consulta_productos.dart';
+part 'features/catalogos_pdf.dart';
 part 'features/calculadora_precios.dart';
 part 'features/optimizador_consumo.dart';
 part 'features/optimizador_acelerado.dart';

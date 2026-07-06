@@ -21,8 +21,8 @@ class _ConsultaProductoPaginaState extends State<ConsultaProductoPagina> {
   bool get _esMiTienda => widget.tipo == TipoCatalogoProducto.miTienda;
 
   String get _tituloCatalogo => _esMiTienda
-      ? txtApp('Catálogo MiTienda', 'MyStore Catalog')
-      : txtApp('Catálogo Afiliado', 'Member Catalog');
+      ? txtApp('Galería de productos MiTienda', 'MyStore Product Gallery')
+      : txtApp('Galería de productos Socio/Afiliado', 'Member Product Gallery');
 
   List<ProductoPrecio> get _productosCatalogo {
     final productos = _esMiTienda
@@ -540,7 +540,9 @@ Este producto no es medicina, no diagnostica, no trata, no cura ni previene enfe
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      '${txtApp('Afiliado', 'Member')} \$${producto.afiliado.toStringAsFixed(2)} | LP ${producto.lp ?? 0} | ${txtApp('Público', 'Retail')} \$${producto.publico.toStringAsFixed(2)}',
+                      _esMiTienda
+                          ? '${txtApp('Afiliado', 'Member')} \$${producto.afiliado.toStringAsFixed(2)} | ${txtApp('Público', 'Retail')} \$${producto.publico.toStringAsFixed(2)} | ${txtApp('Promo', 'Promo')} \$${(precioPromocionalMiTienda(producto.nombre) ?? 0).toStringAsFixed(2)}'
+                          : '${txtApp('Afiliado', 'Member')} \$${producto.afiliado.toStringAsFixed(2)} | LP ${producto.lp ?? 0} | ${txtApp('Público', 'Retail')} \$${producto.publico.toStringAsFixed(2)}',
                       style: const TextStyle(
                         color: Color(0xFF465074),
                         fontSize: 13,
@@ -582,7 +584,7 @@ Este producto no es medicina, no diagnostica, no trata, no cura ni previene enfe
     final promo = precioPromocional;
     return [
       '${ingles ? 'Member' : 'Afiliado'} \$${producto.afiliado.toStringAsFixed(2)}',
-      'LP ${producto.lp ?? 0}',
+      if (!_esMiTienda) 'LP ${producto.lp ?? 0}',
       '${ingles ? 'Retail' : 'Público'} \$${producto.publico.toStringAsFixed(2)}',
       if (_esMiTienda && promo != null)
         '${ingles ? 'Promo' : 'Promocional'} \$${promo.toStringAsFixed(2)}',
@@ -624,9 +626,15 @@ Este producto no es medicina, no diagnostica, no trata, no cura ni previene enfe
           '${txtApp('Afiliado', 'Member')}: \$${producto.afiliado.toStringAsFixed(2)}');
       buffer.writeln(
           '${txtApp('Público', 'Retail')}: \$${producto.publico.toStringAsFixed(2)}');
-      buffer.writeln('LP: ${producto.lp ?? 0}');
+      if (!_esMiTienda) buffer.writeln('LP: ${producto.lp ?? 0}');
       buffer.writeln(
-          '${txtApp('Descripción', 'Description')}: ${info.descripcion}\n');
+          '${txtApp('Descripción', 'Description')}: ${info.descripcion}');
+      buffer.writeln(
+          '${txtApp('Componentes', 'Components')}: ${info.componentes}');
+      buffer.writeln('${txtApp('Uso', 'Use')}: ${info.uso}');
+      buffer.writeln(
+          '${txtApp('Precauciones', 'Precautions')}: ${info.precauciones}');
+      buffer.writeln('${txtApp('Dosis', 'Dosage')}: ${info.dosis}\n');
     }
     return buffer.toString();
   }
@@ -656,10 +664,15 @@ Este producto no es medicina, no diagnostica, no trata, no cura ni previene enfe
                 indicaciones: [
                   '${ingles ? 'Member' : 'Afiliado'}: \$${producto.afiliado.toStringAsFixed(2)}',
                   '${ingles ? 'Retail' : 'Público'}: \$${producto.publico.toStringAsFixed(2)}',
-                  'LP: ${producto.lp ?? 0}',
+                  if (!_esMiTienda) 'LP: ${producto.lp ?? 0}',
                 ],
-                detalle:
-                    informacionProductoCatalogo(producto.nombre).descripcion,
+                detalle: [
+                  informacionProductoCatalogo(producto.nombre).descripcion,
+                  informacionProductoCatalogo(producto.nombre).componentes,
+                  informacionProductoCatalogo(producto.nombre).uso,
+                  informacionProductoCatalogo(producto.nombre).precauciones,
+                  informacionProductoCatalogo(producto.nombre).dosis,
+                ].join('\n\n'),
               ),
             )
             .toList(),

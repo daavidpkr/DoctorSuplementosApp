@@ -151,20 +151,21 @@ class IdiomaService {
     },
     'impact': {'es': 'Tu impacto 4Life', 'en': 'Your 4Life impact'},
     'consult_products': {
-      'es': 'Catalogo Afiliado',
-      'en': 'Member Catalog',
+      'es': 'Galería de productos Socio/Afiliado',
+      'en': 'Member Product Gallery',
     },
     'consult_products_desc': {
-      'es': 'Explora productos, precios afiliado y LP en un catalogo visual.',
-      'en': 'Browse products, member prices, and LP in a visual catalog.',
+      'es':
+          'Explora productos, precios socio/afiliado y LP en una galería visual.',
+      'en': 'Browse products, member prices, and LP in a visual gallery.',
     },
     'mitienda_catalog': {
-      'es': 'Catalogo MiTienda',
-      'en': 'MyStore Catalog',
+      'es': 'Galería de productos MiTienda',
+      'en': 'MyStore Product Gallery',
     },
     'mitienda_catalog_desc': {
-      'es': 'Consulta productos disponibles con precio promocional MiTienda.',
-      'en': 'View available products with MyStore promotional prices.',
+      'es': 'Consulta productos disponibles con precio MiTienda.',
+      'en': 'View products available with MyStore prices.',
     },
     'price_calculator': {
       'es': 'Calculadora de precios',
@@ -248,7 +249,10 @@ class IdiomaService {
       'en': 'Check key concepts about products and wellness.',
     },
     'quick_access': {'es': 'Accesos rápidos', 'en': 'Quick access'},
-    'catalog': {'es': 'Catalogo Afiliado', 'en': 'Member Catalog'},
+    'catalog': {
+      'es': 'Galería de productos Socio/Afiliado',
+      'en': 'Member Product Gallery',
+    },
     'prices': {'es': 'Precios', 'en': 'Prices'},
     'diagnoses': {'es': 'Diagnósticos', 'en': 'Diagnoses'},
     'chats': {'es': 'Chats', 'en': 'Chats'},

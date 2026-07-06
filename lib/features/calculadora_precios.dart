@@ -1,5 +1,7 @@
 part of '../main.dart';
 
+enum TipoPrecioCalculadora { miTienda, afiliado, publico }
+
 class PaginaCalculadoraPrecios extends StatefulWidget {
   const PaginaCalculadoraPrecios({super.key});
 
@@ -12,8 +14,175 @@ class _PaginaCalculadoraPreciosState extends State<PaginaCalculadoraPrecios> {
   final TextEditingController _controller = TextEditingController();
   List<LineaProductoPrecio> _productos = [];
   List<String> _noEncontrados = [];
+  TipoPrecioCalculadora _tipoPrecio = TipoPrecioCalculadora.miTienda;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _mostrarSelectorPrecio();
+    });
+  }
+
+  String get _etiquetaTipoPrecio {
+    switch (_tipoPrecio) {
+      case TipoPrecioCalculadora.miTienda:
+        return txtApp('MiTienda', 'MyStore');
+      case TipoPrecioCalculadora.afiliado:
+        return txtApp('Afiliado', 'Member');
+      case TipoPrecioCalculadora.publico:
+        return txtApp('Publico', 'Retail');
+    }
+  }
+
+  double? _precioProductoSeleccionado(ProductoPrecio producto) {
+    switch (_tipoPrecio) {
+      case TipoPrecioCalculadora.miTienda:
+        return precioPromocionalMiTienda(producto.nombre);
+      case TipoPrecioCalculadora.afiliado:
+        return producto.afiliado;
+      case TipoPrecioCalculadora.publico:
+        return producto.publico;
+    }
+  }
+
+  bool get _mostrarLp => _tipoPrecio == TipoPrecioCalculadora.afiliado;
+
+  bool _productoDisponibleParaPrecio(ProductoPrecio producto) =>
+      _precioProductoSeleccionado(producto) != null;
+
+  String _mensajeNoDisponible(ProductoPrecio producto) {
+    return txtApp(
+      '${producto.nombre} no dispone de precio $_etiquetaTipoPrecio.',
+      '${producto.nombre} does not have a $_etiquetaTipoPrecio price.',
+    );
+  }
+
+  void _aplicarTipoPrecio(TipoPrecioCalculadora tipo) {
+    setState(() {
+      _tipoPrecio = tipo;
+      _productos = _productos
+          .where((linea) => _productoDisponibleParaPrecio(linea.producto))
+          .toList();
+      _noEncontrados = [];
+    });
+  }
+
+  Future<void> _mostrarSelectorPrecio() async {
+    final seleccionado = await showDialog<TipoPrecioCalculadora>(
+      context: context,
+      builder: (dialogContext) => Dialog(
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                txtApp('Elige el precio a calcular', 'Choose price type'),
+                style: const TextStyle(
+                  color: Color(0xFF13288E),
+                  fontSize: 22,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                txtApp(
+                  'La selección mostrará solo productos con ese precio disponible.',
+                  'Selection will show only products with that price available.',
+                ),
+                style: const TextStyle(
+                  color: Color(0xFF58618C),
+                  fontSize: 14,
+                  height: 1.35,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 16),
+              _opcionTipoPrecioDialogo(
+                dialogContext,
+                TipoPrecioCalculadora.miTienda,
+                Icons.storefront_rounded,
+                txtApp('MiTienda', 'MyStore'),
+              ),
+              _opcionTipoPrecioDialogo(
+                dialogContext,
+                TipoPrecioCalculadora.afiliado,
+                Icons.person_outline_rounded,
+                txtApp('Afiliado', 'Member'),
+              ),
+              _opcionTipoPrecioDialogo(
+                dialogContext,
+                TipoPrecioCalculadora.publico,
+                Icons.groups_2_outlined,
+                txtApp('Publico', 'Retail'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    if (seleccionado != null) _aplicarTipoPrecio(seleccionado);
+  }
+
+  Widget _opcionTipoPrecioDialogo(
+    BuildContext dialogContext,
+    TipoPrecioCalculadora tipo,
+    IconData icono,
+    String titulo,
+  ) {
+    final activo = _tipoPrecio == tipo;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(14),
+        onTap: () => Navigator.pop(dialogContext, tipo),
+        child: Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: activo ? const Color(0xFFEFF2FF) : const Color(0xFFF8F9FF),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: activo ? const Color(0xFF17218D) : const Color(0xFFE1E4F0),
+              width: activo ? 2 : 1,
+            ),
+          ),
+          child: Row(
+            children: [
+              Icon(icono, color: const Color(0xFF17218D), size: 30),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  titulo,
+                  style: const TextStyle(
+                    color: Color(0xFF12248B),
+                    fontSize: 17,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+              if (activo)
+                const Icon(
+                  Icons.check_circle_rounded,
+                  color: Color(0xFF17218D),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 
   void _agregarProducto(ProductoPrecio producto, {int cantidad = 1}) {
+    if (!_productoDisponibleParaPrecio(producto)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(_mensajeNoDisponible(producto))),
+      );
+      return;
+    }
     final indice = _productos.indexWhere(
       (item) => item.producto.nombre == producto.nombre,
     );
@@ -47,6 +216,10 @@ class _PaginaCalculadoraPreciosState extends State<PaginaCalculadoraPrecios> {
       final producto = buscarProductoConPrecio(item.texto);
       if (producto == null) {
         noEncontrados.add(consulta);
+        continue;
+      }
+      if (!_productoDisponibleParaPrecio(producto)) {
+        noEncontrados.add(_mensajeNoDisponible(producto));
         continue;
       }
       final indice = _productos.indexWhere(
@@ -142,6 +315,7 @@ class _PaginaCalculadoraPreciosState extends State<PaginaCalculadoraPrecios> {
         'productos': _productos
             .map((p) => {'nombre': p.producto.nombre, 'cantidad': p.cantidad})
             .toList(),
+        'tipoPrecio': _etiquetaTipoPrecio,
         'noEncontrados': _noEncontrados,
       },
     ));
@@ -180,9 +354,8 @@ class _PaginaCalculadoraPreciosState extends State<PaginaCalculadoraPrecios> {
                 ),
               ),
               const SizedBox(height: 14),
-              _resumenTotal("Afiliado", _precio(_totalAfiliado)),
-              _resumenTotal("Publico", _precio(_totalPublico)),
-              _resumenTotal("LP", _totalLp.toString()),
+              _resumenTotal(_etiquetaTipoPrecio, _precio(_totalSeleccionado)),
+              if (_mostrarLp) _resumenTotal("LP", _totalLp.toString()),
               const SizedBox(height: 16),
               OutlinedButton.icon(
                 onPressed: () =>
@@ -222,11 +395,10 @@ class _PaginaCalculadoraPreciosState extends State<PaginaCalculadoraPrecios> {
   int get _cantidadTotalProductos =>
       _productos.fold(0, (total, p) => total + p.cantidad);
 
-  double get _totalAfiliado => _productos.fold(
-      0, (total, p) => total + (p.producto.afiliado * p.cantidad));
-
-  double get _totalPublico => _productos.fold(
-      0, (total, p) => total + (p.producto.publico * p.cantidad));
+  double get _totalSeleccionado => _productos.fold(0, (total, p) {
+        final precio = _precioProductoSeleccionado(p.producto) ?? 0;
+        return total + (precio * p.cantidad);
+      });
 
   int get _totalLp => _productos.fold(
       0, (total, p) => total + ((p.producto.lp ?? 0) * p.cantidad));
@@ -237,15 +409,18 @@ class _PaginaCalculadoraPreciosState extends State<PaginaCalculadoraPrecios> {
     final buffer = StringBuffer('Consulta de precios 4Life\n\n');
     for (final linea in _productos) {
       final producto = linea.producto;
+      final precio = _precioProductoSeleccionado(producto) ?? 0;
       buffer.writeln('${linea.cantidad} x ${producto.nombre}');
-      buffer
-          .writeln('Afiliado: ${_precio(producto.afiliado * linea.cantidad)}');
-      buffer.writeln('Publico: ${_precio(producto.publico * linea.cantidad)}');
-      buffer.writeln('LP: ${(producto.lp ?? 0) * linea.cantidad}\n');
+      buffer.writeln(
+          'Precio $_etiquetaTipoPrecio: ${_precio(precio * linea.cantidad)}');
+      if (_mostrarLp) {
+        buffer.writeln('LP: ${(producto.lp ?? 0) * linea.cantidad}');
+      }
+      buffer.writeln();
     }
-    buffer.writeln('Total afiliado: ${_precio(_totalAfiliado)}');
-    buffer.writeln('Total publico: ${_precio(_totalPublico)}');
-    buffer.writeln('Total LP: $_totalLp');
+    buffer
+        .writeln('Total $_etiquetaTipoPrecio: ${_precio(_totalSeleccionado)}');
+    if (_mostrarLp) buffer.writeln('Total LP: $_totalLp');
     return buffer.toString();
   }
 
@@ -269,9 +444,9 @@ class _PaginaCalculadoraPreciosState extends State<PaginaCalculadoraPrecios> {
         secciones: [
           SeccionDocumento(
             titulo: 'Resumen de la cotización',
-            contenido: 'Total afiliado: ${_precio(_totalAfiliado)}\n'
-                'Total público: ${_precio(_totalPublico)}\n'
-                'Total LP: $_totalLp',
+            contenido: 'Tipo de precio: $_etiquetaTipoPrecio\n'
+                'Total $_etiquetaTipoPrecio: ${_precio(_totalSeleccionado)}'
+                '${_mostrarLp ? '\nTotal LP: $_totalLp' : ''}',
           ),
         ],
         productos: _productos
@@ -280,11 +455,10 @@ class _PaginaCalculadoraPreciosState extends State<PaginaCalculadoraPrecios> {
                 nombre: '${linea.cantidad} x ${linea.producto.nombre}',
                 imagenAsset: imagenesProducto4Life[linea.producto.nombre],
                 indicaciones: [
-                  'Precio afiliado: '
-                      '${_precio(linea.producto.afiliado * linea.cantidad)}',
-                  'Precio público: '
-                      '${_precio(linea.producto.publico * linea.cantidad)}',
-                  'LP: ${(linea.producto.lp ?? 0) * linea.cantidad}',
+                  'Precio $_etiquetaTipoPrecio: '
+                      '${_precio((_precioProductoSeleccionado(linea.producto) ?? 0) * linea.cantidad)}',
+                  if (_mostrarLp)
+                    'LP: ${(linea.producto.lp ?? 0) * linea.cantidad}',
                 ],
               ),
             )
@@ -307,10 +481,11 @@ class _PaginaCalculadoraPreciosState extends State<PaginaCalculadoraPrecios> {
   }
 
   void _abrirCatalogo() {
-    final productosCatalogo = [...productosConPrecio4Life]
-      ..sort((a, b) => normalizarTexto(a.nombre).compareTo(
-            normalizarTexto(b.nombre),
-          ));
+    final productosCatalogo =
+        productosConPrecio4Life.where(_productoDisponibleParaPrecio).toList()
+          ..sort((a, b) => normalizarTexto(a.nombre).compareTo(
+                normalizarTexto(b.nombre),
+              ));
 
     showModalBottomSheet(
       context: context,
@@ -342,7 +517,10 @@ class _PaginaCalculadoraPreciosState extends State<PaginaCalculadoraPrecios> {
                   children: [
                     Expanded(
                       child: Text(
-                        txtApp("Catálogo", "Catalog"),
+                        txtApp(
+                          "Productos con precio $_etiquetaTipoPrecio",
+                          "$_etiquetaTipoPrecio products",
+                        ),
                         style: const TextStyle(
                           color: Color(0xFF11258B),
                           fontSize: 24,
@@ -603,6 +781,48 @@ class _PaginaCalculadoraPreciosState extends State<PaginaCalculadoraPrecios> {
             ],
           ),
           const SizedBox(height: 24),
+          InkWell(
+            borderRadius: BorderRadius.circular(10),
+            onTap: _mostrarSelectorPrecio,
+            child: Container(
+              height: 62,
+              padding: const EdgeInsets.symmetric(horizontal: 18),
+              decoration: BoxDecoration(
+                color: const Color(0xFFEFF2FF),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: const Color(0xFFD1D5E3), width: 1.4),
+              ),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.payments_rounded,
+                    color: Color(0xFF12248B),
+                    size: 30,
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Text(
+                      txtApp(
+                        'Precio activo: $_etiquetaTipoPrecio',
+                        'Active price: $_etiquetaTipoPrecio',
+                      ),
+                      style: const TextStyle(
+                        color: Color(0xFF12248B),
+                        fontSize: 16,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ),
+                  const Icon(
+                    Icons.expand_more_rounded,
+                    color: Color(0xFF12248B),
+                    size: 30,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 14),
           TextField(
             controller: _controller,
             minLines: 1,
@@ -942,19 +1162,17 @@ class _PaginaCalculadoraPreciosState extends State<PaginaCalculadoraPrecios> {
   }
 
   Widget _detallePrecioProducto(LineaProductoPrecio linea) {
+    final precio = _precioProductoSeleccionado(linea.producto) ?? 0;
     return Wrap(
       spacing: 6,
       runSpacing: 6,
       children: [
         _chipPrecioSeleccionado(
-          txtApp('Afiliado', 'Member'),
-          _precio(linea.producto.afiliado),
+          _etiquetaTipoPrecio,
+          _precio(precio),
         ),
-        _chipPrecioSeleccionado(
-          txtApp('Publico', 'Retail'),
-          _precio(linea.producto.publico),
-        ),
-        _chipPrecioSeleccionado('LP', '${linea.producto.lp ?? 0}'),
+        if (_mostrarLp)
+          _chipPrecioSeleccionado('LP', '${linea.producto.lp ?? 0}'),
       ],
     );
   }
