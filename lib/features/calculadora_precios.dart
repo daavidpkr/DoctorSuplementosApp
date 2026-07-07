@@ -14,13 +14,19 @@ class _PaginaCalculadoraPreciosState extends State<PaginaCalculadoraPrecios> {
   final TextEditingController _controller = TextEditingController();
   List<LineaProductoPrecio> _productos = [];
   List<String> _noEncontrados = [];
+  String _busquedaTexto = '';
   TipoPrecioCalculadora _tipoPrecio = TipoPrecioCalculadora.miTienda;
 
   @override
   void initState() {
     super.initState();
+    _controller.addListener(() {
+      if (_busquedaTexto == _controller.text) return;
+      if (!mounted) return;
+      setState(() => _busquedaTexto = _controller.text);
+    });
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) _mostrarSelectorPrecio();
+      if (mounted) _mostrarSelectorPrecio(resaltarActual: false);
     });
   }
 
@@ -68,7 +74,8 @@ class _PaginaCalculadoraPreciosState extends State<PaginaCalculadoraPrecios> {
     });
   }
 
-  Future<void> _mostrarSelectorPrecio() async {
+  Future<void> _mostrarSelectorPrecio({bool resaltarActual = true}) async {
+    final tipoActivo = resaltarActual ? _tipoPrecio : null;
     final seleccionado = await showDialog<TipoPrecioCalculadora>(
       context: context,
       builder: (dialogContext) => Dialog(
@@ -105,18 +112,21 @@ class _PaginaCalculadoraPreciosState extends State<PaginaCalculadoraPrecios> {
               _opcionTipoPrecioDialogo(
                 dialogContext,
                 TipoPrecioCalculadora.miTienda,
+                tipoActivo,
                 Icons.storefront_rounded,
                 txtApp('MiTienda', 'MyStore'),
               ),
               _opcionTipoPrecioDialogo(
                 dialogContext,
                 TipoPrecioCalculadora.afiliado,
+                tipoActivo,
                 Icons.person_outline_rounded,
                 txtApp('Afiliado', 'Member'),
               ),
               _opcionTipoPrecioDialogo(
                 dialogContext,
                 TipoPrecioCalculadora.publico,
+                tipoActivo,
                 Icons.groups_2_outlined,
                 txtApp('Publico', 'Retail'),
               ),
@@ -131,10 +141,11 @@ class _PaginaCalculadoraPreciosState extends State<PaginaCalculadoraPrecios> {
   Widget _opcionTipoPrecioDialogo(
     BuildContext dialogContext,
     TipoPrecioCalculadora tipo,
+    TipoPrecioCalculadora? tipoActivo,
     IconData icono,
     String titulo,
   ) {
-    final activo = _tipoPrecio == tipo;
+    final activo = tipoActivo == tipo;
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: InkWell(
@@ -486,6 +497,8 @@ class _PaginaCalculadoraPreciosState extends State<PaginaCalculadoraPrecios> {
           ..sort((a, b) => normalizarTexto(a.nombre).compareTo(
                 normalizarTexto(b.nombre),
               ));
+    final busquedaCatalogoController = TextEditingController();
+    var busquedaCatalogo = '';
 
     showModalBottomSheet(
       context: context,
@@ -500,132 +513,221 @@ class _PaginaCalculadoraPreciosState extends State<PaginaCalculadoraPrecios> {
         minChildSize: 0.55,
         maxChildSize: 0.94,
         builder: (context, scrollController) {
-          return Column(
-            children: [
-              const SizedBox(height: 10),
-              Container(
-                width: 46,
-                height: 5,
-                decoration: BoxDecoration(
-                  color: const Color(0xFFD8DCEB),
-                  borderRadius: BorderRadius.circular(99),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 18, 12, 10),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        txtApp(
-                          "Productos con precio $_etiquetaTipoPrecio",
-                          "$_etiquetaTipoPrecio products",
+          return StatefulBuilder(
+            builder: (context, actualizarCatalogo) {
+              final productosFiltrados = _filtrarProductosInteligente(
+                productosCatalogo,
+                busquedaCatalogo,
+              );
+              return Column(
+                children: [
+                  const SizedBox(height: 10),
+                  Container(
+                    width: 46,
+                    height: 5,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFD8DCEB),
+                      borderRadius: BorderRadius.circular(99),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 18, 12, 10),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            txtApp(
+                              "Productos con precio $_etiquetaTipoPrecio",
+                              "$_etiquetaTipoPrecio products",
+                            ),
+                            style: const TextStyle(
+                              color: Color(0xFF11258B),
+                              fontSize: 24,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
                         ),
-                        style: const TextStyle(
-                          color: Color(0xFF11258B),
-                          fontSize: 24,
-                          fontWeight: FontWeight.w900,
+                        IconButton(
+                          tooltip: txtApp("Cerrar", "Close"),
+                          onPressed: () => Navigator.pop(context),
+                          icon: const Icon(Icons.close_rounded),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                    child: TextField(
+                      controller: busquedaCatalogoController,
+                      onChanged: (valor) => actualizarCatalogo(
+                        () => busquedaCatalogo = valor,
+                      ),
+                      decoration: InputDecoration(
+                        hintText: txtApp(
+                          'Buscar por nombre, beneficio o componente',
+                          'Search by name, benefit, or ingredient',
+                        ),
+                        prefixIcon: const Icon(Icons.search_rounded),
+                        suffixIcon: busquedaCatalogo.isEmpty
+                            ? null
+                            : IconButton(
+                                tooltip: txtApp('Limpiar', 'Clear'),
+                                onPressed: () => actualizarCatalogo(() {
+                                  busquedaCatalogoController.clear();
+                                  busquedaCatalogo = '';
+                                }),
+                                icon: const Icon(Icons.close_rounded),
+                              ),
+                        filled: true,
+                        fillColor: const Color(0xFFF8F9FF),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(
+                            color: Color(0xFFDDE3FF),
+                            width: 1.3,
+                          ),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(
+                            color: Color(0xFF17218D),
+                            width: 1.7,
+                          ),
                         ),
                       ),
                     ),
-                    IconButton(
-                      tooltip: txtApp("Cerrar", "Close"),
-                      onPressed: () => Navigator.pop(context),
-                      icon: const Icon(Icons.close_rounded),
-                    ),
-                  ],
-                ),
-              ),
-              Expanded(
-                child: GridView.builder(
-                  controller: scrollController,
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 22),
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 3,
-                    mainAxisSpacing: 14,
-                    crossAxisSpacing: 14,
-                    childAspectRatio: 0.86,
                   ),
-                  itemCount: productosCatalogo.length,
-                  itemBuilder: (context, index) {
-                    final producto = productosCatalogo[index];
-                    final imagen = imagenesProducto4Life[producto.nombre];
-                    final cantidad = _productos
-                        .where(
-                            (item) => item.producto.nombre == producto.nombre)
-                        .fold<int>(0, (total, item) => total + item.cantidad);
-                    final seleccionado = cantidad > 0;
-                    return InkWell(
-                      borderRadius: BorderRadius.circular(16),
-                      onTap: () {
-                        _agregarProducto(producto);
-                        Navigator.pop(context);
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: seleccionado
-                              ? const Color(0xFFE9ECFF)
-                              : const Color(0xFFF8F9FF),
+                  Expanded(
+                    child: GridView.builder(
+                      controller: scrollController,
+                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 22),
+                      gridDelegate:
+                          const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 3,
+                        mainAxisSpacing: 14,
+                        crossAxisSpacing: 14,
+                        childAspectRatio: 0.86,
+                      ),
+                      itemCount: productosFiltrados.length,
+                      itemBuilder: (context, index) {
+                        final producto = productosFiltrados[index];
+                        final imagen = imagenesProducto4Life[producto.nombre];
+                        final cantidad = _productos
+                            .where((item) =>
+                                item.producto.nombre == producto.nombre)
+                            .fold<int>(
+                              0,
+                              (total, item) => total + item.cantidad,
+                            );
+                        final seleccionado = cantidad > 0;
+                        return InkWell(
                           borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color: seleccionado
-                                ? const Color(0xFF17218D)
-                                : const Color(0xFFE1E4F0),
-                            width: seleccionado ? 2 : 1,
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: const Color(0xFF17218D)
-                                  .withValues(alpha: 0.07),
-                              blurRadius: 12,
-                              offset: const Offset(0, 6),
+                          onTap: () {
+                            _agregarProducto(producto);
+                            Navigator.pop(context);
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: seleccionado
+                                  ? const Color(0xFFE9ECFF)
+                                  : const Color(0xFFF8F9FF),
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                color: seleccionado
+                                    ? const Color(0xFF17218D)
+                                    : const Color(0xFFE1E4F0),
+                                width: seleccionado ? 2 : 1,
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: const Color(0xFF17218D)
+                                      .withValues(alpha: 0.07),
+                                  blurRadius: 12,
+                                  offset: const Offset(0, 6),
+                                ),
+                              ],
                             ),
-                          ],
-                        ),
-                        child: Stack(
-                          children: [
-                            Center(
-                              child: imagen == null
-                                  ? const Icon(
-                                      Icons.image_not_supported_outlined,
-                                      color: Color(0xFF17218D),
-                                    )
-                                  : Image.asset(
-                                      imagen,
-                                      fit: BoxFit.contain,
-                                      filterQuality: FilterQuality.high,
-                                    ),
-                            ),
-                            if (seleccionado)
-                              Positioned(
-                                right: 0,
-                                top: 0,
-                                child: CircleAvatar(
-                                  radius: 15,
-                                  backgroundColor: const Color(0xFF17218D),
-                                  child: Text(
-                                    'x$cantidad',
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w900,
+                            child: Stack(
+                              children: [
+                                Center(
+                                  child: imagen == null
+                                      ? const Icon(
+                                          Icons.image_not_supported_outlined,
+                                          color: Color(0xFF17218D),
+                                        )
+                                      : Image.asset(
+                                          imagen,
+                                          fit: BoxFit.contain,
+                                          filterQuality: FilterQuality.high,
+                                        ),
+                                ),
+                                if (seleccionado)
+                                  Positioned(
+                                    right: 0,
+                                    top: 0,
+                                    child: CircleAvatar(
+                                      radius: 15,
+                                      backgroundColor:
+                                          const Color(0xFF17218D),
+                                      child: Text(
+                                        'x$cantidad',
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w900,
+                                        ),
+                                      ),
                                     ),
                                   ),
-                                ),
-                              ),
-                          ],
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ),
-            ],
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              );
+            },
           );
         },
       ),
-    );
+    ).whenComplete(busquedaCatalogoController.dispose);
+  }
+
+  List<ProductoPrecio> _filtrarProductosInteligente(
+    List<ProductoPrecio> productos,
+    String consulta,
+  ) {
+    final textoConsulta = normalizarTexto(consulta);
+    if (textoConsulta.isEmpty) return productos;
+    final palabras = textoConsulta
+        .split(RegExp(r'\s+'))
+        .where((palabra) => palabra.length > 1)
+        .toList();
+    final puntuados = <MapEntry<ProductoPrecio, int>>[];
+    for (final producto in productos) {
+      final info = informacionProductoCatalogo(producto.nombre);
+      final texto = normalizarTexto(
+        '${producto.nombre} ${info.descripcion} ${info.componentes} '
+        '${info.uso} ${info.precauciones}',
+      );
+      var puntaje = texto.contains(textoConsulta) ? 10 : 0;
+      for (final palabra in palabras) {
+        if (texto.contains(palabra)) puntaje += 3;
+        if (normalizarTexto(producto.nombre).startsWith(palabra)) puntaje += 4;
+      }
+      if (puntaje > 0) puntuados.add(MapEntry(producto, puntaje));
+    }
+    puntuados.sort((a, b) {
+      final puntaje = b.value.compareTo(a.value);
+      if (puntaje != 0) return puntaje;
+      return normalizarTexto(a.key.nombre).compareTo(
+        normalizarTexto(b.key.nombre),
+      );
+    });
+    return puntuados.map((entry) => entry.key).toList();
   }
 
   @override
@@ -783,7 +885,7 @@ class _PaginaCalculadoraPreciosState extends State<PaginaCalculadoraPrecios> {
           const SizedBox(height: 24),
           InkWell(
             borderRadius: BorderRadius.circular(10),
-            onTap: _mostrarSelectorPrecio,
+            onTap: () => _mostrarSelectorPrecio(),
             child: Container(
               height: 62,
               padding: const EdgeInsets.symmetric(horizontal: 18),
@@ -863,6 +965,7 @@ class _PaginaCalculadoraPreciosState extends State<PaginaCalculadoraPrecios> {
               ),
             ),
           ),
+          _sugerenciasBusquedaTexto(),
           const SizedBox(height: 18),
           InkWell(
             borderRadius: BorderRadius.circular(10),
@@ -970,6 +1073,75 @@ class _PaginaCalculadoraPreciosState extends State<PaginaCalculadoraPrecios> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _sugerenciasBusquedaTexto() {
+    final consulta = _busquedaTexto.trim();
+    if (consulta.length < 2) return const SizedBox.shrink();
+    final productosBase =
+        productosConPrecio4Life.where(_productoDisponibleParaPrecio).toList();
+    final sugerencias = _filtrarProductosInteligente(productosBase, consulta)
+        .take(5)
+        .toList();
+    if (sugerencias.isEmpty) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(top: 10),
+      child: Column(
+        children: [
+          for (final producto in sugerencias)
+            _sugerenciaProductoTexto(producto),
+        ],
+      ),
+    );
+  }
+
+  Widget _sugerenciaProductoTexto(ProductoPrecio producto) {
+    final imagen = imagenesProducto4Life[producto.nombre];
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: () {
+          _agregarProducto(producto);
+          _controller.clear();
+        },
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+          decoration: BoxDecoration(
+            color: const Color(0xFFF8F9FF),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: const Color(0xFFE1E4F0)),
+          ),
+          child: Row(
+            children: [
+              SizedBox(
+                width: 48,
+                height: 48,
+                child: imagen == null
+                    ? const Icon(Icons.inventory_2_outlined)
+                    : Image.asset(
+                        imagen,
+                        fit: BoxFit.contain,
+                        filterQuality: FilterQuality.high,
+                      ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  producto.nombre,
+                  style: const TextStyle(
+                    color: Color(0xFF12248B),
+                    fontSize: 15,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+              const Icon(Icons.add_circle_rounded, color: Color(0xFF17218D)),
+            ],
+          ),
+        ),
       ),
     );
   }

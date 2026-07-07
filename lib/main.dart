@@ -13,6 +13,7 @@ import 'package:record/record.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:lottie/lottie.dart';
+import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
 import 'package:video_player/video_player.dart';
 import 'services/servicio_texto_voz.dart';
 import 'services/servicio_version.dart';

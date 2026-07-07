@@ -67,9 +67,12 @@ class _PaginaCatalogosPdf4LifeState extends State<PaginaCatalogosPdf4Life> {
   }
 
   Future<void> _abrirCatalogo(CatalogoPdf4Life catalogo) async {
-    final uri = Uri.tryParse(catalogo.url);
-    if (uri == null) return;
-    await launchUrl(uri, mode: LaunchMode.externalApplication);
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => _VisorCatalogoPdf4Life(catalogo: catalogo),
+      ),
+    );
   }
 
   Future<void> _compartirCatalogo(CatalogoPdf4Life catalogo) async {
@@ -298,6 +301,46 @@ class _PaginaCatalogosPdf4LifeState extends State<PaginaCatalogosPdf4Life> {
             ],
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _VisorCatalogoPdf4Life extends StatelessWidget {
+  final CatalogoPdf4Life catalogo;
+
+  const _VisorCatalogoPdf4Life({required this.catalogo});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFFF7F7FB),
+      appBar: AppBar(
+        backgroundColor: const Color(0xFF12248B),
+        foregroundColor: Colors.white,
+        title: Text(
+          catalogo.titulo,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(fontWeight: FontWeight.w900),
+        ),
+      ),
+      body: SfPdfViewer.network(
+        catalogo.url,
+        canShowScrollHead: true,
+        canShowScrollStatus: true,
+        onDocumentLoadFailed: (details) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                txtApp(
+                  'No se pudo cargar el PDF dentro de la app.',
+                  'The PDF could not be loaded inside the app.',
+                ),
+              ),
+            ),
+          );
+        },
       ),
     );
   }

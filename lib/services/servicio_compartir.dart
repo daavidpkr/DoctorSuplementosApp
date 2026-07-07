@@ -668,8 +668,8 @@ class ServicioCompartir {
         'Precio publico: \$${producto.precioPublico!.toStringAsFixed(2)}',
       if (producto.precioPublico != null || producto.precioPromocional != null)
         producto.precioPromocional == null
-            ? 'Precio de promocion: ${producto.textoPrecioPromocional}'
-            : 'Precio de promocion: \$${producto.precioPromocional!.toStringAsFixed(2)}',
+            ? 'Precio MiTienda: ${producto.textoPrecioPromocional}'
+            : 'Precio MiTienda: \$${producto.precioPromocional!.toStringAsFixed(2)}',
       if (producto.puntosLP != null) 'LP: ${producto.puntosLP}',
     ];
     return pw.Container(

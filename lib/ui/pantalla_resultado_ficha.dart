@@ -862,8 +862,8 @@ class _PantallaResultadoFichaState extends State<PantallaResultadoFicha> {
           ),
           const Divider(height: 1, color: Color(0xFFE8EAF2)),
           _datoComercial(
-            Icons.local_offer_outlined,
-            _txt('Precio de promoción', 'Promotional price'),
+            Icons.storefront_rounded,
+            _txt('Precio MiTienda', 'MyStore price'),
             precio.promocional == null
                 ? _txt('Precio a preguntar', 'Ask for price')
                 : '\$${precio.promocional!.toStringAsFixed(2)}',
@@ -1197,7 +1197,7 @@ class _PantallaResultadoFichaState extends State<PantallaResultadoFicha> {
         return ProductoDocumento(
           nombre: producto.nombre,
           imagenAsset: producto.imagen,
-          precioAfiliado: precio?.afiliado,
+          precioAfiliado: null,
           precioPublico: precio?.publico,
           precioPromocional: precio?.promocional,
           cantidad: 1,

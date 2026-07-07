@@ -151,12 +151,12 @@ class IdiomaService {
     },
     'impact': {'es': 'Tu impacto 4Life', 'en': 'Your 4Life impact'},
     'consult_products': {
-      'es': 'Galería de productos Socio/Afiliado',
+      'es': 'Galería de productos Afiliado',
       'en': 'Member Product Gallery',
     },
     'consult_products_desc': {
       'es':
-          'Explora productos, precios socio/afiliado y LP en una galería visual.',
+          'Explora productos, precios afiliado, público y LP en una galería visual.',
       'en': 'Browse products, member prices, and LP in a visual gallery.',
     },
     'mitienda_catalog': {
@@ -250,7 +250,7 @@ class IdiomaService {
     },
     'quick_access': {'es': 'Accesos rápidos', 'en': 'Quick access'},
     'catalog': {
-      'es': 'Galería de productos Socio/Afiliado',
+      'es': 'Galería de productos Afiliado',
       'en': 'Member Product Gallery',
     },
     'prices': {'es': 'Precios', 'en': 'Prices'},

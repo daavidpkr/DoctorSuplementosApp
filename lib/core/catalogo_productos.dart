@@ -119,12 +119,14 @@ class ProductoPrecio {
   final double afiliado;
   final double publico;
   final int? lp;
+  final int? lpCanje;
 
   const ProductoPrecio({
     required this.nombre,
     required this.afiliado,
     required this.publico,
     required this.lp,
+    this.lpCanje,
   });
 }
 

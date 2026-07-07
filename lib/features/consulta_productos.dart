@@ -15,14 +15,16 @@ class ConsultaProductoPagina extends StatefulWidget {
 }
 
 class _ConsultaProductoPaginaState extends State<ConsultaProductoPagina> {
+  final TextEditingController _busquedaController = TextEditingController();
   bool _modoMultiple = false;
+  String _busqueda = '';
   final Set<String> _seleccionMultiple = {};
 
   bool get _esMiTienda => widget.tipo == TipoCatalogoProducto.miTienda;
 
   String get _tituloCatalogo => _esMiTienda
       ? txtApp('Galería de productos MiTienda', 'MyStore Product Gallery')
-      : txtApp('Galería de productos Socio/Afiliado', 'Member Product Gallery');
+      : txtApp('Galería de productos Afiliado', 'Member Product Gallery');
 
   List<ProductoPrecio> get _productosCatalogo {
     final productos = _esMiTienda
@@ -37,6 +39,49 @@ class _ConsultaProductoPaginaState extends State<ConsultaProductoPagina> {
   List<ProductoPrecio> get _productosSeleccionados => _productosCatalogo
       .where((producto) => _seleccionMultiple.contains(producto.nombre))
       .toList();
+
+  List<ProductoPrecio> get _productosFiltradosCatalogo =>
+      _filtrarProductosInteligente(_productosCatalogo, _busqueda);
+
+  List<ProductoPrecio> _filtrarProductosInteligente(
+    List<ProductoPrecio> productos,
+    String consulta,
+  ) {
+    final textoConsulta = normalizarTexto(consulta);
+    if (textoConsulta.isEmpty) return productos;
+    final palabras = textoConsulta
+        .split(RegExp(r'\s+'))
+        .where((palabra) => palabra.length > 1)
+        .toList();
+    final puntuados = <MapEntry<ProductoPrecio, int>>[];
+    for (final producto in productos) {
+      final info = informacionProductoCatalogo(producto.nombre);
+      final texto = normalizarTexto(
+        '${producto.nombre} ${info.descripcion} ${info.componentes} '
+        '${info.uso} ${info.precauciones}',
+      );
+      var puntaje = texto.contains(textoConsulta) ? 10 : 0;
+      for (final palabra in palabras) {
+        if (texto.contains(palabra)) puntaje += 3;
+        if (normalizarTexto(producto.nombre).startsWith(palabra)) puntaje += 4;
+      }
+      if (puntaje > 0) puntuados.add(MapEntry(producto, puntaje));
+    }
+    puntuados.sort((a, b) {
+      final puntaje = b.value.compareTo(a.value);
+      if (puntaje != 0) return puntaje;
+      return normalizarTexto(a.key.nombre).compareTo(
+        normalizarTexto(b.key.nombre),
+      );
+    });
+    return puntuados.map((entry) => entry.key).toList();
+  }
+
+  @override
+  void dispose() {
+    _busquedaController.dispose();
+    super.dispose();
+  }
 
   void _alternarSeleccionMultiple(ProductoPrecio producto) {
     setState(() {
@@ -143,10 +188,12 @@ Este producto no es medicina, no diagnostica, no trata, no cura ni previene enfe
           children: [
             _encabezadoConsulta(),
             _selectorModoConsulta(),
+            _barraBusquedaCatalogo(),
             Expanded(
               child: LayoutBuilder(
                 builder: (context, constraints) {
                   final ancho = constraints.maxWidth;
+                  final productos = _productosFiltradosCatalogo;
                   return GridView.builder(
                     padding: EdgeInsets.fromLTRB(
                       ancho < 420 ? 12 : 24,
@@ -160,10 +207,10 @@ Este producto no es medicina, no diagnostica, no trata, no cura ni previene enfe
                       crossAxisSpacing: ancho < 420 ? 10 : 18,
                       childAspectRatio: ancho < 420 ? 0.70 : 0.92,
                     ),
-                    itemCount: _productosCatalogo.length,
+                    itemCount: productos.length,
                     itemBuilder: (context, index) {
                       return _tarjetaProductoCatalogo(
-                        _productosCatalogo[index],
+                        productos[index],
                       );
                     },
                   );
@@ -237,6 +284,45 @@ Este producto no es medicina, no diagnostica, no trata, no cura ni previene enfe
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _barraBusquedaCatalogo() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 0, 24, 14),
+      child: TextField(
+        controller: _busquedaController,
+        onChanged: (valor) => setState(() => _busqueda = valor),
+        decoration: InputDecoration(
+          hintText: txtApp(
+            'Buscar por nombre, beneficio o componente',
+            'Search by name, benefit, or ingredient',
+          ),
+          prefixIcon: const Icon(Icons.search_rounded),
+          suffixIcon: _busqueda.isEmpty
+              ? null
+              : IconButton(
+                  tooltip: txtApp('Limpiar', 'Clear'),
+                  onPressed: () {
+                    _busquedaController.clear();
+                    setState(() => _busqueda = '');
+                  },
+                  icon: const Icon(Icons.close_rounded),
+                ),
+          filled: true,
+          fillColor: Colors.white,
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(color: Color(0xFFDDE3FF), width: 1.3),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(color: Color(0xFF12248B), width: 1.7),
+          ),
         ),
       ),
     );
@@ -415,7 +501,7 @@ Este producto no es medicina, no diagnostica, no trata, no cura ni previene enfe
                 spacing: 10,
                 runSpacing: 10,
                 children: [
-                  _resumenMultiple('LP', '$totalLp'),
+                  if (!_esMiTienda) _resumenMultiple('LP', '$totalLp'),
                   _resumenMultiple(
                     ingles ? 'Member' : 'Afiliado',
                     '\$${totalAfiliado.toStringAsFixed(2)}',
@@ -585,6 +671,8 @@ Este producto no es medicina, no diagnostica, no trata, no cura ni previene enfe
     return [
       '${ingles ? 'Member' : 'Afiliado'} \$${producto.afiliado.toStringAsFixed(2)}',
       if (!_esMiTienda) 'LP ${producto.lp ?? 0}',
+      if (!_esMiTienda && producto.lpCanje != null)
+        '${ingles ? 'Exchange LP' : 'LP canje'} ${producto.lpCanje}',
       '${ingles ? 'Retail' : 'Público'} \$${producto.publico.toStringAsFixed(2)}',
       if (_esMiTienda && promo != null)
         '${ingles ? 'Promo' : 'Promocional'} \$${promo.toStringAsFixed(2)}',
@@ -976,12 +1064,22 @@ Este producto no es medicina, no diagnostica, no trata, no cura ni previene enfe
             '\$${producto.publico.toStringAsFixed(2)}',
             Icons.groups_2_outlined,
           ),
-          const Divider(height: 1),
-          _datoPrecio(
-            "LP",
-            producto.lp?.toString() ?? (ingles ? 'No data' : 'Sin dato'),
-            Icons.star_outline_rounded,
-          ),
+          if (!_esMiTienda) ...[
+            const Divider(height: 1),
+            _datoPrecio(
+              "LP",
+              producto.lp?.toString() ?? (ingles ? 'No data' : 'Sin dato'),
+              Icons.star_outline_rounded,
+            ),
+            if (producto.lpCanje != null) ...[
+              const Divider(height: 1),
+              _datoPrecio(
+                ingles ? "Exchange LP" : "LP canje",
+                producto.lpCanje.toString(),
+                Icons.redeem_outlined,
+              ),
+            ],
+          ],
           if (precioPromocional != null) ...[
             const Divider(height: 1),
             _datoPrecio(
