@@ -670,7 +670,7 @@ Este producto no es medicina, no diagnostica, no trata, no cura ni previene enfe
     final promo = precioPromocional;
     return [
       '${ingles ? 'Member' : 'Afiliado'} \$${producto.afiliado.toStringAsFixed(2)}',
-      if (!_esMiTienda) 'LP ${producto.lp ?? 0}',
+      'LP ${producto.lp ?? 0}',
       if (!_esMiTienda && producto.lpCanje != null)
         '${ingles ? 'Exchange LP' : 'LP canje'} ${producto.lpCanje}',
       '${ingles ? 'Retail' : 'Público'} \$${producto.publico.toStringAsFixed(2)}',

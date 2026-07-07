@@ -80,13 +80,10 @@ class _PaginaCatalogosPdf4LifeState extends State<PaginaCatalogosPdf4Life> {
     setState(() => _compartiendoId = catalogo.id);
 
     try {
-      final carpetaTemporal = await getTemporaryDirectory();
-      final nombreArchivo = '${_nombreArchivoSeguro(catalogo.titulo)}.pdf';
-      final ruta =
-          '${carpetaTemporal.path}${Platform.pathSeparator}$nombreArchivo';
-      await Dio().download(catalogo.url, ruta);
+      final archivo = await _obtenerArchivoCatalogoPdf(catalogo);
+      final nombreArchivo = archivo.uri.pathSegments.last;
       await Share.shareXFiles(
-        [XFile(ruta, mimeType: 'application/pdf', name: nombreArchivo)],
+        [XFile(archivo.path, mimeType: 'application/pdf', name: nombreArchivo)],
         subject: catalogo.titulo,
         text: catalogo.descripcion,
       );
@@ -106,13 +103,6 @@ class _PaginaCatalogosPdf4LifeState extends State<PaginaCatalogosPdf4Life> {
     } finally {
       if (mounted) setState(() => _compartiendoId = null);
     }
-  }
-
-  String _nombreArchivoSeguro(String texto) {
-    final limpio = normalizarTexto(texto)
-        .replaceAll(RegExp(r'[^a-z0-9]+'), '_')
-        .replaceAll(RegExp(r'^_+|_+$'), '');
-    return limpio.isEmpty ? 'catalogo_4life' : limpio;
   }
 
   @override
@@ -306,10 +296,53 @@ class _PaginaCatalogosPdf4LifeState extends State<PaginaCatalogosPdf4Life> {
   }
 }
 
-class _VisorCatalogoPdf4Life extends StatelessWidget {
+class _VisorCatalogoPdf4Life extends StatefulWidget {
   final CatalogoPdf4Life catalogo;
 
   const _VisorCatalogoPdf4Life({required this.catalogo});
+
+  @override
+  State<_VisorCatalogoPdf4Life> createState() => _VisorCatalogoPdf4LifeState();
+}
+
+class _VisorCatalogoPdf4LifeState extends State<_VisorCatalogoPdf4Life> {
+  File? _archivoPdf;
+  bool _cargando = true;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _prepararPdf();
+  }
+
+  Future<void> _prepararPdf({bool forzarDescarga = false}) async {
+    setState(() {
+      _cargando = true;
+      _error = null;
+    });
+
+    try {
+      final archivo = await _obtenerArchivoCatalogoPdf(
+        widget.catalogo,
+        forzarDescarga: forzarDescarga,
+      );
+      if (!mounted) return;
+      setState(() {
+        _archivoPdf = archivo;
+        _cargando = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _cargando = false;
+        _error = txtApp(
+          'No se pudo cargar el PDF dentro de la app.',
+          'The PDF could not be loaded inside the app.',
+        );
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -319,29 +352,113 @@ class _VisorCatalogoPdf4Life extends StatelessWidget {
         backgroundColor: const Color(0xFF12248B),
         foregroundColor: Colors.white,
         title: Text(
-          catalogo.titulo,
+          widget.catalogo.titulo,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: const TextStyle(fontWeight: FontWeight.w900),
         ),
+        actions: [
+          IconButton(
+            tooltip: txtApp('Recargar', 'Reload'),
+            onPressed:
+                _cargando ? null : () => _prepararPdf(forzarDescarga: true),
+            icon: const Icon(Icons.refresh_rounded),
+          ),
+        ],
       ),
-      body: SfPdfViewer.network(
-        catalogo.url,
-        canShowScrollHead: true,
-        canShowScrollStatus: true,
-        onDocumentLoadFailed: (details) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                txtApp(
-                  'No se pudo cargar el PDF dentro de la app.',
-                  'The PDF could not be loaded inside the app.',
-                ),
+      body: _cargando
+          ? Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const CircularProgressIndicator(),
+                  const SizedBox(height: 14),
+                  Text(
+                    txtApp('Preparando PDF...', 'Preparing PDF...'),
+                    style: const TextStyle(
+                      color: Color(0xFF12248B),
+                      fontSize: 15,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ],
               ),
-            ),
-          );
-        },
-      ),
+            )
+          : _error != null
+              ? Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          Icons.picture_as_pdf_outlined,
+                          color: Color(0xFF12248B),
+                          size: 48,
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          _error!,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            color: Color(0xFF27315F),
+                            fontSize: 16,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                        const SizedBox(height: 14),
+                        ElevatedButton.icon(
+                          onPressed: () => _prepararPdf(forzarDescarga: true),
+                          icon: const Icon(Icons.refresh_rounded),
+                          label: Text(txtApp('Reintentar', 'Try again')),
+                        ),
+                      ],
+                    ),
+                  ),
+                )
+              : SfPdfViewer.file(
+                  _archivoPdf!,
+                  canShowScrollHead: true,
+                  canShowScrollStatus: true,
+                  enableDoubleTapZooming: false,
+                  onDocumentLoadFailed: (details) {
+                    setState(() {
+                      _error = txtApp(
+                        'No se pudo abrir el PDF descargado.',
+                        'The downloaded PDF could not be opened.',
+                      );
+                    });
+                  },
+                ),
     );
   }
+}
+
+Future<File> _obtenerArchivoCatalogoPdf(
+  CatalogoPdf4Life catalogo, {
+  bool forzarDescarga = false,
+}) async {
+  final carpetaTemporal = await getTemporaryDirectory();
+  final nombreArchivo = '${_nombreArchivoCatalogoSeguro(catalogo.titulo)}.pdf';
+  final archivo = File(
+    '${carpetaTemporal.path}${Platform.pathSeparator}$nombreArchivo',
+  );
+
+  if (!forzarDescarga && await archivo.exists() && await archivo.length() > 0) {
+    return archivo;
+  }
+
+  await Dio().download(
+    catalogo.url,
+    archivo.path,
+    options: Options(responseType: ResponseType.bytes),
+  );
+  return archivo;
+}
+
+String _nombreArchivoCatalogoSeguro(String texto) {
+  final limpio = normalizarTexto(texto)
+      .replaceAll(RegExp(r'[^a-z0-9]+'), '_')
+      .replaceAll(RegExp(r'^_+|_+$'), '');
+  return limpio.isEmpty ? 'catalogo_4life' : limpio;
 }
