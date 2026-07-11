@@ -9,15 +9,23 @@ class PantallaPrincipal extends StatefulWidget {
 
 class _PantallaPrincipalState extends State<PantallaPrincipal> {
   late Future<PerfilAsesor> _perfilFuture;
+  late final PageController _pageController;
   final Set<String> _categoriasAbiertas = <String>{};
 
   @override
   void initState() {
     super.initState();
+    _pageController = PageController();
     _perfilFuture = PerfilService.cargar();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ServicioVersion.validarVersion(context);
     });
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
   }
 
   void _recargarPerfil() {
@@ -174,107 +182,130 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
       body: SafeArea(
         child: Column(
           children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+              child: FutureBuilder<PerfilAsesor>(
+                future: _perfilFuture,
+                builder: (context, snapshot) {
+                  return _heroAsesor(context, snapshot.data);
+                },
+              ),
+            ),
+            const SizedBox(height: 18),
             Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 18),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    FutureBuilder<PerfilAsesor>(
-                      future: _perfilFuture,
-                      builder: (context, snapshot) {
-                        return _heroAsesor(context, snapshot.data);
-                      },
-                    ),
-                    const SizedBox(height: 18),
-                    _tarjetaCategoria(
-                      context,
-                      id: 'catalogos',
-                      titulo: txtApp('Catálogos', 'Catalogs'),
-                      descripcion: txtApp(
-                        'Galerías de productos y catálogos PDF.',
-                        'Product galleries and PDF catalogs.',
-                      ),
-                      icono: Icons.view_list_rounded,
-                      colores: const [Color(0xFF2E3192), Color(0xFF151B7C)],
-                      fichas: [
-                        catalogoAfiliado,
-                        catalogoMiTienda,
-                        catalogosPdf,
+              child: PageView(
+                controller: _pageController,
+                children: [
+                  SingleChildScrollView(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 18),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _tarjetaMenu(context, ficha: catalogoAfiliado),
+                        _tarjetaMenu(context, ficha: catalogoMiTienda),
+                        _tarjetaMenu(context, ficha: catalogosPdf),
+                        _tarjetaMenu(context, ficha: calculadoraPrecios),
+                        _tarjetaMenu(context, ficha: diagnostico),
+                        _tarjetaMenu(context, ficha: chatLive),
+                        _tarjetaMenu(context, ficha: asesorIa),
                       ],
                     ),
-                    _tarjetaCategoria(
-                      context,
-                      id: 'panel_rendimiento',
-                      titulo:
-                          txtApp('Panel de Rendimiento', 'Performance Panel'),
-                      descripcion: txtApp(
-                        'Calculadoras y optimizadores para planificar compras.',
-                        'Calculators and optimizers for purchase planning.',
-                      ),
-                      icono: Icons.speed_rounded,
-                      colores: const [Color(0xFF008C7E), Color(0xFF006B61)],
-                      fichas: [
-                        calculadoraPrecios,
-                        optimizadorConsumo,
-                        optimizadorAcelerado,
+                  ),
+                  SingleChildScrollView(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 18),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _tarjetaCategoria(
+                          context,
+                          id: 'catalogos',
+                          titulo: txtApp('Catálogos', 'Catalogs'),
+                          descripcion: txtApp(
+                            'Galerías de productos y catálogos PDF.',
+                            'Product galleries and PDF catalogs.',
+                          ),
+                          icono: Icons.view_list_rounded,
+                          colores: const [Color(0xFF2E3192), Color(0xFF151B7C)],
+                          fichas: [
+                            catalogoAfiliado,
+                            catalogoMiTienda,
+                            catalogosPdf,
+                          ],
+                        ),
+                        _tarjetaCategoria(
+                          context,
+                          id: 'panel_rendimiento',
+                          titulo: txtApp(
+                              'Panel de Rendimiento', 'Performance Panel'),
+                          descripcion: txtApp(
+                            'Calculadoras y optimizadores para planificar compras.',
+                            'Calculators and optimizers for purchase planning.',
+                          ),
+                          icono: Icons.speed_rounded,
+                          colores: const [Color(0xFF008C7E), Color(0xFF006B61)],
+                          fichas: [
+                            calculadoraPrecios,
+                            optimizadorConsumo,
+                            optimizadorAcelerado,
+                          ],
+                        ),
+                        _tarjetaCategoria(
+                          context,
+                          id: 'diagnosticos',
+                          titulo: txtApp('Diagnósticos', 'Diagnoses'),
+                          descripcion: txtApp(
+                            'Diagnóstico, cambio físico e historial.',
+                            'Diagnosis, body transformation, and history.',
+                          ),
+                          icono: Icons.assignment_turned_in_rounded,
+                          colores: const [Color(0xFF1457E8), Color(0xFF1531A6)],
+                          fichas: [diagnostico, cambioFisico, historial],
+                        ),
+                        _tarjetaCategoria(
+                          context,
+                          id: 'analisis_control',
+                          titulo: txtApp(
+                              'Análisis y Control', 'Analysis and Control'),
+                          descripcion: txtApp(
+                            'Inventario local y comparador A/B.',
+                            'Local inventory and A/B comparator.',
+                          ),
+                          icono: Icons.analytics_rounded,
+                          colores: const [Color(0xFF1487A8), Color(0xFF172394)],
+                          fichas: [inventarioLocal, comparadorAB],
+                        ),
+                        _tarjetaCategoria(
+                          context,
+                          id: 'asistentes_ia',
+                          titulo: txtApp('Asistentes IA', 'AI Assistants'),
+                          descripcion: txtApp(
+                            'Chat Live y Asesor IA 4Life.',
+                            'Chat Live and 4Life AI Adviser.',
+                          ),
+                          icono: Icons.auto_awesome_rounded,
+                          colores: const [Color(0xFF6A4DE8), Color(0xFF3C2AAE)],
+                          fichas: [chatLive, asesorIa, historialChatsIa],
+                        ),
+                        _tarjetaCategoria(
+                          context,
+                          id: 'recursos_aprendizaje',
+                          titulo: txtApp(
+                            'Recursos y Centro de Aprendizaje',
+                            'Resources and Learning Center',
+                          ),
+                          descripcion: txtApp(
+                            'Testimonios y diccionario.',
+                            'Testimonials and dictionary.',
+                          ),
+                          icono: Icons.school_rounded,
+                          colores: const [Color(0xFF3047CC), Color(0xFF172394)],
+                          fichas: [testimonios, diccionario],
+                        ),
+                        _tarjetaMenu(context, ficha: perfil),
                       ],
                     ),
-                    _tarjetaCategoria(
-                      context,
-                      id: 'diagnosticos',
-                      titulo: txtApp('Diagnósticos', 'Diagnoses'),
-                      descripcion: txtApp(
-                        'Diagnóstico, cambio físico e historial.',
-                        'Diagnosis, body transformation, and history.',
-                      ),
-                      icono: Icons.assignment_turned_in_rounded,
-                      colores: const [Color(0xFF1457E8), Color(0xFF1531A6)],
-                      fichas: [diagnostico, cambioFisico, historial],
-                    ),
-                    _tarjetaCategoria(
-                      context,
-                      id: 'analisis_control',
-                      titulo:
-                          txtApp('Análisis y Control', 'Analysis and Control'),
-                      descripcion: txtApp(
-                        'Inventario local y comparador A/B.',
-                        'Local inventory and A/B comparator.',
-                      ),
-                      icono: Icons.analytics_rounded,
-                      colores: const [Color(0xFF1487A8), Color(0xFF172394)],
-                      fichas: [inventarioLocal, comparadorAB],
-                    ),
-                    _tarjetaCategoria(
-                      context,
-                      id: 'asistentes_ia',
-                      titulo: txtApp('Asistentes IA', 'AI Assistants'),
-                      descripcion: txtApp(
-                        'Chat Live y Asesor IA 4Life.',
-                        'Chat Live and 4Life AI Adviser.',
-                      ),
-                      icono: Icons.auto_awesome_rounded,
-                      colores: const [Color(0xFF6A4DE8), Color(0xFF3C2AAE)],
-                      fichas: [chatLive, asesorIa, historialChatsIa],
-                    ),
-                    _tarjetaCategoria(
-                      context,
-                      id: 'recursos_aprendizaje',
-                      titulo: txtApp(
-                        'Recursos y Centro de Aprendizaje',
-                        'Resources and Learning Center',
-                      ),
-                      descripcion: txtApp(
-                        'Testimonios y diccionario.',
-                        'Testimonials and dictionary.',
-                      ),
-                      icono: Icons.school_rounded,
-                      colores: const [Color(0xFF3047CC), Color(0xFF172394)],
-                      fichas: [testimonios, diccionario],
-                    ),
-                    _tarjetaMenu(context, ficha: perfil),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
             _barraInferior(context),
