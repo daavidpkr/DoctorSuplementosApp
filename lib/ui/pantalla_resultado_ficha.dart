@@ -86,7 +86,7 @@ class ContenidoResultadoFicha {
 
     for (final linea in lineas) {
       final normalizada = _normalizar(linea);
-      if (_contiene(normalizada, const [
+      if (_esEncabezado(normalizada, const [
         'saludo y analisis',
         'analisis del caso',
         'saludo y analisis fisico',
@@ -98,7 +98,7 @@ class ContenidoResultadoFicha {
         seccion = 'analisis';
         continue;
       }
-      if (_contiene(normalizada, const [
+      if (_esEncabezado(normalizada, const [
         'nuestro objetivo',
         'planificacion del caso',
         'our goal',
@@ -108,8 +108,9 @@ class ContenidoResultadoFicha {
         seccion = 'objetivo';
         continue;
       }
-      if (_contiene(normalizada, const [
+      if (_esEncabezado(normalizada, const [
         'sustrato y respaldo',
+        'sustrato y respaldo recomendado',
         'plan de apoyo 4life',
         'productos recomendados',
         'recommended products',
@@ -120,8 +121,9 @@ class ContenidoResultadoFicha {
         seccion = 'productos';
         continue;
       }
-      if (_contiene(normalizada, const [
+      if (_esEncabezado(normalizada, const [
         'recomendaciones de bienestar',
+        'recomendaciones de bienestar general',
         'habitos para el objetivo',
         'recomendacion general',
         'wellness recommendations',
@@ -158,6 +160,7 @@ class ContenidoResultadoFicha {
 
       if (seccion == 'productos' && actual != null) {
         final contenido = linea.replaceFirst(RegExp(r'^[-•]\s*'), '').trim();
+        if (contenido.isEmpty || contenido == '-') continue;
         final campo = _normalizar(contenido);
         if (campo.startsWith('dosis ') || campo.startsWith('dose ')) {
           actual!.dosis.add(contenido);
@@ -223,8 +226,8 @@ class ContenidoResultadoFicha {
     return salida;
   }
 
-  static bool _contiene(String linea, List<String> opciones) =>
-      opciones.any(linea.contains);
+  static bool _esEncabezado(String linea, List<String> opciones) =>
+      opciones.any((opcion) => linea == opcion);
 
   static String? _detectarProducto(
     String linea,
@@ -854,12 +857,8 @@ class _PantallaResultadoFichaState extends State<PantallaResultadoFicha> {
               for (final dosis in producto.dosis)
                 _lineaProducto(
                   dosis,
-                  dosis.toLowerCase().contains('noche')
-                      ? Icons.dark_mode_outlined
-                      : Icons.wb_sunny_outlined,
-                  dosis.toLowerCase().contains('noche')
-                      ? violeta
-                      : const Color(0xFFFFA000),
+                  _iconoDosis(dosis),
+                  _colorDosis(dosis),
                 ),
               if (producto.justificacion.isNotEmpty)
                 _lineaProducto(
@@ -878,6 +877,26 @@ class _PantallaResultadoFichaState extends State<PantallaResultadoFicha> {
         },
       ),
     );
+  }
+
+  IconData _iconoDosis(String dosis) {
+    final horario = dosis.toLowerCase();
+    if (horario.contains('noche') || horario.contains('night')) {
+      return Icons.dark_mode_outlined;
+    }
+    if (horario.contains('tarde') || horario.contains('afternoon')) {
+      return Icons.wb_twilight_outlined;
+    }
+    return Icons.wb_sunny_outlined;
+  }
+
+  Color _colorDosis(String dosis) {
+    final horario = dosis.toLowerCase();
+    if (horario.contains('noche') || horario.contains('night')) return violeta;
+    if (horario.contains('tarde') || horario.contains('afternoon')) {
+      return const Color(0xFFFF7A00);
+    }
+    return const Color(0xFFFFB300);
   }
 
   Widget _resumenComercial(PrecioProductoResultadoFicha precio) {

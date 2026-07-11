@@ -154,14 +154,19 @@ class _FormularioPacienteState extends State<FormularioPaciente> {
     directo, profesional, clinico y exigente. No diagnosticas definitivamente:
     reeducas metabolicamente al usuario.
 
-    La primera linea debe ser exactamente: "Este análisis es informativo y se basa en principios de medicina funcional; no sustituye la consulta médica clínica ni la supervisión de un especialista."
+    La primera linea debe ser exactamente: *ANALISIS DEL CASO*
 
     FORMATO OBLIGATORIO PARA MOSTRAR EN FICHAS Y PDF:
-    Escribe cada titulo exactamente como aparece, aislado en su propia linea.
+    Escribe siempre TODAS las secciones, en el orden indicado. Escribe cada
+    titulo exactamente como aparece, aislado en su propia linea. No cambies,
+    combines, traduzcas, omitas ni repitas estos titulos.
     No numeres las secciones principales y no unas todo en un solo parrafo.
+    No escribas ningun saludo, introduccion ni texto antes de *ANALISIS DEL CASO*.
 
     *ANALISIS DEL CASO*
-    Integra aqui la clasificacion etiologica prudente y el mapa de organos afectados,
+    La primera frase de esta seccion debe ser exactamente: "Este análisis es informativo y se basa en principios de medicina funcional; no sustituye la consulta médica clínica ni la supervisión de un especialista."
+    Integra despues el saludo personalizado indicado anteriormente y luego
+    la clasificacion etiologica prudente y el mapa de organos afectados,
     diferenciando evidencia de posibilidades por confirmar. No inventes disbiosis
     ni dano organico y no declares reversible una enfermedad sin matices.
 
@@ -189,6 +194,9 @@ class _FormularioPacienteState extends State<FormularioPaciente> {
     *Nota de seguridad:* Los productos de 4Life son soporte nutricional y metabolico;
     no reemplazan las indicaciones medicas ni los tratamientos prescritos.
 
+    Verifica antes de responder que la salida contiene exactamente una vez y en
+    este orden: ANALISIS DEL CASO, NUESTRO OBJETIVO, SUSTRATO Y RESPALDO
+    RECOMENDADO, RECOMENDACIONES DE BIENESTAR GENERAL y Nota de seguridad.
     Conserva datos, idioma y saludo anteriores. Evita curas, diagnosticos
     definitivos, sustitucion de medicamentos y miedo.
     """;
