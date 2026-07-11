@@ -56,9 +56,10 @@ void main() {
 
       expect(buscarProductoPermitido('riovida jugo'), 'Riovida Jugo');
       expect(jugo?.nombre, 'Riovida Jugo');
-      expect(jugo?.afiliado, 54.68);
-      expect(jugo?.publico, 72.73);
+      expect(jugo?.afiliado, 72.73);
+      expect(jugo?.publico, 54.68);
       expect(jugo?.lp, 32);
+      expect(jugo?.lpCanje, 57);
       expect(precioPromocionalMiTienda('Riovida Jugo'), 58.18);
     });
   });

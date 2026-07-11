@@ -230,6 +230,12 @@ ESTRUCTURA OBLIGATORIA:
 Escribe cada encabezado exactamente como aparece, en una linea independiente,
 seguido por su contenido en parrafos o listas. No unas dos bloques en un mismo parrafo.
 FICHA TECNICA EJECUTIVA: nombre y funcion metabolica principal.
+COMPONENTES PRINCIPALES Y ORIGEN: para cada componente principal disponible,
+explica por separado que es, para que se utiliza dentro del producto y de donde
+proviene (por ejemplo, origen vegetal, animal, mineral o sintetico). Indica la
+fuente concreta solo cuando este respaldada por los datos suministrados. Si el
+origen exacto no consta, escribe claramente "origen no especificado en la
+informacion disponible"; no lo deduzcas ni lo inventes.
 MECANISMO DE ACCION: explica los ingredientes clave y su
 impacto biologico con lenguaje prudente; no garantices resultados clinicos.
 PERFIL DEL USUARIO IDEAL: define quien podria beneficiarse del
@@ -1382,6 +1388,8 @@ Este producto no es medicina, no diagnostica, no trata, no cura ni previene enfe
       'Executive technical sheet',
       'Mecanismo de accion',
       'Mechanism of action',
+      'Componentes principales y origen',
+      'Main components and origin',
       'Perfil del usuario ideal',
       'Ideal user profile',
       'Protocolo de uso',
@@ -1455,6 +1463,8 @@ Este producto no es medicina, no diagnostica, no trata, no cura ni previene enfe
       'Description': Icons.assignment_outlined,
       'Ingredientes o componentes principales': Icons.science_outlined,
       'Main ingredients or components': Icons.science_outlined,
+      'Componentes principales y origen': Icons.biotech_outlined,
+      'Main components and origin': Icons.biotech_outlined,
       'Indicaciones de uso': Icons.calendar_month_outlined,
       'Directions for use': Icons.calendar_month_outlined,
       'Contraindicaciones o precauciones': Icons.health_and_safety_outlined,
