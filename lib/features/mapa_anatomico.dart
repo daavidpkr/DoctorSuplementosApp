@@ -336,8 +336,31 @@ const List<_OrganoAnatomico> _organosAnatomicos = [
       ]),
 ];
 
-class PaginaMapaAnatomico extends StatelessWidget {
+class PaginaMapaAnatomico extends StatefulWidget {
   const PaginaMapaAnatomico({super.key});
+
+  @override
+  State<PaginaMapaAnatomico> createState() => _PaginaMapaAnatomicoState();
+}
+
+class _PaginaMapaAnatomicoState extends State<PaginaMapaAnatomico> {
+  final TransformationController _zoomController = TransformationController();
+
+  @override
+  void dispose() {
+    _zoomController.dispose();
+    super.dispose();
+  }
+
+  void _cambiarZoom(double diferencia) {
+    final escalaActual = _zoomController.value.getMaxScaleOnAxis();
+    final nuevaEscala = (escalaActual + diferencia).clamp(1.0, 4.0);
+    _zoomController.value = Matrix4.diagonal3Values(
+      nuevaEscala,
+      nuevaEscala,
+      1,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -366,8 +389,8 @@ class PaginaMapaAnatomico extends StatelessWidget {
               Expanded(
                   child: Text(
                       txtApp(
-                          'Toca un órgano para conocer sus enfermedades y productos de apoyo.',
-                          'Tap an organ to view its conditions and support products.'),
+                          'Amplía con dos dedos y toca un órgano para conocer sus enfermedades y productos de apoyo.',
+                          'Pinch to zoom, then tap an organ to view its conditions and support products.'),
                       style: const TextStyle(
                           color: Color(0xFF25315F),
                           fontWeight: FontWeight.w700)))
@@ -375,12 +398,19 @@ class PaginaMapaAnatomico extends StatelessWidget {
           ),
         ),
         Expanded(
-            child: Center(
+          child: Stack(
+            children: [
+              Center(
                 child: AspectRatio(
-                    aspectRatio: 2 / 3,
+                  aspectRatio: 2 / 3,
+                  child: InteractiveViewer(
+                    transformationController: _zoomController,
+                    minScale: 1,
+                    maxScale: 4,
+                    boundaryMargin: const EdgeInsets.all(100),
                     child: LayoutBuilder(builder: (context, c) {
                       return Stack(fit: StackFit.expand, children: [
-                        Image.asset('assets/anatomia/mapa_anatomico.png',
+                        Image.asset('assets/anatomia/mapa_anatomico.webp',
                             fit: BoxFit.contain),
                         for (final organo in _organosAnatomicos)
                           Positioned(
@@ -401,8 +431,46 @@ class PaginaMapaAnatomico extends StatelessWidget {
                                           splashColor: const Color(0xFF3047CC)
                                               .withValues(alpha: .25))))),
                       ]);
-                    })))),
+                    }),
+                  ),
+                ),
+              ),
+              Positioned(
+                right: 14,
+                bottom: 18,
+                child: Column(
+                  children: [
+                    _botonZoom(Icons.add_rounded, () => _cambiarZoom(.75)),
+                    const SizedBox(height: 8),
+                    _botonZoom(Icons.remove_rounded, () => _cambiarZoom(-.75)),
+                    const SizedBox(height: 8),
+                    _botonZoom(Icons.center_focus_strong_rounded,
+                        () => _zoomController.value = Matrix4.identity()),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
       ]),
+    );
+  }
+
+  Widget _botonZoom(IconData icono, VoidCallback onPressed) {
+    return Material(
+      color: const Color(0xFF172394),
+      elevation: 4,
+      shape: const CircleBorder(),
+      child: IconButton(
+        tooltip: icono == Icons.add_rounded
+            ? txtApp('Acercar', 'Zoom in')
+            : icono == Icons.remove_rounded
+                ? txtApp('Alejar', 'Zoom out')
+                : txtApp('Restablecer zoom', 'Reset zoom'),
+        onPressed: onPressed,
+        color: Colors.white,
+        icon: Icon(icono),
+      ),
     );
   }
 
