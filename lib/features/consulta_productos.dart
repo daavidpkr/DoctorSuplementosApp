@@ -1064,13 +1064,13 @@ Este producto no es medicina, no diagnostica, no trata, no cura ni previene enfe
             '\$${producto.publico.toStringAsFixed(2)}',
             Icons.groups_2_outlined,
           ),
+          const Divider(height: 1),
+          _datoPrecio(
+            "LP",
+            producto.lp?.toString() ?? (ingles ? 'No data' : 'Sin dato'),
+            Icons.star_outline_rounded,
+          ),
           if (!_esMiTienda) ...[
-            const Divider(height: 1),
-            _datoPrecio(
-              "LP",
-              producto.lp?.toString() ?? (ingles ? 'No data' : 'Sin dato'),
-              Icons.star_outline_rounded,
-            ),
             if (producto.lpCanje != null) ...[
               const Divider(height: 1),
               _datoPrecio(
