@@ -43,6 +43,7 @@ part 'features/inventario_local.dart';
 part 'features/comparador_ab.dart';
 part 'features/testimonios.dart';
 part 'features/diccionario.dart';
+part 'features/mapa_anatomico.dart';
 part 'features/historial.dart';
 part 'features/chatbot.dart';
 

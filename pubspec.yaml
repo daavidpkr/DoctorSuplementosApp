@@ -72,6 +72,7 @@ flutter:
     - assets/icon.webp
     - assets/fonts/
     - assets/lottie/
+    - assets/anatomia/
     - assets/productos/productos-ec/
     - assets/productos/productos-eu/
     - assets/enlaces/

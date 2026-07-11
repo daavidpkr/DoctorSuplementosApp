@@ -169,6 +169,16 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
       colores: const [Color(0xFF3047CC), Color(0xFF172394)],
       destino: const PaginaDiccionario4Life(),
     );
+    final mapaAnatomico = _FichaInicio(
+      titulo: txtApp('Mapa Anatómico Interactivo', 'Interactive Anatomy Map'),
+      descripcion: txtApp(
+        'Explora órganos, enfermedades y productos de apoyo.',
+        'Explore organs, conditions, and support products.',
+      ),
+      icono: Icons.accessibility_new_rounded,
+      colores: const [Color(0xFF3047CC), Color(0xFF172394)],
+      destino: const PaginaMapaAnatomico(),
+    );
     final perfil = _FichaInicio(
       titulo: IdiomaService.texto('profile'),
       descripcion: IdiomaService.texto('profile_desc'),
@@ -294,12 +304,12 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
                             'Resources and Learning Center',
                           ),
                           descripcion: txtApp(
-                            'Testimonios y diccionario.',
-                            'Testimonials and dictionary.',
+                            'Testimonios, diccionario y mapa anatómico.',
+                            'Testimonials, dictionary, and anatomy map.',
                           ),
                           icono: Icons.school_rounded,
                           colores: const [Color(0xFF3047CC), Color(0xFF172394)],
-                          fichas: [testimonios, diccionario],
+                          fichas: [testimonios, diccionario, mapaAnatomico],
                         ),
                         _tarjetaMenu(context, ficha: perfil),
                       ],
