@@ -113,6 +113,10 @@ class _PaginaComparadorABState extends State<PaginaComparadorAB> {
         '${_t('Especializacion', 'Specialization')}: ${_nivelEspecializacion(_productoA)}');
     buffer
         .writeln('${_t('Formato', 'Format')}: ${_formatoProducto(_productoA)}');
+    buffer.writeln(
+        '${_t('Componentes', 'Components')}: ${_componentesProducto(_productoA)}');
+    buffer.writeln(
+        '${_t('Como funciona', 'How it works')}: ${_funcionProducto(_productoA)}');
     buffer.writeln();
     buffer.writeln('${_t('Producto B', 'Product B')}: ${_productoB.nombre}');
     buffer
@@ -123,6 +127,10 @@ class _PaginaComparadorABState extends State<PaginaComparadorAB> {
         '${_t('Especializacion', 'Specialization')}: ${_nivelEspecializacion(_productoB)}');
     buffer
         .writeln('${_t('Formato', 'Format')}: ${_formatoProducto(_productoB)}');
+    buffer.writeln(
+        '${_t('Componentes', 'Components')}: ${_componentesProducto(_productoB)}');
+    buffer.writeln(
+        '${_t('Como funciona', 'How it works')}: ${_funcionProducto(_productoB)}');
     buffer.writeln();
     buffer.writeln(
         '${_t('Decisión rápida', 'Quick decision')}: ${_decisionRapida()}');
@@ -133,40 +141,62 @@ class _PaginaComparadorABState extends State<PaginaComparadorAB> {
 
   String _t(String es, String en) => txtApp(es, en);
 
+  InformacionProductoCatalogo _informacion(ProductoPrecio producto) =>
+      informacionProductoCatalogo(producto.nombre);
+
+  String _limpiarDetalle(String texto) => texto
+      .split('\n')
+      .map((linea) => linea.replaceFirst(RegExp(r'^\s*[-•]\s*'), '').trim())
+      .where((linea) => linea.isNotEmpty)
+      .join(' ');
+
+  String _componentesProducto(ProductoPrecio producto) =>
+      _limpiarDetalle(_informacion(producto).componentes);
+
+  String _funcionProducto(ProductoPrecio producto) =>
+      _limpiarDetalle(_informacion(producto).descripcion);
+
+  String _usoProducto(ProductoPrecio producto) =>
+      _limpiarDetalle(_informacion(producto).uso);
+
   String _decisionRapida() {
+    if (_productoA.nombre == _productoB.nombre) {
+      return _t(
+        'Seleccionaste el mismo producto en A y B: su formula, funcionamiento y uso son iguales. Cambia uno para obtener una comparacion real.',
+        'You selected the same product for A and B: formula, function, and use are identical. Change one to get a real comparison.',
+      );
+    }
     if (_enfoqueProducto(_productoA) != _enfoqueProducto(_productoB)) {
       return _t(
-        'Elige ${_productoA.nombre} para necesidades de ${_enfoqueProducto(_productoA).toLowerCase()}, o ${_productoB.nombre} para necesidades de ${_enfoqueProducto(_productoB).toLowerCase()}.',
-        'Choose ${_productoA.nombre} for ${_enfoqueProducto(_productoA).toLowerCase()} needs, or ${_productoB.nombre} for ${_enfoqueProducto(_productoB).toLowerCase()} needs.',
+        '${_productoA.nombre} conviene cuando se busca ${_enfoqueProducto(_productoA).toLowerCase()}, porque su formula se orienta a: ${_funcionProducto(_productoA)} En cambio, ${_productoB.nombre} conviene para ${_enfoqueProducto(_productoB).toLowerCase()}, porque: ${_funcionProducto(_productoB)}',
+        '${_productoA.nombre} fits ${_enfoqueProducto(_productoA).toLowerCase()} because its formula is designed for: ${_funcionProducto(_productoA)} By contrast, ${_productoB.nombre} fits ${_enfoqueProducto(_productoB).toLowerCase()} because: ${_funcionProducto(_productoB)}',
       );
     }
     final calidadA = _pesoCalidad(_productoA);
     final calidadB = _pesoCalidad(_productoB);
     if (calidadA > calidadB) {
       return _t(
-        '${_productoA.nombre} ofrece una senal de calidad mas robusta para el mismo enfoque.',
-        '${_productoA.nombre} offers a stronger quality signal for the same focus.',
+        '${_productoA.nombre} es la opcion mas especializada para este objetivo porque ${_funcionProducto(_productoA).toLowerCase()} y contiene ${_componentesProducto(_productoA)} ${_productoB.nombre} ofrece un apoyo mas amplio basado en ${_componentesProducto(_productoB)}',
+        '${_productoA.nombre} is the more specialized option for this goal because ${_funcionProducto(_productoA).toLowerCase()} and contains ${_componentesProducto(_productoA)} ${_productoB.nombre} offers broader support based on ${_componentesProducto(_productoB)}',
       );
     }
     if (calidadB > calidadA) {
       return _t(
-        '${_productoB.nombre} ofrece una senal de calidad mas robusta para el mismo enfoque.',
-        '${_productoB.nombre} offers a stronger quality signal for the same focus.',
+        '${_productoB.nombre} es la opcion mas especializada para este objetivo porque ${_funcionProducto(_productoB).toLowerCase()} y contiene ${_componentesProducto(_productoB)} ${_productoA.nombre} ofrece un apoyo mas amplio basado en ${_componentesProducto(_productoA)}',
+        '${_productoB.nombre} is the more specialized option for this goal because ${_funcionProducto(_productoB).toLowerCase()} and contains ${_componentesProducto(_productoB)} ${_productoA.nombre} offers broader support based on ${_componentesProducto(_productoA)}',
       );
     }
     return _t(
-      'Ambos productos estan cercanos; decide segun necesidad del cliente, formato y tolerancia.',
-      'Both products are close; decide by client preference, format, and wellness goal.',
+      'Ambos cubren un enfoque parecido, pero no son iguales: ${_productoA.nombre} se diferencia por ${_componentesProducto(_productoA)}, mientras ${_productoB.nombre} incorpora ${_componentesProducto(_productoB)}. Decide segun el objetivo y el uso indicado de cada formula.',
+      'Both cover a similar focus, but they are not identical: ${_productoA.nombre} differs through ${_componentesProducto(_productoA)}, while ${_productoB.nombre} includes ${_componentesProducto(_productoB)}. Decide according to the goal and intended use of each formula.',
     );
   }
 
   String _lecturaComparativa() {
-    final destacado = _pesoCalidad(_productoA) >= _pesoCalidad(_productoB)
-        ? _productoA
-        : _productoB;
+    if (_productoA.nombre == _productoB.nombre) return _decisionRapida();
     return _t(
-      '${_productoA.nombre} se interpreta como una opcion de ${_enfoqueProducto(_productoA).toLowerCase()} con calidad ${_senalCalidad(_productoA).toLowerCase()} y formato ${_formatoProducto(_productoA).toLowerCase()}. ${_productoB.nombre} se interpreta como una opcion de ${_enfoqueProducto(_productoB).toLowerCase()} con calidad ${_senalCalidad(_productoB).toLowerCase()} y formato ${_formatoProducto(_productoB).toLowerCase()}. Si ambos cubren la misma necesidad, destaca ${destacado.nombre} por una senal de calidad mas amplia. Para decidir con un cliente, cruza esta informacion con necesidad real, tolerancia, rutina y formato preferido.',
-      '${_productoA.nombre} reads as a ${_enfoqueProducto(_productoA).toLowerCase()} option with ${_senalCalidad(_productoA).toLowerCase()} quality and ${_formatoProducto(_productoA).toLowerCase()} format. ${_productoB.nombre} reads as a ${_enfoqueProducto(_productoB).toLowerCase()} option with ${_senalCalidad(_productoB).toLowerCase()} quality and ${_formatoProducto(_productoB).toLowerCase()} format. If both cover the same need, ${destacado.nombre} stands out for a broader quality signal. To decide with a client, cross this with real need, tolerance, routine, and preferred format.',
+      '${_productoA.nombre}: ${_funcionProducto(_productoA)} Sus componentes son ${_componentesProducto(_productoA)} Su uso recomendado es: ${_usoProducto(_productoA)}\n\n${_productoB.nombre}: ${_funcionProducto(_productoB)} Sus componentes son ${_componentesProducto(_productoB)} Su uso recomendado es: ${_usoProducto(_productoB)}\n\nLa diferencia practica esta en el objetivo de cada formula, sus componentes y la forma en que se integra a la rutina; no solamente en que sus nombres o formatos sean distintos.',
+      '${_productoA.nombre}: ${_funcionProducto(_productoA)} Its components are ${_componentesProducto(_productoA)} Intended use: ${_usoProducto(_productoA)}\n\n${_productoB.nombre}: ${_funcionProducto(_productoB)} Its components are ${_componentesProducto(_productoB)} Intended use: ${_usoProducto(_productoB)}\n\nThe practical difference lies in each formula goal, its components, and how it fits the routine—not merely in different names or formats.',
     );
   }
 
@@ -603,6 +633,14 @@ class _PaginaComparadorABState extends State<PaginaComparadorAB> {
               _nivelEspecializacion(_productoB)),
           _filaMetrica(_t('Formato', 'Format'), _formatoProducto(_productoA),
               _formatoProducto(_productoB)),
+          _filaMetrica(
+              _t('Componentes', 'Components'),
+              _componentesProducto(_productoA),
+              _componentesProducto(_productoB)),
+          _filaMetrica(_t('Como funciona', 'How it works'),
+              _funcionProducto(_productoA), _funcionProducto(_productoB)),
+          _filaMetrica(_t('Uso recomendado', 'Intended use'),
+              _usoProducto(_productoA), _usoProducto(_productoB)),
         ],
       ),
     );

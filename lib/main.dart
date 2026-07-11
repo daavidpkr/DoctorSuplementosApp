@@ -79,6 +79,15 @@ String get geminiApiKey {
   return apiKey;
 }
 
+String get copyrightOwner {
+  try {
+    final owner = dotenv.env['COPYRIGHT_OWNER']?.trim() ?? '';
+    return owner.isEmpty ? 'DoctorSuplementos' : owner;
+  } catch (_) {
+    return 'DoctorSuplementos';
+  }
+}
+
 Future<void> inicializarFirebaseSeguro() async {
   try {
     try {

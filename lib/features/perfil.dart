@@ -768,10 +768,10 @@ class _PaginaPerfilState extends State<PaginaPerfil> {
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: const Color(0xFFE1E4F0)),
       ),
-      child: const Text(
-        "Copyright © 2026 Josué David Girón Castro. All Rights Reserved.",
+      child: Text(
+        'Copyright © 2026 $copyrightOwner. All Rights Reserved.',
         textAlign: TextAlign.center,
-        style: TextStyle(
+        style: const TextStyle(
           color: Color(0xFF5B628C),
           fontSize: 12,
           height: 1.3,
