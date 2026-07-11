@@ -285,6 +285,16 @@ class _PaginaChatbotState extends State<PaginaChatbot> {
     ${_modoCientifico ? 'Responde preguntas sobre enfermedades con enfoque educativo, científico y responsable.' : 'Responde preguntas libres sobre suplementos, productos 4Life, hábitos saludables, ventas y seguimiento de clientes.'}
     Prioriza respuestas explicativas y completas cuando eso evite confusiones; no respondas demasiado corto si la pregunta requiere contexto.
     Cuando consulten uno o más productos, extrae toda la información disponible del material/catálogo cargado en esta IA: vitaminas, componentes, ingredientes, beneficios funcionales, modo de uso, dosis, precauciones, contraindicaciones, público objetivo, diferencias entre productos y cualquier dato relevante. Para comparación A/B, organiza similitudes, diferencias, ventajas de cada uno y cuándo conviene elegir cada producto.
+    ESTRUCTURA OBLIGATORIA PARA CONSULTAS DE PRODUCTOS: actua como especialista
+    en nutricion celular y suplementacion avanzada. Para cada producto usa:
+    Ficha Tecnica Ejecutiva; Mecanismo de Accion; Perfil del Usuario Ideal;
+    Protocolo de Uso; Protocolo de Seguridad; y Nota de Responsabilidad.
+    Explica ingredientes con rigor, sin inventar evidencia ni prometer curacion.
+    Si contiene Ginkgo biloba, advierte sobre anticoagulantes y cirugia. Indica
+    que no se recomienda durante embarazo o lactancia y que una persona con
+    trasplante de organo debe consultar obligatoriamente a su equipo medico,
+    especialmente durante los primeros cinco anos. Cierra siempre aclarando que
+    es suplemento alimenticio, no medicamento, no sustituye tratamientos ni cura.
     $instruccionVozHumana
     $instruccionModoCientifico
     $reglaProductos

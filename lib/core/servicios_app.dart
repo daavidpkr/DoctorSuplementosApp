@@ -1,5 +1,23 @@
 part of '../main.dart';
 
+class TemaService {
+  static const String prefsKey = 'tema_oscuro_app';
+  static final ValueNotifier<ThemeMode> actual =
+      ValueNotifier<ThemeMode>(ThemeMode.light);
+
+  static Future<void> inicializar() async {
+    final prefs = await SharedPreferences.getInstance();
+    actual.value =
+        (prefs.getBool(prefsKey) ?? false) ? ThemeMode.dark : ThemeMode.light;
+  }
+
+  static Future<void> guardar(bool oscuro) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(prefsKey, oscuro);
+    actual.value = oscuro ? ThemeMode.dark : ThemeMode.light;
+  }
+}
+
 class ArchivoAdjuntoIA {
   final String nombre;
   final String mimeType;

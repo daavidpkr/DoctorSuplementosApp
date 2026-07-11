@@ -19,6 +19,7 @@ class _PaginaPerfilState extends State<PaginaPerfil> {
   PaisApp _pais = PaisApp.ecuador;
   bool _cargando = true;
   bool _guardando = false;
+  bool _modoOscuro = false;
 
   @override
   void initState() {
@@ -39,6 +40,7 @@ class _PaginaPerfilState extends State<PaginaPerfil> {
       _fotoBase64 = perfil.fotoBase64;
       _idioma = idioma;
       _pais = pais;
+      _modoOscuro = TemaService.actual.value == ThemeMode.dark;
       _cargando = false;
     });
   }
@@ -168,6 +170,8 @@ class _PaginaPerfilState extends State<PaginaPerfil> {
                         _tarjetaIdioma(),
                         const SizedBox(height: 22),
                         _tarjetaPais(),
+                        const SizedBox(height: 22),
+                        _tarjetaTema(ingles),
                         const SizedBox(height: 28),
                         _botonGuardarPerfil(ingles),
                         const SizedBox(height: 28),
@@ -703,6 +707,46 @@ class _PaginaPerfilState extends State<PaginaPerfil> {
     );
   }
 
+  Widget _tarjetaTema(bool ingles) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+      decoration: _decoracionTarjetaPerfil(),
+      child: Row(
+        children: [
+          Icon(_modoOscuro ? Icons.dark_mode_rounded : Icons.light_mode_rounded,
+              color: const Color(0xFF4059EA), size: 30),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(ingles ? 'Dark mode' : 'Modo oscuro',
+                    style: const TextStyle(
+                        fontSize: 17, fontWeight: FontWeight.w900)),
+                const SizedBox(height: 4),
+                Text(
+                  ingles
+                      ? 'Use a comfortable theme in low light.'
+                      : 'Usa un tema comodo en lugares con poca luz.',
+                  style: TextStyle(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant),
+                ),
+              ],
+            ),
+          ),
+          Switch.adaptive(
+            value: _modoOscuro,
+            onChanged: (valor) async {
+              setState(() => _modoOscuro = valor);
+              await TemaService.guardar(valor);
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _tarjetaSeguridadPerfil(bool ingles) {
     return Container(
       width: double.infinity,
@@ -782,8 +826,9 @@ class _PaginaPerfilState extends State<PaginaPerfil> {
   }
 
   BoxDecoration _decoracionTarjetaPerfil() {
+    final oscuro = Theme.of(context).brightness == Brightness.dark;
     return BoxDecoration(
-      color: Colors.white,
+      color: oscuro ? const Color(0xFF111936) : Colors.white,
       borderRadius: BorderRadius.circular(22),
       boxShadow: [
         BoxShadow(

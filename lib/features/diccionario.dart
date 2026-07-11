@@ -14,6 +14,20 @@ class EntradaDiccionario4Life {
 
 const List<EntradaDiccionario4Life> entradasDiccionario4Life = [
   EntradaDiccionario4Life(
+    termino: 'Células madre',
+    conceptoEs:
+        'Células no especializadas capaces de autorrenovarse y diferenciarse en uno o más tipos de células especializadas. Las pluripotentes pueden originar casi todos los tipos celulares del cuerpo; muchas células madre adultas producen tipos celulares propios de su tejido.',
+    conceptoEn:
+        'Unspecialized cells able to self-renew and differentiate into one or more specialized cell types. Pluripotent cells can generate nearly all body cell types, while many adult stem cells produce cell types belonging to their tissue.',
+  ),
+  EntradaDiccionario4Life(
+    termino: 'Placas de Peyer',
+    conceptoEs:
+        'Conjuntos organizados de folículos linfoides situados principalmente en la mucosa y submucosa del íleon, en el intestino delgado. Forman parte del tejido linfoide asociado al intestino: captan antígenos mediante células M y ayudan a iniciar respuestas inmunitarias de la mucosa, incluida la producción de inmunoglobulina A (IgA).',
+    conceptoEn:
+        'Organized clusters of lymphoid follicles located mainly in the mucosa and submucosa of the ileum in the small intestine. They are part of gut-associated lymphoid tissue: M cells sample antigens and help initiate mucosal immune responses, including immunoglobulin A (IgA) production.',
+  ),
+  EntradaDiccionario4Life(
     termino: 'Factor de transferencia',
     conceptoEs:
         'Mensajeros inmunológicos presentes en fuentes naturales que ayudan a educar y respaldar la respuesta del sistema inmunológico.',

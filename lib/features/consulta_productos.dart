@@ -102,7 +102,23 @@ class _ConsultaProductoPaginaState extends State<ConsultaProductoPagina> {
 
   Future<void> _abrirProducto(ProductoPrecio producto) async {
     final idioma = IdiomaService.actual.value;
-    final resultado = _informacionPredeterminadaProducto(producto, idioma);
+    _mostrarCargandoIa();
+    String resultado;
+    try {
+      resultado = await _generarFichaProducto(producto, idioma);
+    } catch (_) {
+      if (mounted) Navigator.of(context, rootNavigator: true).pop();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(txtApp(
+            'Se necesita conexion para consultar la ficha con IA.',
+            'An internet connection is required to generate the AI product sheet.',
+          )),
+        ));
+      }
+      return;
+    }
+    if (mounted) Navigator.of(context, rootNavigator: true).pop();
     final precioPromocional = precioPromocionalMiTienda(producto.nombre);
     if (!mounted) return;
     unawaited(ImpactoService.registrar(
@@ -130,6 +146,71 @@ class _ConsultaProductoPaginaState extends State<ConsultaProductoPagina> {
     );
   }
 
+  void _mostrarCargandoIa() {
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => AlertDialog(
+        content: Row(children: [
+          const CircularProgressIndicator(),
+          const SizedBox(width: 18),
+          Expanded(
+              child: Text(txtApp(
+            'Generando ficha clinica en linea...',
+            'Generating online clinical sheet...',
+          ))),
+        ]),
+      ),
+    );
+  }
+
+  Future<String> _generarFichaProducto(
+    ProductoPrecio producto,
+    IdiomaApp idioma,
+  ) async {
+    final info = informacionProductoCatalogo(producto.nombre);
+    final idiomaIa = idioma == IdiomaApp.ingles ? 'English' : 'espanol';
+    final model = GenerativeModel(
+      model: 'gemini-3.1-flash-lite',
+      apiKey: geminiApiKey,
+    );
+    final prompt = """
+Responde exclusivamente en $idiomaIa.
+ROL: Eres especialista en nutricion celular y suplementacion avanzada. Explica
+los beneficios con rigor cientifico y sin promesas falsas de curacion. Usa solo
+la informacion comprobable suministrada; no inventes ingredientes ni efectos.
+
+PRODUCTO: ${producto.nombre}
+DATOS DISPONIBLES:
+- Descripcion: ${info.descripcion}
+- Ingredientes/componentes: ${info.componentes}
+- Uso: ${info.uso}
+- Dosis de etiqueta: ${info.dosis}
+- Precauciones: ${info.precauciones}
+
+ESTRUCTURA OBLIGATORIA:
+FICHA TECNICA EJECUTIVA: nombre y funcion metabolica principal.
+MECANISMO DE ACCION (EL POR QUE FUNCIONA): explica los ingredientes clave y su
+impacto biologico con lenguaje prudente; no garantices resultados clinicos.
+PERFIL DEL USUARIO IDEAL (PARA QUIEN ES): define quien podria beneficiarse del
+respaldo sin diagnosticar ni presionar la compra.
+PROTOCOLO DE USO: incluye exclusivamente la dosis de etiqueta facilitada.
+PROTOCOLO DE SEGURIDAD: enumera las precauciones conocidas. Incluye consulta
+medica por anticoagulantes o cirugia cuando contenga Ginkgo biloba; no recomendado
+en embarazo o lactancia; y consulta obligatoria para personas con trasplante de
+organo, especialmente durante los primeros cinco anos. No atribuyas un riesgo a
+un ingrediente que no aparece en los datos.
+NOTA DE RESPONSABILIDAD: cierra indicando que es suplemento alimenticio, no
+medicamento, no sustituye tratamientos prescritos y no cura enfermedades.
+""";
+    final response = await model.generateContent([Content.text(prompt)]);
+    final texto = response.text?.trim() ?? '';
+    if (texto.isEmpty) throw StateError('Respuesta vacia de IA');
+    return texto;
+  }
+
+  // Conservado solo para compatibilidad de estructura; las galerias ya no lo usan.
+  // ignore: unused_element
   String _informacionPredeterminadaProducto(
     ProductoPrecio producto,
     IdiomaApp idioma,
