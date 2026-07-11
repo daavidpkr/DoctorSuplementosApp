@@ -103,7 +103,7 @@ class _FormularioCambioFisicoState extends State<FormularioCambioFisico> {
     - No inventes productos, no uses medicamentos, no recomiendes marcas externas y no menciones productos fuera de la lista.
 
     Instrucciones:
-    1. Usa asteriscos para titulos en negrita de WhatsApp.
+    1. Usa asteriscos para titulos y conserva cada titulo y cada campo en una linea independiente.
     2. Enfoca el análisis en peso, altura, género, contextura y objetivo físico.
     3. No prometas resultados exactos ni milagrosos.
     4. Para cada producto incluye dosis general por horario si corresponde.
@@ -113,7 +113,8 @@ class _FormularioCambioFisicoState extends State<FormularioCambioFisico> {
     8. Arma un plan bien pensado: prioridad del objetivo, estrategia nutricional general, apoyo de entrenamiento, descanso, seguimiento y señales para ajustar.
     9. Desarrolla la explicación con al menos 1000 palabras si el objetivo entregado tiene suficiente contexto.
 
-    Estructura obligatoria:
+    Estructura obligatoria para mostrar por bloques en la ficha y el PDF. No unas
+    secciones ni productos en un solo parrafo:
 
     *SALUDO Y ANÁLISIS FÍSICO*
     [Análisis breve del perfil y objetivo]

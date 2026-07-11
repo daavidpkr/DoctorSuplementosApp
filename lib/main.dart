@@ -60,7 +60,6 @@ Future<void> main() async {
   await inicializarFirebaseSeguro();
   await IdiomaService.inicializar();
   await PaisService.inicializar();
-  await TemaService.inicializar();
   runApp(const DoctorSuplementos());
 }
 
@@ -104,53 +103,33 @@ class DoctorSuplementos extends StatelessWidget {
     return ValueListenableBuilder<IdiomaApp>(
       valueListenable: IdiomaService.actual,
       builder: (context, idioma, _) {
-        return ValueListenableBuilder<ThemeMode>(
-            valueListenable: TemaService.actual,
-            builder: (context, modoTema, __) => MaterialApp(
-                  key: ValueKey('app-${idioma.codigo}'),
-                  debugShowCheckedModeBanner: false,
-                  title: idioma == IdiomaApp.ingles
-                      ? 'Doctor Supplements'
-                      : 'Doctor de Suplementos',
-                  builder: (context, child) {
-                    final media = MediaQuery.of(context);
-                    return MediaQuery(
-                      data: media.copyWith(
-                        textScaler: media.textScaler.clamp(
-                          minScaleFactor: 0.82,
-                          maxScaleFactor: escalaTextoInterfaces,
-                        ),
-                      ),
-                      child: child ?? const SizedBox.shrink(),
-                    );
-                  },
-                  theme: ThemeData(
-                    brightness: Brightness.light,
-                    scaffoldBackgroundColor: const Color(0xFFF5F5EE),
-                    primaryColor: const Color(0xFF1A237E),
-                    colorScheme: ColorScheme.fromSeed(
-                        seedColor: const Color(0xFF1A237E)),
-                  ),
-                  darkTheme: ThemeData(
-                    brightness: Brightness.dark,
-                    scaffoldBackgroundColor: const Color(0xFF080D24),
-                    primaryColor: const Color(0xFF9BA8FF),
-                    colorScheme: ColorScheme.fromSeed(
-                      seedColor: const Color(0xFF7888FF),
-                      brightness: Brightness.dark,
-                      surface: const Color(0xFF111936),
-                    ),
-                    cardColor: const Color(0xFF111936),
-                    dialogTheme: const DialogThemeData(
-                        backgroundColor: Color(0xFF111936)),
-                    inputDecorationTheme: const InputDecorationTheme(
-                      filled: true,
-                      fillColor: Color(0xFF182143),
-                    ),
-                  ),
-                  themeMode: modoTema,
-                  home: const ArranqueDoctorSuplementos(),
-                ));
+        return MaterialApp(
+          key: ValueKey('app-${idioma.codigo}'),
+          debugShowCheckedModeBanner: false,
+          title: idioma == IdiomaApp.ingles
+              ? 'Doctor Supplements'
+              : 'Doctor de Suplementos',
+          builder: (context, child) {
+            final media = MediaQuery.of(context);
+            return MediaQuery(
+              data: media.copyWith(
+                textScaler: media.textScaler.clamp(
+                  minScaleFactor: 0.82,
+                  maxScaleFactor: escalaTextoInterfaces,
+                ),
+              ),
+              child: child ?? const SizedBox.shrink(),
+            );
+          },
+          theme: ThemeData(
+            brightness: Brightness.light,
+            scaffoldBackgroundColor: const Color(0xFFF5F5EE),
+            primaryColor: const Color(0xFF1A237E),
+            colorScheme:
+                ColorScheme.fromSeed(seedColor: const Color(0xFF1A237E)),
+          ),
+          home: const ArranqueDoctorSuplementos(),
+        );
       },
     );
   }

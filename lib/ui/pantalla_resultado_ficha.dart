@@ -56,7 +56,7 @@ class ContenidoResultadoFicha {
     String texto,
     Map<String, String> imagenesProducto,
   ) {
-    final lineas = texto
+    final lineas = _separarBloques(texto)
         .replaceAll('\r', '')
         .split('\n')
         .map(_limpiar)
@@ -64,6 +64,7 @@ class ContenidoResultadoFicha {
         .toList();
     final productos = <ProductoResultadoFicha>[];
     final analisis = <String>[];
+    final objetivo = <String>[];
     final recomendaciones = <String>[];
     final nota = <String>[];
     var seccion = 'analisis';
@@ -95,6 +96,16 @@ class ContenidoResultadoFicha {
       ])) {
         guardarProducto();
         seccion = 'analisis';
+        continue;
+      }
+      if (_contiene(normalizada, const [
+        'nuestro objetivo',
+        'planificacion del caso',
+        'our goal',
+        'case planning',
+      ])) {
+        guardarProducto();
+        seccion = 'objetivo';
         continue;
       }
       if (_contiene(normalizada, const [
@@ -171,20 +182,45 @@ class ContenidoResultadoFicha {
         recomendaciones.add(contenido);
       } else if (seccion == 'nota') {
         nota.add(contenido);
+      } else if (seccion == 'objetivo') {
+        objetivo.add(contenido);
       } else {
         analisis.add(contenido);
       }
     }
     guardarProducto();
 
-    final corte = analisis.length > 2 ? 2 : analisis.length;
+    final corte = objetivo.isEmpty && analisis.length > 2 ? 2 : analisis.length;
     return ContenidoResultadoFicha(
       analisis: analisis.take(corte).join('\n\n'),
-      objetivo: analisis.skip(corte).join(' '),
+      objetivo: objetivo.isNotEmpty
+          ? objetivo.join('\n')
+          : analisis.skip(corte).join(' '),
       productos: productos,
       recomendaciones: recomendaciones.join('\n'),
       nota: nota.join(' '),
     );
+  }
+
+  static String _separarBloques(String texto) {
+    var salida = texto.replaceAll('\r', '');
+    final encabezados = RegExp(
+      r'\s+(?=\*{0,2}(?:AN.LISIS DEL CASO|SALUDO Y AN.LISIS(?: F.SICO)?|NUESTRO OBJETIVO|PLANIFICACI.N DEL CASO|SUSTRATO Y RESPALDO RECOMENDADO|PLAN DE APOYO 4LIFE|PRODUCTOS RECOMENDADOS|RECOMENDACIONES DE BIENESTAR GENERAL|H.BITOS PARA EL OBJETIVO|RECOMENDACI.N GENERAL|NOTA DE SEGURIDAD|NOTA RESPONSABLE)\b)',
+      caseSensitive: false,
+    );
+    salida = salida.replaceAll(encabezados, '\n');
+    salida = salida.replaceAllMapped(
+      RegExp(r'\s+(?=\*{0,2}\d+\s*[\.)]\s+)', caseSensitive: false),
+      (_) => '\n',
+    );
+    salida = salida.replaceAllMapped(
+      RegExp(
+        r'\s+(?=-?\s*\*{0,2}(?:Dosis|Dose|Por qu.|Why it|Beneficio clave|Key benefit|Apoyo principal|Main support)\b)',
+        caseSensitive: false,
+      ),
+      (_) => '\n',
+    );
+    return salida;
   }
 
   static bool _contiene(String linea, List<String> opciones) =>

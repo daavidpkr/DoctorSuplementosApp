@@ -150,16 +150,54 @@ class _ConsultaProductoPaginaState extends State<ConsultaProductoPagina> {
     showDialog<void>(
       context: context,
       barrierDismissible: false,
-      builder: (_) => AlertDialog(
-        content: Row(children: [
-          const CircularProgressIndicator(),
-          const SizedBox(width: 18),
-          Expanded(
-              child: Text(txtApp(
-            'Generando ficha clinica en linea...',
-            'Generating online clinical sheet...',
-          ))),
-        ]),
+      builder: (_) => Dialog(
+        backgroundColor: Colors.transparent,
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 390),
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(22),
+            border: Border.all(color: const Color(0xFFE1E4F0)),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x220B176B),
+                blurRadius: 24,
+                offset: Offset(0, 10),
+              ),
+            ],
+          ),
+          child: Row(children: [
+            Container(
+              width: 52,
+              height: 52,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF0EFFF),
+                borderRadius: BorderRadius.circular(15),
+              ),
+              child: const CircularProgressIndicator(
+                color: Color(0xFF3F46D7),
+                strokeWidth: 3,
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Text(
+                txtApp(
+                  'Generando ficha clinica en linea...',
+                  'Generating online clinical sheet...',
+                ),
+                style: const TextStyle(
+                  color: Color(0xFF20294F),
+                  fontSize: 16,
+                  height: 1.3,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ]),
+        ),
       ),
     );
   }
@@ -189,10 +227,12 @@ DATOS DISPONIBLES:
 - Precauciones: ${info.precauciones}
 
 ESTRUCTURA OBLIGATORIA:
+Escribe cada encabezado exactamente como aparece, en una linea independiente,
+seguido por su contenido en parrafos o listas. No unas dos bloques en un mismo parrafo.
 FICHA TECNICA EJECUTIVA: nombre y funcion metabolica principal.
-MECANISMO DE ACCION (EL POR QUE FUNCIONA): explica los ingredientes clave y su
+MECANISMO DE ACCION: explica los ingredientes clave y su
 impacto biologico con lenguaje prudente; no garantices resultados clinicos.
-PERFIL DEL USUARIO IDEAL (PARA QUIEN ES): define quien podria beneficiarse del
+PERFIL DEL USUARIO IDEAL: define quien podria beneficiarse del
 respaldo sin diagnosticar ni presionar la compra.
 PROTOCOLO DE USO: incluye exclusivamente la dosis de etiqueta facilitada.
 PROTOCOLO DE SEGURIDAD: enumera las precauciones conocidas. Incluye consulta
@@ -1338,6 +1378,18 @@ Este producto no es medicina, no diagnostica, no trata, no cura ni previene enfe
 
   List<MapEntry<String, String>> _seccionesResultadoProducto(String resultado) {
     const titulos = [
+      'Ficha tecnica ejecutiva',
+      'Executive technical sheet',
+      'Mecanismo de accion',
+      'Mechanism of action',
+      'Perfil del usuario ideal',
+      'Ideal user profile',
+      'Protocolo de uso',
+      'Usage protocol',
+      'Protocolo de seguridad',
+      'Safety protocol',
+      'Nota de responsabilidad',
+      'Responsibility note',
       'Producto identificado',
       'Product identified',
       'Descripción',
@@ -1353,9 +1405,19 @@ Este producto no es medicina, no diagnostica, no trata, no cura ni previene enfe
       'Nota',
       'Note',
     ];
+    var resultadoSeparado = resultado.replaceAll('\r', '');
+    for (final titulo in titulos) {
+      resultadoSeparado = resultadoSeparado.replaceAllMapped(
+        RegExp(
+          '\\s+(?=${RegExp.escape(titulo)}\\s*:?)',
+          caseSensitive: false,
+        ),
+        (_) => '\n',
+      );
+    }
     final secciones = <String, List<String>>{};
     String? actual;
-    for (final lineaOriginal in resultado.replaceAll('\r', '').split('\n')) {
+    for (final lineaOriginal in resultadoSeparado.split('\n')) {
       final linea = lineaOriginal
           .replaceAll(RegExp(r'[*#_`]'), '')
           .replaceAll(RegExp(r'\s+'), ' ')
@@ -1403,9 +1465,12 @@ Este producto no es medicina, no diagnostica, no trata, no cura ni previene enfe
       'Note': Icons.info_outline_rounded,
     };
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 15),
-      decoration: const BoxDecoration(
-        border: Border(bottom: BorderSide(color: Color(0xFFE5E7F0))),
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(15),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF9FAFF),
+        borderRadius: BorderRadius.circular(17),
+        border: Border.all(color: const Color(0xFFE1E4F0)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
