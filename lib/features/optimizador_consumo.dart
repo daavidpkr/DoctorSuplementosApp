@@ -843,12 +843,17 @@ class _OptimizadorConsumo {
     int variacion = 0,
   }) {
     final productos = productosConPrecio4Life
-        .where((producto) => (producto.lp ?? 0) > 0)
+        .where(
+          (producto) =>
+              productoDisponibleEnOptimizadores(producto) &&
+              (producto.lp ?? 0) > 0,
+        )
         .toList()
       ..sort((a, b) => (b.lp ?? 0).compareTo(a.lp ?? 0));
     final obligatoriosUnicos = <String, ProductoPrecio>{};
     for (final producto in obligatorios) {
-      if ((producto.lp ?? 0) > 0) {
+      if (productoDisponibleEnOptimizadores(producto) &&
+          (producto.lp ?? 0) > 0) {
         obligatoriosUnicos[producto.nombre] = producto;
       }
     }
@@ -1032,7 +1037,9 @@ class _SelectorProductosObligatoriosState
 
   List<ProductoPrecio> get _productos {
     final busqueda = normalizarTexto(_busqueda);
-    final productos = [...productosConPrecio4Life]
+    final productos = productosConPrecio4Life
+        .where(productoDisponibleEnOptimizadores)
+        .toList()
       ..sort((a, b) => a.nombre.compareTo(b.nombre));
     if (busqueda.isEmpty) return productos;
     return productos
@@ -1054,7 +1061,11 @@ class _SelectorProductosObligatoriosState
 
   void _aplicar() {
     final seleccion = productosConPrecio4Life
-        .where((producto) => _seleccionados.contains(producto.nombre))
+        .where(
+          (producto) =>
+              productoDisponibleEnOptimizadores(producto) &&
+              _seleccionados.contains(producto.nombre),
+        )
         .toList();
     Navigator.pop(context, seleccion);
   }

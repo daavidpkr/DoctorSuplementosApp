@@ -178,7 +178,8 @@ const List<ProductoPrecio> productosConPrecio4Life = [
       nombre: 'Aloe Vera Stix Tropical',
       afiliado: 40.04,
       publico: 53.39,
-      lp: 22),
+      lp: 22,
+      lpCanje: 22),
   ProductoPrecio(
       nombre: 'Transfer factor plus',
       afiliado: 83.17,
@@ -197,7 +198,7 @@ const List<ProductoPrecio> productosConPrecio4Life = [
       nombre: 'Riovida stix',
       afiliado: 43.36,
       publico: 57.67,
-      lp: 44,
+      lp: 20,
       lpCanje: 44),
   ProductoPrecio(
       nombre: 'Energy go stix',
@@ -212,7 +213,7 @@ const List<ProductoPrecio> productosConPrecio4Life = [
       afiliado: 79.06,
       publico: 104.73,
       lp: 53,
-      lpCanje: 53),
+      lpCanje: 63),
   ProductoPrecio(
       nombre: 'Bcv', afiliado: 79.06, publico: 104.73, lp: 52, lpCanje: 52),
   ProductoPrecio(
@@ -233,16 +234,16 @@ const List<ProductoPrecio> productosConPrecio4Life = [
       nombre: 'Nutrastart',
       afiliado: 73.93,
       publico: 98.57,
-      lp: 80,
+      lp: 30,
       lpCanje: 80),
   ProductoPrecio(
       nombre: 'Riovida burst',
       afiliado: 53.39,
       publico: 70.85,
-      lp: 52,
+      lp: 27,
       lpCanje: 52),
   ProductoPrecio(
-      nombre: 'Protf', afiliado: 90.36, publico: 120.13, lp: 100, lpCanje: 100),
+      nombre: 'Protf', afiliado: 90.36, publico: 120.13, lp: 26, lpCanje: 100),
   ProductoPrecio(
       nombre: 'Bioefa', afiliado: 33.11, publico: 44.04, lp: 18, lpCanje: 18),
   ProductoPrecio(
@@ -252,8 +253,13 @@ const List<ProductoPrecio> productosConPrecio4Life = [
       lp: 43,
       lpCanje: 43),
   ProductoPrecio(
-      nombre: 'Glutamine prime', afiliado: 46.21, publico: 61.61, lp: 27),
-  ProductoPrecio(nombre: 'Kbu', afiliado: 67.77, publico: 90.36, lp: 42),
+      nombre: 'Glutamine prime',
+      afiliado: 46.21,
+      publico: 61.61,
+      lp: 27,
+      lpCanje: 27),
+  ProductoPrecio(
+      nombre: 'Kbu', afiliado: 67.77, publico: 90.36, lp: 42, lpCanje: 42),
   ProductoPrecio(
       nombre: 'Vistari', afiliado: 68.79, publico: 91.38, lp: 40, lpCanje: 40),
   ProductoPrecio(
@@ -266,7 +272,7 @@ const List<ProductoPrecio> productosConPrecio4Life = [
       nombre: 'Fibre', afiliado: 54.47, publico: 72.45, lp: 24, lpCanje: 47),
   ProductoPrecio(
       nombre: 'Agpro', afiliado: 73.00, publico: 97.00, lp: 45, lpCanje: 45),
-  ProductoPrecio(nombre: 'Suero', afiliado: 50.31, publico: 66.74, lp: 29),
+  ProductoPrecio(nombre: 'Suero', afiliado: 50.31, publico: 66.74, lp: 27),
   ProductoPrecio(
       nombre: 'Crema para los ojos', afiliado: 45.00, publico: 60.00, lp: 27),
   ProductoPrecio(nombre: 'Tonico', afiliado: 36.00, publico: 48.00, lp: 19),
@@ -276,18 +282,30 @@ const List<ProductoPrecio> productosConPrecio4Life = [
       nombre: 'Pasta de dientes',
       afiliado: 16.43,
       publico: 21.56,
-      lp: 15,
+      lp: 5,
       lpCanje: 15),
   ProductoPrecio(
       nombre: 'Crema cuerpo',
       afiliado: 25.67,
       publico: 33.88,
-      lp: 18,
+      lp: 8,
       lpCanje: 18),
   ProductoPrecio(
       nombre: 'Recall', afiliado: 72.90, publico: 96.52, lp: 42, lpCanje: 42),
-  ProductoPrecio(nombre: 'TF Boost', afiliado: 27.72, publico: 36.96, lp: 15),
+  ProductoPrecio(
+      nombre: 'TF Boost', afiliado: 27.72, publico: 36.96, lp: 15, lpCanje: 15),
 ];
+
+const Set<String> productosExcluidosOptimizadores4Life = {
+  'Tonico',
+  'Limpiador',
+  'Crema cuerpo',
+  'Crema humectante',
+  'Crema para los ojos',
+};
+
+bool productoDisponibleEnOptimizadores(ProductoPrecio producto) =>
+    !productosExcluidosOptimizadores4Life.contains(producto.nombre);
 
 const Map<String, double> preciosPromocionalesMiTienda4Life = {
   'Agpro': 77.60,

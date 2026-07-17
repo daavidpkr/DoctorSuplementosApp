@@ -798,8 +798,9 @@ Este producto no es medicina, no diagnostica, no trata, no cura ni previene enfe
     return [
       '${ingles ? 'Member' : 'Afiliado'} \$${producto.afiliado.toStringAsFixed(2)}',
       'LP ${producto.lp ?? 0}',
-      if (!_esMiTienda && producto.lpCanje != null)
-        '${ingles ? 'Exchange LP' : 'LP canje'} ${producto.lpCanje}',
+      if (!_esMiTienda)
+        '${ingles ? 'Exchange LP' : 'LP canje'} '
+            '${producto.lpCanje?.toString() ?? (ingles ? 'Unavailable' : 'No disponible')}',
       '${ingles ? 'Retail' : 'Público'} \$${producto.publico.toStringAsFixed(2)}',
       if (_esMiTienda && promo != null)
         '${ingles ? 'Promo' : 'Promocional'} \$${promo.toStringAsFixed(2)}',
@@ -1198,14 +1199,13 @@ Este producto no es medicina, no diagnostica, no trata, no cura ni previene enfe
             Icons.star_outline_rounded,
           ),
           if (!_esMiTienda) ...[
-            if (producto.lpCanje != null) ...[
-              const Divider(height: 1),
-              _datoPrecio(
-                ingles ? "Exchange LP" : "LP canje",
-                producto.lpCanje.toString(),
-                Icons.redeem_outlined,
-              ),
-            ],
+            const Divider(height: 1),
+            _datoPrecio(
+              ingles ? "Exchange LP" : "LP canje",
+              producto.lpCanje?.toString() ??
+                  (ingles ? 'Unavailable' : 'No disponible'),
+              Icons.redeem_outlined,
+            ),
           ],
           if (precioPromocional != null) ...[
             const Divider(height: 1),

@@ -63,4 +63,43 @@ void main() {
       expect(precioPromocionalMiTienda('Riovida Jugo'), 58.18);
     });
   });
+
+  group('LP operativo y LP de canje', () {
+    test('mantiene ambos valores independientes', () {
+      final casos = <String, (int, int?)>{
+        'Nutrastart': (30, 80),
+        'Protf': (26, 100),
+        'Riovida stix': (20, 44),
+        'Crema cuerpo': (8, 18),
+        'Suero': (27, null),
+        'Transfer factor MAX': (75, null),
+      };
+
+      for (final entry in casos.entries) {
+        final producto = productosConPrecio4Life.firstWhere(
+          (producto) => producto.nombre == entry.key,
+        );
+        expect(producto.lp, entry.value.$1, reason: entry.key);
+        expect(producto.lpCanje, entry.value.$2, reason: entry.key);
+      }
+    });
+
+    test('excluye cosmeticos de los optimizadores', () {
+      const excluidos = {
+        'Tonico',
+        'Limpiador',
+        'Crema cuerpo',
+        'Crema humectante',
+        'Crema para los ojos',
+      };
+
+      expect(productosExcluidosOptimizadores4Life, excluidos);
+      expect(
+        productosConPrecio4Life
+            .where(productoDisponibleEnOptimizadores)
+            .map((producto) => producto.nombre),
+        everyElement(isNot(isIn(excluidos))),
+      );
+    });
+  });
 }
