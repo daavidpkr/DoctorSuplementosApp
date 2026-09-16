@@ -1,5 +1,90 @@
 part of '../main.dart';
 
+String construirPromptCambioFisicoBase(
+    {required PaisApp pais,
+    required String instruccionIdioma,
+    required String saludoAsesor,
+    required String nombre,
+    required String edad,
+    required String genero,
+    required String peso,
+    required String altura,
+    required String objetivo,
+    required String contextura,
+    required String descripcionContextura}) {
+  final catalogoCambioFisicoPaisActual = pais == PaisApp.ecuador
+      ? productosCambioFisicoEcuador.join(', ')
+      : productosPermitidosEstadosUnidos.join(', ');
+  final instruccionDosis = pais == PaisApp.estadosUnidos
+      ? '4. Incluye únicamente uso documentado en la ficha USA. Si falta uso/directions, indica: No documentado en el catálogo; revisa la etiqueta vigente. No inventes dosis, frecuencia, cantidad ni horario.'
+      : '4. Para cada producto incluye dosis general por horario si corresponde.';
+  final bloqueDosis = pais == PaisApp.estadosUnidos
+      ? '- *Forma de uso:* [Solo uso documentado; si falta, revisa la etiqueta vigente]'
+      : '- *Dosis manana:* [Cantidad]\n    - *Dosis tarde:* [Cantidad, si aplica]\n    - *Dosis noche:* [Cantidad, si aplica]';
+
+  final prompt = """
+    IDIOMA OBLIGATORIO:
+    $instruccionIdioma
+
+    DATOS PARA CAMBIO FISICO:
+    Nombre: $nombre
+    Edad: $edad
+    Género: $genero
+    Peso: $peso kg
+    Altura: $altura m
+    Contextura: $contextura - $descripcionContextura
+    Objetivo físico: $objetivo
+    $saludoAsesor
+
+    Actúa como asesor profesional de bienestar, composición corporal y suplementos 4Life. Genera una guía responsable, clara y lista para compartir por WhatsApp.
+
+    REGLA CRITICA DE PRODUCTOS:
+    - Debes recomendar UNICAMENTE productos de esta lista: $catalogoCambioFisicoPaisActual.
+    - Recomienda normalmente maximo 3 o 4 productos.
+    - Solo en casos extremos, complejos o especiales donde el objetivo y el contexto realmente lo justifiquen puedes usar mas de 4 productos; si lo haces, explica brevemente por que el plan necesita un protocolo ampliado. En casos comunes, moderados o poco detallados, manten 3 o 4 productos como limite.
+    - No inventes productos, no uses medicamentos, no recomiendes marcas externas y no menciones productos fuera de la lista.
+
+    Instrucciones:
+    1. Usa asteriscos para titulos y conserva cada titulo y cada campo en una linea independiente.
+    2. Enfoca el análisis en peso, altura, género, contextura y objetivo físico.
+    3. No prometas resultados exactos ni milagrosos.
+    $instruccionDosis
+    5. Agrega 3 recomendaciones de hábitos: alimentación, entrenamiento y descanso.
+    6. Usa títulos en *negrita*, listas claras y _subrayado_ para puntos clave o advertencias.
+    7. No des productos "por dar"; justifica cada producto con el objetivo físico, contextura, peso, altura, edad y hábitos implícitos del caso.
+    8. Arma un plan bien pensado: prioridad del objetivo, estrategia nutricional general, apoyo de entrenamiento, descanso, seguimiento y señales para ajustar.
+    9. Desarrolla la explicación con al menos 1000 palabras si el objetivo entregado tiene suficiente contexto.
+
+    Estructura obligatoria para mostrar por bloques en la ficha y el PDF. No unas
+    secciones ni productos en un solo parrafo:
+
+    *SALUDO Y ANÁLISIS FÍSICO*
+    [Análisis breve del perfil y objetivo]
+
+    *PLANIFICACIÓN DEL CASO*
+    - [Prioridad principal del objetivo]
+    - [Qué se debe cuidar por la contextura]
+    - [Cómo medir avance y cuándo ajustar]
+
+    *PLAN DE APOYO 4LIFE (Máx. 3-4 productos; más solo si el caso es extremo/especial)*
+
+    *1. [Nombre exacto del producto]*
+    $bloqueDosis
+    - *Por qué se elige:* [Razón precisa conectada con el caso]
+    - *Apoyo principal:* [Explicacion breve]
+
+    [Repetir solo hasta 3 o 4 productos]
+
+    *HABITOS PARA EL OBJETIVO*
+    - [Consejo de alimentacion]
+    - [Consejo de entrenamiento]
+    - [Consejo de descanso/seguimiento]
+
+    *Nota responsable:* Esta guía es de apoyo general para bienestar y composición corporal; no sustituye una evaluación médica, nutricional o deportiva profesional.""";
+
+  return prompt;
+}
+
 class FormularioCambioFisico extends StatefulWidget {
   const FormularioCambioFisico({super.key});
 
@@ -82,67 +167,18 @@ class _FormularioCambioFisicoState extends State<FormularioCambioFisico> {
         ? "Inicia el reporte con este saludo personalizado: Hola, ¿cómo estás?, mi nombre es ${perfilAsesor.nombre.trim()}. Luego continúa con la guía."
         : "Inicia con un saludo empático breve y luego continúa con la guía.";
 
-    final prompt = """
-    IDIOMA OBLIGATORIO:
-    $instruccionIdioma
-
-    DATOS PARA CAMBIO FISICO:
-    Nombre: ${nombreController.text}
-    Edad: ${edadController.text}
-    Género: $_generoSeleccionado
-    Peso: ${pesoController.text} kg
-    Altura: ${alturaController.text} m
-    Contextura: $_contexturaSeleccionada - ${_contexturas[_contexturaSeleccionada] ?? ''}
-    Objetivo físico: ${objetivoController.text}
-    $saludoAsesor
-
-    Actúa como asesor profesional de bienestar, composición corporal y suplementos 4Life. Genera una guía responsable, clara y lista para compartir por WhatsApp.
-
-    REGLA CRITICA DE PRODUCTOS:
-    - Debes recomendar UNICAMENTE productos de esta lista: $catalogoCambioFisicoPaisActual.
-    - Recomienda normalmente maximo 3 o 4 productos.
-    - Solo en casos extremos, complejos o especiales donde el objetivo y el contexto realmente lo justifiquen puedes usar mas de 4 productos; si lo haces, explica brevemente por que el plan necesita un protocolo ampliado. En casos comunes, moderados o poco detallados, manten 3 o 4 productos como limite.
-    - No inventes productos, no uses medicamentos, no recomiendes marcas externas y no menciones productos fuera de la lista.
-
-    Instrucciones:
-    1. Usa asteriscos para titulos y conserva cada titulo y cada campo en una linea independiente.
-    2. Enfoca el análisis en peso, altura, género, contextura y objetivo físico.
-    3. No prometas resultados exactos ni milagrosos.
-    4. Para cada producto incluye dosis general por horario si corresponde.
-    5. Agrega 3 recomendaciones de hábitos: alimentación, entrenamiento y descanso.
-    6. Usa títulos en *negrita*, listas claras y _subrayado_ para puntos clave o advertencias.
-    7. No des productos "por dar"; justifica cada producto con el objetivo físico, contextura, peso, altura, edad y hábitos implícitos del caso.
-    8. Arma un plan bien pensado: prioridad del objetivo, estrategia nutricional general, apoyo de entrenamiento, descanso, seguimiento y señales para ajustar.
-    9. Desarrolla la explicación con al menos 1000 palabras si el objetivo entregado tiene suficiente contexto.
-
-    Estructura obligatoria para mostrar por bloques en la ficha y el PDF. No unas
-    secciones ni productos en un solo parrafo:
-
-    *SALUDO Y ANÁLISIS FÍSICO*
-    [Análisis breve del perfil y objetivo]
-
-    *PLANIFICACIÓN DEL CASO*
-    - [Prioridad principal del objetivo]
-    - [Qué se debe cuidar por la contextura]
-    - [Cómo medir avance y cuándo ajustar]
-
-    *PLAN DE APOYO 4LIFE (Máx. 3-4 productos; más solo si el caso es extremo/especial)*
-
-    *1. [Nombre exacto del producto]*
-    - *Dosis manana:* [Cantidad]
-    - *Dosis tarde:* [Cantidad, si aplica]
-    - *Dosis noche:* [Cantidad, si aplica]
-    - *Por qué se elige:* [Razón precisa conectada con el caso]
-    - *Apoyo principal:* [Explicacion breve]
-
-    [Repetir solo hasta 3 o 4 productos]
-
-    *HABITOS PARA EL OBJETIVO*
-    - [Consejo de alimentacion]
-    - [Consejo de entrenamiento]
-    - [Consejo de descanso/seguimiento]
-
-    *Nota responsable:* Esta guía es de apoyo general para bienestar y composición corporal; no sustituye una evaluación médica, nutricional o deportiva profesional.""";
+    final prompt = construirPromptCambioFisicoBase(
+        pais: paisConsulta,
+        instruccionIdioma: instruccionIdioma,
+        saludoAsesor: saludoAsesor,
+        nombre: nombreController.text,
+        edad: edadController.text,
+        genero: _generoSeleccionado!,
+        peso: pesoController.text,
+        altura: alturaController.text,
+        objetivo: objetivoController.text,
+        contextura: _contexturaSeleccionada!,
+        descripcionContextura: _contexturas[_contexturaSeleccionada] ?? '');
 
     final consultaCatalogo =
         'Objetivo: ${objetivoController.text}. Nombre: ${nombreController.text}. Edad: ${edadController.text}. Peso: ${pesoController.text}. Altura: ${alturaController.text}. Género: $_generoSeleccionado';

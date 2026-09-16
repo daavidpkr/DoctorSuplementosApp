@@ -1,5 +1,76 @@
 part of '../main.dart';
 
+String componerPromptChatbotPais(String consulta, String promptBase,
+        {required bool modoCientifico,
+        required PaisApp pais,
+        required IdiomaApp idioma}) =>
+    modoCientifico
+        ? promptBase
+        : construirPromptProductosPais(consulta, promptBase,
+            pais: pais, idioma: idioma);
+
+String construirPromptChatbotBase(
+    {required PaisApp pais,
+    required bool modoCientifico,
+    required String instruccionIdioma,
+    required String instruccionVozHumana,
+    required String instruccionModoCientifico,
+    required String reglaProductos,
+    required String instruccionProducto,
+    required String instruccionComponente,
+    required String instruccionVoz,
+    required String historialPrevio,
+    required String textoVisible,
+    required String terminosComponentes}) {
+  final promptLimpioParaChatbot = """
+    IDIOMA OBLIGATORIO:
+    $instruccionIdioma
+
+    ${modoCientifico ? 'Eres un investigador científico de enfermedades.' : 'Eres un asesor IA para socios de 4Life.'}
+    Responde de manera clara, conversacional, sumamente ordenada y amigable.
+    FORMATO OBLIGATORIO:
+    - No uses negrita, asteriscos, subrayados ni formato tipo WhatsApp.
+    - Usa listas numeradas o viñetas cuando expliques varios puntos.
+    - Usa títulos simples sin símbolos de formato, por ejemplo: Resumen, Puntos importantes, Recomendación.
+    - Evita bloques largos de texto corrido; separa la respuesta en secciones breves y fáciles de leer.
+    - No uses almohadillas (#) ni símbolos extraños.
+    ${modoCientifico ? 'Responde preguntas sobre enfermedades con enfoque educativo, científico y responsable.' : 'Responde preguntas libres sobre suplementos, productos 4Life, hábitos saludables, ventas y seguimiento de clientes.'}
+    Prioriza respuestas explicativas y completas cuando eso evite confusiones; no respondas demasiado corto si la pregunta requiere contexto.
+    Cuando consulten uno o más productos, extrae toda la información disponible del material/catálogo cargado en esta IA: vitaminas, componentes, ingredientes, beneficios funcionales, modo de uso, dosis, precauciones, contraindicaciones, público objetivo, diferencias entre productos y cualquier dato relevante. Para comparación A/B, organiza similitudes, diferencias, ventajas de cada uno y cuándo conviene elegir cada producto.
+    ESTRUCTURA OBLIGATORIA PARA CONSULTAS DE PRODUCTOS: actua como especialista
+    en nutricion celular y suplementacion avanzada. Para cada producto usa:
+    Ficha Tecnica Ejecutiva; Mecanismo de Accion; Perfil del Usuario Ideal;
+    Protocolo de Uso; Protocolo de Seguridad; y Nota de Responsabilidad.
+    Explica ingredientes con rigor, sin inventar evidencia ni prometer curacion.
+    Si contiene Ginkgo biloba, advierte sobre anticoagulantes y cirugia. Indica
+    que no se recomienda durante embarazo o lactancia y que una persona con
+    trasplante de organo debe consultar obligatoriamente a su equipo medico,
+    especialmente durante los primeros cinco anos. Cierra siempre aclarando que
+    es suplemento alimenticio, no medicamento, no sustituye tratamientos ni cura.
+    $instruccionVozHumana
+    $instruccionModoCientifico
+    $reglaProductos
+    REGLA OBLIGATORIA SOBRE COMPONENTES O INGREDIENTES: Si el usuario pregunta por un componente, ingrediente,
+    nutriente o concepto general, explica el componente en si y NO lo conviertas automaticamente en un producto.
+    Ejemplos de componentes/conceptos: $terminosComponentes.
+    Ejemplo clave: si pregunta por factores de transferencia, explica que son los factores de transferencia,
+    su rol general y sus precauciones; no recomiendes ${pais == PaisApp.estadosUnidos ? 'productos del catálogo USA' : 'Transfer factor plus, Transfer factor tri factor ni otro producto'}
+    salvo que el usuario pida explicitamente un producto, una rutina o una recomendacion de compra.
+    $instruccionProducto
+    $instruccionComponente
+    $instruccionVoz
+    Mantén un tono claro, práctico y responsable. Si la pregunta parece médica, recomienda consultar a un profesional de salud.
+
+    Conversacion actual:
+    $historialPrevio
+
+    Consulta actual:
+    $textoVisible
+    """;
+
+  return promptLimpioParaChatbot;
+}
+
 Future<void> _compartirRespuestaChat(
   BuildContext context,
   String texto,
@@ -282,51 +353,19 @@ class _PaginaChatbotState extends State<PaginaChatbot>
     No inventes nombres, presentaciones ni productos adicionales.
     """;
 
-    final promptLimpioParaChatbot = """
-    IDIOMA OBLIGATORIO:
-    $instruccionIdioma
-
-    ${_modoCientifico ? 'Eres un investigador científico de enfermedades.' : 'Eres un asesor IA para socios de 4Life.'}
-    Responde de manera clara, conversacional, sumamente ordenada y amigable.
-    FORMATO OBLIGATORIO:
-    - No uses negrita, asteriscos, subrayados ni formato tipo WhatsApp.
-    - Usa listas numeradas o viñetas cuando expliques varios puntos.
-    - Usa títulos simples sin símbolos de formato, por ejemplo: Resumen, Puntos importantes, Recomendación.
-    - Evita bloques largos de texto corrido; separa la respuesta en secciones breves y fáciles de leer.
-    - No uses almohadillas (#) ni símbolos extraños.
-    ${_modoCientifico ? 'Responde preguntas sobre enfermedades con enfoque educativo, científico y responsable.' : 'Responde preguntas libres sobre suplementos, productos 4Life, hábitos saludables, ventas y seguimiento de clientes.'}
-    Prioriza respuestas explicativas y completas cuando eso evite confusiones; no respondas demasiado corto si la pregunta requiere contexto.
-    Cuando consulten uno o más productos, extrae toda la información disponible del material/catálogo cargado en esta IA: vitaminas, componentes, ingredientes, beneficios funcionales, modo de uso, dosis, precauciones, contraindicaciones, público objetivo, diferencias entre productos y cualquier dato relevante. Para comparación A/B, organiza similitudes, diferencias, ventajas de cada uno y cuándo conviene elegir cada producto.
-    ESTRUCTURA OBLIGATORIA PARA CONSULTAS DE PRODUCTOS: actua como especialista
-    en nutricion celular y suplementacion avanzada. Para cada producto usa:
-    Ficha Tecnica Ejecutiva; Mecanismo de Accion; Perfil del Usuario Ideal;
-    Protocolo de Uso; Protocolo de Seguridad; y Nota de Responsabilidad.
-    Explica ingredientes con rigor, sin inventar evidencia ni prometer curacion.
-    Si contiene Ginkgo biloba, advierte sobre anticoagulantes y cirugia. Indica
-    que no se recomienda durante embarazo o lactancia y que una persona con
-    trasplante de organo debe consultar obligatoriamente a su equipo medico,
-    especialmente durante los primeros cinco anos. Cierra siempre aclarando que
-    es suplemento alimenticio, no medicamento, no sustituye tratamientos ni cura.
-    $instruccionVozHumana
-    $instruccionModoCientifico
-    $reglaProductos
-    REGLA OBLIGATORIA SOBRE COMPONENTES O INGREDIENTES: Si el usuario pregunta por un componente, ingrediente,
-    nutriente o concepto general, explica el componente en si y NO lo conviertas automaticamente en un producto.
-    Ejemplos de componentes/conceptos: ${_terminosComponentesBienestar.join(', ')}.
-    Ejemplo clave: si pregunta por factores de transferencia, explica que son los factores de transferencia,
-    su rol general y sus precauciones; no recomiendes Transfer factor plus, Transfer factor tri factor ni otro producto
-    salvo que el usuario pida explicitamente un producto, una rutina o una recomendacion de compra.
-    $instruccionProducto
-    $instruccionComponente
-    $instruccionVoz
-    Mantén un tono claro, práctico y responsable. Si la pregunta parece médica, recomienda consultar a un profesional de salud.
-
-    Conversacion actual:
-    $historialPrevio
-
-    Consulta actual:
-    $textoVisible
-    """;
+    final promptLimpioParaChatbot = construirPromptChatbotBase(
+        pais: paisConsulta,
+        modoCientifico: _modoCientifico,
+        instruccionIdioma: instruccionIdioma,
+        instruccionVozHumana: instruccionVozHumana,
+        instruccionModoCientifico: instruccionModoCientifico,
+        reglaProductos: reglaProductos,
+        instruccionProducto: instruccionProducto,
+        instruccionComponente: instruccionComponente,
+        instruccionVoz: instruccionVoz,
+        historialPrevio: historialPrevio,
+        textoVisible: textoVisible,
+        terminosComponentes: _terminosComponentesBienestar.join(', '));
 
     final preguntasMercado = mensajes
         .skip(_inicioContextoMercado)
@@ -335,11 +374,11 @@ class _PaginaChatbotState extends State<PaginaChatbot>
         .toList();
     final consultaCatalogo =
         [textoVisible, ...preguntasMercado.reversed.take(3)].join('\n');
-    final promptPais = _modoCientifico
-        ? promptLimpioParaChatbot
-        : construirPromptProductosPais(
-            consultaCatalogo, promptLimpioParaChatbot,
-            pais: paisConsulta, idioma: idiomaConsulta);
+    final promptPais = componerPromptChatbotPais(
+        consultaCatalogo, promptLimpioParaChatbot,
+        modoCientifico: _modoCientifico,
+        pais: paisConsulta,
+        idioma: idiomaConsulta);
     try {
       final textoAdjuntos = _tieneAdjuntos
           ? (_adjuntosSoloAudio

@@ -119,8 +119,7 @@ void main() {
     final sheets = productosUsaRelevantes(query);
     expect(sheets.length, lessThanOrEqualTo(6));
     expect(sheets.map((p) => p.id), contains(query));
-    final es =
-        construirPromptProductosPais(query, 'CATALOGO ECUADOR: Agpro Bioefa');
+    final es = construirPromptProductosPais(query, 'FORMATO DEL MODULO');
     expect(es, isNot(contains('Agpro')));
     expect(es, isNot(contains('Bioefa')));
     expect(es, contains('Nutrición básica'));
