@@ -15,6 +15,13 @@ void main() {
     await tester.pumpWidget(const DoctorSuplementos());
     await tester.pumpAndSettle();
 
+    await tester.tap(find.byKey(const ValueKey('pais-ec')));
+    await tester.pumpAndSettle();
+    await tester
+        .ensureVisible(find.byKey(const ValueKey('continuar-seleccion')));
+    await tester.tap(find.byKey(const ValueKey('continuar-seleccion')));
+    await tester.pumpAndSettle();
+
     expect(find.textContaining('Hola, Socio'), findsOneWidget);
     expect(find.text(IdiomaService.texto('consult_products')), findsWidgets);
     expect(find.text(IdiomaService.texto('mitienda_catalog')), findsOneWidget);

@@ -46,6 +46,13 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
 
   @override
   Widget build(BuildContext context) {
+    return ValueListenableBuilder<IdiomaApp>(
+      valueListenable: IdiomaService.actual,
+      builder: (context, idioma, _) => _construirInicio(context),
+    );
+  }
+
+  Widget _construirInicio(BuildContext context) {
     final catalogoAfiliado = _FichaInicio(
       titulo: IdiomaService.texto('consult_products'),
       descripcion: IdiomaService.texto('consult_products_desc'),

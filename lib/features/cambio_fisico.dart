@@ -69,6 +69,8 @@ class _FormularioCambioFisicoState extends State<FormularioCambioFisico> {
 
     setState(() => cargando = true);
 
+    final paisConsulta = PaisService.actual.value;
+    final idiomaConsulta = IdiomaService.actual.value;
     final model = GenerativeModel(
       model: 'gemini-3.1-flash-lite',
       apiKey: geminiApiKey,
@@ -97,7 +99,7 @@ class _FormularioCambioFisicoState extends State<FormularioCambioFisico> {
     Actúa como asesor profesional de bienestar, composición corporal y suplementos 4Life. Genera una guía responsable, clara y lista para compartir por WhatsApp.
 
     REGLA CRITICA DE PRODUCTOS:
-    - Debes recomendar UNICAMENTE productos de esta lista: $catalogoCambioFisico4Life.
+    - Debes recomendar UNICAMENTE productos de esta lista: $catalogoCambioFisicoPaisActual.
     - Recomienda normalmente maximo 3 o 4 productos.
     - Solo en casos extremos, complejos o especiales donde el objetivo y el contexto realmente lo justifiquen puedes usar mas de 4 productos; si lo haces, explica brevemente por que el plan necesita un protocolo ampliado. En casos comunes, moderados o poco detallados, manten 3 o 4 productos como limite.
     - No inventes productos, no uses medicamentos, no recomiendes marcas externas y no menciones productos fuera de la lista.
@@ -142,14 +144,20 @@ class _FormularioCambioFisicoState extends State<FormularioCambioFisico> {
 
     *Nota responsable:* Esta guía es de apoyo general para bienestar y composición corporal; no sustituye una evaluación médica, nutricional o deportiva profesional.""";
 
+    final consultaCatalogo =
+        'Objetivo: ${objetivoController.text}. Nombre: ${nombreController.text}. Edad: ${edadController.text}. Peso: ${pesoController.text}. Altura: ${alturaController.text}. Género: $_generoSeleccionado';
+    final promptPais = construirPromptProductosPais(consultaCatalogo, prompt,
+        pais: paisConsulta, idioma: idiomaConsulta);
     try {
-      final response = await model.generateContent([Content.text(prompt)]);
-      final textoFinal = response.text ?? "Sin respuesta";
+      final response = await model.generateContent([Content.text(promptPais)]);
+      final textoFinal = procesarRespuestaProductosPais(
+          response.text ?? '', consultaCatalogo, paisConsulta, idiomaConsulta);
 
       await HistorialService.guardar(
         "Cambio físico: ${nombreController.text}",
         textoFinal,
         {
+          'pais': paisConsulta.codigo,
           'nombre': nombreController.text,
           'edad': edadController.text,
           'genero': _generoSeleccionado!,
@@ -181,8 +189,8 @@ class _FormularioCambioFisicoState extends State<FormularioCambioFisico> {
           especialidad: "Asesor de bienestar y composición corporal",
           resultado: mensaje,
           fecha: DateTime.now(),
-          imagenesProducto: imagenesProducto4Life,
-          preciosProducto: preciosResultado4Life,
+          imagenesProducto: imagenesProductoPaisActual,
+          preciosProducto: preciosResultadoPaisActual,
           ingles: IdiomaService.actual.value == IdiomaApp.ingles,
         ),
       ),

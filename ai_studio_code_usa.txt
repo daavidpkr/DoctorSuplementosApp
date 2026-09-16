@@ -1,0 +1,45 @@
+#!/bin/bash
+set -e -E
+
+GEMINI_API_KEY="$GEMINI_API_KEY"
+MODEL_ID="gemini-3.1-flash-lite"
+GENERATE_CONTENT_API="streamGenerateContent"
+
+cat << EOF > request.json
+{
+    "contents": [
+      {
+        "role": "user",
+        "parts": [
+          {
+            "inlineData": {
+              "mimeType": "application/pdf",
+              "data": "<Drive file: 1EXUFsj5YIk3Yhxqg1mkQX7bkL9vIj6sZ>"
+            }
+          },
+          {
+            "inlineData": {
+              "mimeType": "application/pdf",
+              "data": "<Drive file: 1W87yhFCNKcND04qd1mwza5_1Iwu5sUzP>"
+            }
+          },
+          {
+            "text": "INSERT_INPUT_HERE"
+          }
+        ]
+      }
+    ],
+    "generationConfig": {
+      "thinkingConfig": {
+        "thinkingLevel": "HIGH"
+      }
+    },
+    "systemInstruction": {
+    }
+}
+EOF
+
+curl \
+-X POST \
+-H "Content-Type: application/json" \
+"https://generativelanguage.googleapis.com/v1beta/models/${MODEL_ID}:${GENERATE_CONTENT_API}?key=${GEMINI_API_KEY}" -d '@request.json'

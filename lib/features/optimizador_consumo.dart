@@ -8,7 +8,18 @@ class PaginaOptimizadorConsumo extends StatefulWidget {
       _PaginaOptimizadorConsumoState();
 }
 
-class _PaginaOptimizadorConsumoState extends State<PaginaOptimizadorConsumo> {
+class _PaginaOptimizadorConsumoState extends State<PaginaOptimizadorConsumo>
+    with EstadoCatalogoPais<PaginaOptimizadorConsumo> {
+  @override
+  void alCambiarPais() {
+    _productosObligatorios = [];
+    _paquetes = [];
+    _variacionPaquetes = 0;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _generarPaquetes();
+    });
+  }
+
   final TextEditingController _metaController =
       TextEditingController(text: '150');
   List<PaqueteConsumo> _paquetes = [];
@@ -105,8 +116,9 @@ class _PaginaOptimizadorConsumoState extends State<PaginaOptimizadorConsumo> {
         afiliado: _t('Afiliado', 'Member'),
       ),
     );
-    if (seleccion == null) return;
-    setState(() => _productosObligatorios = seleccion);
+    if (!mounted || seleccion == null) return;
+    setState(() => _productosObligatorios =
+        seleccion.where(seleccionProductoVigente).toList());
     _generarPaquetes();
   }
 
@@ -147,8 +159,8 @@ class _PaginaOptimizadorConsumoState extends State<PaginaOptimizadorConsumo> {
         productos: paquete.lineas
             .map(
               (linea) => ProductoDocumento(
-                nombre: '${linea.cantidad} x ${linea.producto.nombre}',
-                imagenAsset: imagenesProducto4Life[linea.producto.nombre],
+                nombre: '${linea.cantidad} x ${linea.producto.nombreVisible}',
+                imagenAsset: imagenesProductoPaisActual[linea.producto.nombre],
                 indicaciones: [
                   'LP: ${(linea.producto.lp ?? 0) * linea.cantidad}',
                   '${_t('Afiliado', 'Member')}: ${_precio(linea.producto.afiliado * linea.cantidad)}',
@@ -172,7 +184,7 @@ class _PaginaOptimizadorConsumoState extends State<PaginaOptimizadorConsumo> {
     buffer.writeln(
         '${_t('LP sobre la meta', 'LP above goal')}: ${paquete.excedenteLp}\n');
     for (final linea in paquete.lineas) {
-      buffer.writeln('${linea.cantidad} x ${linea.producto.nombre}');
+      buffer.writeln('${linea.cantidad} x ${linea.producto.nombreVisible}');
       buffer.writeln('LP: ${(linea.producto.lp ?? 0) * linea.cantidad}');
       buffer.writeln(
           '${_t('Afiliado', 'Member')}: ${_precio(linea.producto.afiliado * linea.cantidad)}');
@@ -712,7 +724,7 @@ class _PaginaOptimizadorConsumoState extends State<PaginaOptimizadorConsumo> {
             width: 54,
             height: 54,
             child: Image.asset(
-              imagenesProducto4Life[linea.producto.nombre] ?? '',
+              imagenesProductoPaisActual[linea.producto.nombre] ?? '',
               fit: BoxFit.contain,
               errorBuilder: (_, __, ___) =>
                   const Icon(Icons.inventory_2_outlined),
@@ -725,7 +737,7 @@ class _PaginaOptimizadorConsumoState extends State<PaginaOptimizadorConsumo> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  '${linea.cantidad} x ${linea.producto.nombre}',
+                  '${linea.cantidad} x ${linea.producto.nombreVisible}',
                   style: const TextStyle(
                     color: _tinta,
                     fontSize: 15,
@@ -842,7 +854,7 @@ class _OptimizadorConsumo {
     List<ProductoPrecio> obligatorios = const [],
     int variacion = 0,
   }) {
-    final productos = productosConPrecio4Life
+    final productos = productosConPrecioPaisActual
         .where(
           (producto) =>
               productoDisponibleEnOptimizadores(producto) &&
@@ -984,7 +996,7 @@ class _OptimizadorConsumo {
 
     for (final paquete in orden) {
       final firma = paquete.lineas
-          .map((linea) => '${linea.producto.nombre}:${linea.cantidad}')
+          .map((linea) => '${linea.producto.nombreVisible}:${linea.cantidad}')
           .join('|');
       if (firmas.add(firma)) {
         seleccionados.add(paquete);
@@ -1023,7 +1035,15 @@ class _SelectorProductosObligatorios extends StatefulWidget {
 }
 
 class _SelectorProductosObligatoriosState
-    extends State<_SelectorProductosObligatorios> {
+    extends State<_SelectorProductosObligatorios>
+    with EstadoCatalogoPais<_SelectorProductosObligatorios> {
+  @override
+  void alCambiarPais() {
+    _seleccionados.clear();
+    _busqueda = "";
+    _controller.clear();
+  }
+
   final TextEditingController _controller = TextEditingController();
   late final Set<String> _seleccionados =
       widget.seleccionados.map((producto) => producto.nombre).toSet();
@@ -1037,14 +1057,16 @@ class _SelectorProductosObligatoriosState
 
   List<ProductoPrecio> get _productos {
     final busqueda = normalizarTexto(_busqueda);
-    final productos = productosConPrecio4Life
+    final productos = productosConPrecioPaisActual
         .where(productoDisponibleEnOptimizadores)
         .toList()
       ..sort((a, b) => a.nombre.compareTo(b.nombre));
     if (busqueda.isEmpty) return productos;
     return productos
         .where(
-          (producto) => normalizarTexto(producto.nombre).contains(busqueda),
+          (producto) => normalizarTexto(
+                  '${producto.nombreVisible} ${fichaProductoUsa(producto.nombre)?.alias.join(' ') ?? producto.nombre}')
+              .contains(busqueda),
         )
         .toList();
   }
@@ -1060,7 +1082,7 @@ class _SelectorProductosObligatoriosState
   }
 
   void _aplicar() {
-    final seleccion = productosConPrecio4Life
+    final seleccion = productosConPrecioPaisActual
         .where(
           (producto) =>
               productoDisponibleEnOptimizadores(producto) &&
@@ -1173,7 +1195,7 @@ class _SelectorProductosObligatoriosState
                     controlAffinity: ListTileControlAffinity.trailing,
                     contentPadding: EdgeInsets.zero,
                     title: Text(
-                      producto.nombre,
+                      producto.nombreVisible,
                       style: const TextStyle(
                         color: Color(0xFF111B59),
                         fontWeight: FontWeight.w900,
@@ -1186,7 +1208,7 @@ class _SelectorProductosObligatoriosState
                       width: 46,
                       height: 46,
                       child: Image.asset(
-                        imagenesProducto4Life[producto.nombre] ?? '',
+                        imagenesProductoPaisActual[producto.nombre] ?? '',
                         fit: BoxFit.contain,
                         errorBuilder: (_, __, ___) =>
                             const Icon(Icons.inventory_2_outlined),

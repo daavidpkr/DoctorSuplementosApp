@@ -155,8 +155,19 @@ class _PaginaHistorialState extends State<PaginaHistorial> {
 
   void _reDiagnosticar(Map<String, dynamic> pacienteViejo) {
     final nombre = _nombrePaciente(pacienteViejo);
-    final resultado = pacienteViejo['resultado']?.toString() ??
+    final resultadoGuardado = pacienteViejo['resultado']?.toString() ??
         txtApp("Sin resultado guardado", "No saved result");
+    final paisGuardado = pacienteViejo['datos']?['pais']?.toString();
+    final otroMercado = paisGuardado != null &&
+            paisGuardado != PaisService.actual.value.codigo ||
+        paisGuardado == null &&
+            PaisService.actual.value == PaisApp.estadosUnidos &&
+            productosPermitidosEcuador.any((p) =>
+                normalizarTexto(resultadoGuardado)
+                    .contains(normalizarTexto(p)));
+    final resultado = otroMercado
+        ? '${txtApp('Registro de otro mercado', 'Record from another market')}: ${paisGuardado ?? 'Ecuador'}\n\n$resultadoGuardado'
+        : resultadoGuardado;
     final esCambio = _esCambioFisico(pacienteViejo);
     final nuevaPreguntaController = TextEditingController();
 
@@ -313,8 +324,19 @@ class _PaginaHistorialState extends State<PaginaHistorial> {
     Map<String, dynamic> pacienteViejo,
   ) async {
     final nombre = _nombrePaciente(pacienteViejo);
-    final resultado = pacienteViejo['resultado']?.toString() ??
+    final resultadoGuardado = pacienteViejo['resultado']?.toString() ??
         txtApp("Sin resultado guardado", "No saved result");
+    final paisGuardado = pacienteViejo['datos']?['pais']?.toString();
+    final otroMercado = paisGuardado != null &&
+            paisGuardado != PaisService.actual.value.codigo ||
+        paisGuardado == null &&
+            PaisService.actual.value == PaisApp.estadosUnidos &&
+            productosPermitidosEcuador.any((p) =>
+                normalizarTexto(resultadoGuardado)
+                    .contains(normalizarTexto(p)));
+    final resultado = otroMercado
+        ? '${txtApp('Registro de otro mercado', 'Record from another market')}: ${paisGuardado ?? 'Ecuador'}\n\n$resultadoGuardado'
+        : resultadoGuardado;
     final esCambio = _esCambioFisico(pacienteViejo);
     final fecha = DateTime.tryParse(
           pacienteViejo['fecha']?.toString() ?? '',
@@ -340,8 +362,8 @@ class _PaginaHistorialState extends State<PaginaHistorial> {
                   'Immunology and bioenergetics specialist'),
           resultado: resultado,
           fecha: fecha,
-          imagenesProducto: imagenesProducto4Life,
-          preciosProducto: preciosResultado4Life,
+          imagenesProducto: imagenesProductoPaisActual,
+          preciosProducto: preciosResultadoPaisActual,
           ingles: IdiomaService.actual.value == IdiomaApp.ingles,
         ),
       ),

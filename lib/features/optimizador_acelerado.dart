@@ -8,15 +8,23 @@ class PaginaOptimizadorAcelerado extends StatefulWidget {
       _PaginaOptimizadorAceleradoState();
 }
 
-class _PaginaOptimizadorAceleradoState
-    extends State<PaginaOptimizadorAcelerado> {
+class _PaginaOptimizadorAceleradoState extends State<PaginaOptimizadorAcelerado>
+    with EstadoCatalogoPais<PaginaOptimizadorAcelerado> {
+  @override
+  void alCambiarPais() {
+    _seleccionado = null;
+    _variacion = 0;
+    _predeterminados = _crearPredeterminados();
+    _sugeridos = _crearSugeridos();
+  }
+
   static const int _metaLp = 400;
   static const Color _azul = Color(0xFF172394);
   static const Color _azulOscuro = Color(0xFF07125E);
   static const Color _tinta = Color(0xFF111B59);
   static const Color _texto = Color(0xFF465074);
 
-  late final List<PaqueteAcelerado> _predeterminados;
+  late List<PaqueteAcelerado> _predeterminados;
   late List<PaqueteAcelerado> _sugeridos;
   int? _seleccionado;
   int _variacion = 0;
@@ -32,9 +40,9 @@ class _PaginaOptimizadorAceleradoState
   String _precio(double valor) => '\$${valor.toStringAsFixed(2)}';
 
   ProductoPrecio _producto(String nombre) {
-    return productosConPrecio4Life.firstWhere(
+    return productosConPrecioPaisActual.firstWhere(
       (producto) => producto.nombre == nombre,
-      orElse: () => productosConPrecio4Life.first,
+      orElse: () => productosConPrecioPaisActual.first,
     );
   }
 
@@ -50,6 +58,9 @@ class _PaginaOptimizadorAceleradoState
   }
 
   List<PaqueteAcelerado> _crearPredeterminados() {
+    if (PaisService.actual.value == PaisApp.estadosUnidos) {
+      return _crearSugeridos();
+    }
     return [
       PaqueteAcelerado(
         nombre: _t('Paquete acelerado 1', 'Accelerated pack 1'),
@@ -136,8 +147,8 @@ class _PaginaOptimizadorAceleradoState
         productos: paquete.lineas
             .map(
               (linea) => ProductoDocumento(
-                nombre: '${linea.cantidad} x ${linea.producto.nombre}',
-                imagenAsset: imagenesProducto4Life[linea.producto.nombre],
+                nombre: '${linea.cantidad} x ${linea.producto.nombreVisible}',
+                imagenAsset: imagenesProductoPaisActual[linea.producto.nombre],
                 indicaciones: [
                   'LP: ${(linea.producto.lp ?? 0) * linea.cantidad}',
                   '${_t('Afiliado', 'Member')}: ${_precio(linea.producto.afiliado * linea.cantidad)}',
@@ -162,7 +173,7 @@ class _PaginaOptimizadorAceleradoState
       '${_t('Mochila', 'Backpack')}: ${paquete.incluyeMochila ? _t('Incluida', 'Included') : _t('No incluida', 'Not included')}\n',
     );
     for (final linea in paquete.lineas) {
-      buffer.writeln('${linea.cantidad} x ${linea.producto.nombre}');
+      buffer.writeln('${linea.cantidad} x ${linea.producto.nombreVisible}');
       buffer.writeln('LP: ${(linea.producto.lp ?? 0) * linea.cantidad}');
       buffer.writeln(
         '${_t('Afiliado', 'Member')}: ${_precio(linea.producto.afiliado * linea.cantidad)}\n',
@@ -535,7 +546,7 @@ class _PaginaOptimizadorAceleradoState
             width: 54,
             height: 54,
             child: Image.asset(
-              imagenesProducto4Life[linea.producto.nombre] ?? '',
+              imagenesProductoPaisActual[linea.producto.nombre] ?? '',
               fit: BoxFit.contain,
               errorBuilder: (_, __, ___) =>
                   const Icon(Icons.inventory_2_outlined),
@@ -548,7 +559,7 @@ class _PaginaOptimizadorAceleradoState
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  '${linea.cantidad} x ${linea.producto.nombre}',
+                  '${linea.cantidad} x ${linea.producto.nombreVisible}',
                   style: const TextStyle(
                     color: _tinta,
                     fontSize: 15,

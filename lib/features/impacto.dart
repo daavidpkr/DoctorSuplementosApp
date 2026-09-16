@@ -489,8 +489,7 @@ class _BotonLimpiarImpactoNuevo extends StatelessWidget {
                   borderRadius: BorderRadius.circular(22),
                   boxShadow: [
                     BoxShadow(
-                      color:
-                          const Color(0xFF07125E).withValues(alpha: 0.18),
+                      color: const Color(0xFF07125E).withValues(alpha: 0.18),
                       blurRadius: 26,
                       offset: const Offset(0, 12),
                     ),
@@ -558,8 +557,7 @@ class _BotonLimpiarImpactoNuevo extends StatelessWidget {
                             onPressed: () => Navigator.pop(context, false),
                             style: OutlinedButton.styleFrom(
                               foregroundColor: const Color(0xFF111B59),
-                              side:
-                                  const BorderSide(color: Color(0xFFDDE2F2)),
+                              side: const BorderSide(color: Color(0xFFDDE2F2)),
                               padding: const EdgeInsets.symmetric(vertical: 13),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(14),
@@ -1129,10 +1127,10 @@ class _CardProductosImpactoNuevo extends StatelessWidget {
   }
 
   String? _imagenProducto(String nombre) {
-    final exacta = imagenesProducto4Life[nombre];
+    final exacta = imagenesProductoPaisActual[nombre];
     if (exacta != null) return exacta;
     final producto = buscarProductoPermitido(nombre);
-    return producto == null ? null : imagenesProducto4Life[producto];
+    return producto == null ? null : imagenesProductoPaisActual[producto];
   }
 }
 

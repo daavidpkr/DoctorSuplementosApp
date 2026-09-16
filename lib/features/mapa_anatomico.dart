@@ -343,7 +343,10 @@ class PaginaMapaAnatomico extends StatefulWidget {
   State<PaginaMapaAnatomico> createState() => _PaginaMapaAnatomicoState();
 }
 
-class _PaginaMapaAnatomicoState extends State<PaginaMapaAnatomico> {
+class _PaginaMapaAnatomicoState extends State<PaginaMapaAnatomico>
+    with EstadoCatalogoPais<PaginaMapaAnatomico> {
+  @override
+  void alCambiarPais() {}
   final TransformationController _zoomController = TransformationController();
 
   @override
@@ -583,11 +586,13 @@ class _PaginaMapaAnatomicoState extends State<PaginaMapaAnatomico> {
               height: 112,
               child: ListView.separated(
                   scrollDirection: Axis.horizontal,
-                  itemCount: organo.productos.length,
+                  itemCount: PaisService.actual.value == PaisApp.ecuador
+                      ? organo.productos.length
+                      : 0,
                   separatorBuilder: (_, __) => const SizedBox(width: 10),
                   itemBuilder: (context, i) {
                     final nombre = organo.productos[i];
-                    final imagen = imagenesProducto4Life[nombre];
+                    final imagen = imagenesProductoPaisActual[nombre];
                     return Container(
                         width: 104,
                         padding: const EdgeInsets.all(8),

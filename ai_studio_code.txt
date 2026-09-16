@@ -48,13 +48,13 @@ cat << EOF > request.json
             }
           },
           {
-            "inlineData": { //pdf de prueba
+            "inlineData": {
               "mimeType": "application/pdf",
               "data": "<Drive file: 1fFyf3139gPEZzzqVAGyUkSjea_7JbNEQ>"
             }
           },
           {
-            "inlineData": { //pdf de prueba 2
+            "inlineData": {
               "mimeType": "application/pdf",
               "data": "<Drive file: 18YnJTWraNwFuKEzA0r2VhPhd5TNWTEHG>"
             }

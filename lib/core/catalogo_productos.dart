@@ -1,6 +1,6 @@
 part of '../main.dart';
 
-const List<String> productosPermitidos4Life = [
+const List<String> productosPermitidosEcuador = [
   'Agpro',
   'Aloe Vera Stix Tropical',
   'Bcv',
@@ -37,9 +37,14 @@ const List<String> productosPermitidos4Life = [
 
 const double escalaTextoInterfaces = 0.90;
 
-final String catalogoPermitido4Life = productosPermitidos4Life.join(', ');
+List<String> get productosPermitidosPaisActual =>
+    PaisService.actual.value == PaisApp.estadosUnidos
+        ? productosPermitidosEstadosUnidos
+        : productosPermitidosEcuador;
+String get catalogoPermitidoPaisActual =>
+    productosPermitidosPaisActual.join(', ');
 
-const List<String> productosCambioFisico4Life = [
+const List<String> productosCambioFisicoEcuador = [
   'Aloe Vera Stix Tropical',
   '4Life Transfer Factor GluCoach',
   'Energy Go Stix Berry',
@@ -55,7 +60,10 @@ const List<String> productosCambioFisico4Life = [
   'Renuvo',
 ];
 
-final String catalogoCambioFisico4Life = productosCambioFisico4Life.join(', ');
+String get catalogoCambioFisicoPaisActual =>
+    PaisService.actual.value == PaisApp.estadosUnidos
+        ? catalogoPermitidoPaisActual
+        : productosCambioFisicoEcuador.join(', ');
 
 const Map<String, List<String>> _diferenciadoresProducto4Life = {
   'Transfer factor MAX': [
@@ -74,7 +82,7 @@ const Map<String, List<String>> _diferenciadoresProducto4Life = {
   'Aloe Vera Stix Tropical': ['aloe', 'aloe vera', 'aloe stix'],
 };
 
-const Map<String, String> imagenesProducto4Life = {
+const Map<String, String> imagenesProductoEcuador = {
   'Aloe Vera Stix Tropical':
       'assets/productos/productos-ec/aloe_vera_stix_tropical.webp',
   'Transfer factor plus':
@@ -116,6 +124,7 @@ const Map<String, String> imagenesProducto4Life = {
 
 class ProductoPrecio {
   final String nombre;
+  String get nombreVisible => nombreProductoVisible(nombre);
   final double afiliado;
   final double publico;
   final int? lp;
@@ -173,7 +182,7 @@ class ConsultaProductoCantidad {
   });
 }
 
-const List<ProductoPrecio> productosConPrecio4Life = [
+const List<ProductoPrecio> productosConPrecioEcuador = [
   ProductoPrecio(
       nombre: 'Aloe Vera Stix Tropical',
       afiliado: 40.04,
@@ -305,9 +314,14 @@ const Set<String> productosExcluidosOptimizadores4Life = {
 };
 
 bool productoDisponibleEnOptimizadores(ProductoPrecio producto) =>
+    seleccionProductoVigente(producto) &&
+    (PaisService.actual.value != PaisApp.estadosUnidos ||
+        (fichaProductoUsa(producto.nombre)?.esPaquete == false &&
+            !const ['?Kw? Skincare', 'enummi Personal Care', '4Life Service']
+                .contains(fichaProductoUsa(producto.nombre)?.categoria))) &&
     !productosExcluidosOptimizadores4Life.contains(producto.nombre);
 
-const Map<String, double> preciosPromocionalesMiTienda4Life = {
+const Map<String, double> preciosPromocionalesMiTiendaEcuador = {
   'Agpro': 77.60,
   'Bcv': 83.78,
   'Belle vie': 72.28,
@@ -337,19 +351,20 @@ const Map<String, double> preciosPromocionalesMiTienda4Life = {
   'Aloe Vera Stix Tropical': 42.72,
 };
 
-final List<ProductoPrecio> productosMiTienda4Life = productosConPrecio4Life
-    .where(
-      (producto) => preciosPromocionalesMiTienda4Life.containsKey(
-        producto.nombre,
-      ),
-    )
-    .toList();
+List<ProductoPrecio> get productosMiTiendaPaisActual =>
+    productosConPrecioPaisActual
+        .where(
+          (producto) => preciosPromocionalesMiTiendaPaisActual.containsKey(
+            producto.nombre,
+          ),
+        )
+        .toList();
 
 double? precioPromocionalMiTienda(String nombre) {
-  return preciosPromocionalesMiTienda4Life[nombre];
+  return preciosPromocionalesMiTiendaPaisActual[nombre];
 }
 
-const Map<String, InformacionProductoCatalogo> informacionProductos4Life = {
+const Map<String, InformacionProductoCatalogo> informacionProductosEcuador = {
   'Transfer factor tri factor': InformacionProductoCatalogo(
     descripcion:
         'Este producto es un suplemento disenado para respaldar el sistema inmunitario. Su formula combina la tecnologia de los factores de transferencia provenientes del calostro bovino y la yema de huevo, ayudando al cuerpo a reconocer, responder y recordar amenazas potenciales a la salud, promoviendo un equilibrio en el sistema de defensa natural.',
@@ -693,7 +708,18 @@ const Map<String, InformacionProductoCatalogo> informacionProductos4Life = {
 };
 
 InformacionProductoCatalogo informacionProductoCatalogo(String nombre) {
-  return informacionProductos4Life[nombre] ??
+  if (PaisService.actual.value == PaisApp.estadosUnidos) {
+    final ficha = fichaProductoUsa(nombre);
+    final idioma = IdiomaService.actual.value;
+    return InformacionProductoCatalogo(
+      descripcion: ficha?.campo('description', idioma) ?? '',
+      componentes: ficha?.campo('ingredients', idioma) ?? '',
+      uso: ficha?.campo('directions', idioma) ?? '',
+      precauciones: ficha?.campo('precautions', idioma) ?? '',
+      dosis: '',
+    );
+  }
+  return informacionProductosEcuador[nombre] ??
       InformacionProductoCatalogo(
         descripcion:
             'Producto 4Life de bienestar disenado para complementar una rutina saludable segun la necesidad del cliente y la linea a la que pertenece.',
@@ -708,15 +734,15 @@ InformacionProductoCatalogo informacionProductoCatalogo(String nombre) {
       );
 }
 
-final Map<String, PrecioProductoResultadoFicha> preciosResultado4Life = {
-  for (final producto in productosConPrecio4Life)
-    producto.nombre: PrecioProductoResultadoFicha(
-      afiliado: producto.afiliado,
-      publico: producto.publico,
-      promocional: precioPromocionalMiTienda(producto.nombre),
-      lp: producto.lp,
-    ),
-};
+Map<String, PrecioProductoResultadoFicha> get preciosResultadoPaisActual => {
+      for (final producto in productosConPrecioPaisActual)
+        producto.nombre: PrecioProductoResultadoFicha(
+          afiliado: producto.afiliado,
+          publico: producto.publico,
+          promocional: precioPromocionalMiTienda(producto.nombre),
+          lp: producto.lp,
+        ),
+    };
 
 String normalizarTexto(String texto) {
   return texto
@@ -737,6 +763,9 @@ String normalizarClaveProducto(String texto) {
 }
 
 String? productoPorReglaDiferenciadora(String consulta) {
+  if (PaisService.actual.value == PaisApp.estadosUnidos) {
+    return buscarProductoUsa(consulta);
+  }
   final normalizado = normalizarTexto(consulta);
   final clave = normalizarClaveProducto(consulta);
   if (normalizado.isEmpty) return null;
@@ -821,16 +850,24 @@ int puntajeCoincidencia(String consulta, String producto) {
 }
 
 ProductoPrecio? buscarProductoConPrecio(String consulta) {
+  if (PaisService.actual.value == PaisApp.estadosUnidos) {
+    final id = buscarProductoUsa(consulta);
+    for (final p in productosConPrecioPaisActual) {
+      if (p.nombre == id) return p;
+    }
+    return null;
+  }
+  if (buscarProductoPermitido(consulta) == null) return null;
   final productoDiferenciado = productoPorReglaDiferenciadora(consulta);
   if (productoDiferenciado != null) {
-    for (final producto in productosConPrecio4Life) {
+    for (final producto in productosConPrecioPaisActual) {
       if (producto.nombre == productoDiferenciado) return producto;
     }
   }
 
   ProductoPrecio? mejor;
   var mejorPuntaje = 0;
-  for (final producto in productosConPrecio4Life) {
+  for (final producto in productosConPrecioPaisActual) {
     final puntaje = puntajeCoincidencia(consulta, producto.nombre);
     if (puntaje > mejorPuntaje) {
       mejorPuntaje = puntaje;
@@ -841,12 +878,43 @@ ProductoPrecio? buscarProductoConPrecio(String consulta) {
 }
 
 String? buscarProductoPermitido(String consulta) {
+  if (PaisService.actual.value == PaisApp.estadosUnidos) {
+    return buscarProductoUsa(consulta);
+  }
+  // No adaptar una entrada USA exclusiva a un producto parecido de Ecuador.
+  final q = normalizarTexto(consulta);
+  if (catalogoProductosEstadosUnidos
+          .any((p) => p.alias.any((a) => normalizarTexto(a) == q)) &&
+      !productosPermitidosEcuador.any((p) => normalizarTexto(p) == q) &&
+      !productosConPrecioEcuador.any((p) =>
+          normalizarClaveProducto(p.nombre) == normalizarClaveProducto(q)) &&
+      !productosCambioFisicoEcuador.any(
+          (p) => normalizarClaveProducto(p) == normalizarClaveProducto(q))) {
+    final id = buscarProductoUsa(consulta);
+    if (id != null &&
+        !const {
+          '4Life Transfer Factor Max',
+          '4Life Transfer Factor Plus Tri-Factor Formula',
+          '4Life Transfer Factor Tri-Factor Formula',
+          '4Life Transfer Factor RioVida Stix',
+          '4Life Transfer Factor RioVida Burst',
+          '4Life Transfer Factor Renuvo',
+          '4Life Transfer Factor GluCoach',
+          '4Life Transfer Factor ReCall',
+          '4Life Transfer Factor KBU',
+          '4Life Transfer Factor MalePro',
+          '4Life Transfer Factor Belle Vie',
+          '4Life NanoFactor Glutamine Prime',
+        }.contains(id)) {
+      return null;
+    }
+  }
   final productoDiferenciado = productoPorReglaDiferenciadora(consulta);
   if (productoDiferenciado != null) return productoDiferenciado;
 
   String? mejor;
   var mejorPuntaje = 0;
-  for (final producto in productosPermitidos4Life) {
+  for (final producto in productosPermitidosPaisActual) {
     final puntaje = puntajeCoincidencia(consulta, producto);
     if (puntaje > mejorPuntaje) {
       mejorPuntaje = puntaje;
@@ -857,9 +925,23 @@ String? buscarProductoPermitido(String consulta) {
 }
 
 String? productoDesdeTexto(String texto) {
+  if (PaisService.actual.value == PaisApp.estadosUnidos) {
+    final normalizado = ' ${normalizarTexto(texto)} ';
+    final coincidencias = <MapEntry<String, int>>[];
+    for (final p in catalogoProductosEstadosUnidos) {
+      for (final alias in p.alias) {
+        final a = normalizarTexto(alias);
+        if (a.length >= 4 && normalizado.contains(' $a ')) {
+          coincidencias.add(MapEntry(p.id, a.length));
+        }
+      }
+    }
+    coincidencias.sort((a, b) => b.value.compareTo(a.value));
+    return coincidencias.isEmpty ? null : coincidencias.first.key;
+  }
   final normalizado = normalizarTexto(texto);
   final normalizadoClave = normalizarClaveProducto(texto);
-  for (final producto in productosPermitidos4Life) {
+  for (final producto in productosPermitidosPaisActual) {
     if (normalizado.contains(normalizarTexto(producto)) ||
         normalizadoClave.contains(normalizarClaveProducto(producto))) {
       return producto;
@@ -890,3 +972,26 @@ ConsultaProductoCantidad extraerConsultaConCantidad(String texto) {
     cantidad: cantidad.clamp(1, 999).toInt(),
   );
 }
+
+List<ProductoPrecio> get productosConPrecioPaisActual =>
+    PaisService.actual.value == PaisApp.estadosUnidos
+        ? productosPrecioEstadosUnidos
+        : productosConPrecioEcuador;
+Map<String, String> get imagenesProductoPaisActual =>
+    PaisService.actual.value == PaisApp.estadosUnidos
+        ? const {}
+        : imagenesProductoEcuador;
+Map<String, double> get preciosPromocionalesMiTiendaPaisActual =>
+    PaisService.actual.value == PaisApp.estadosUnidos
+        ? {
+            for (final p in catalogoProductosEstadosUnidos)
+              p.id: (p.presentaciones.first['discount'] as num).toDouble()
+          }
+        : preciosPromocionalesMiTiendaEcuador;
+// Compatibilidad para consumidores anteriores; todos resuelven el mercado actual.
+List<ProductoPrecio> get productosConPrecio4Life =>
+    productosConPrecioPaisActual;
+List<ProductoPrecio> get productosMiTienda4Life => productosMiTiendaPaisActual;
+Map<String, String> get imagenesProducto4Life => imagenesProductoPaisActual;
+Map<String, PrecioProductoResultadoFicha> get preciosResultado4Life =>
+    preciosResultadoPaisActual;

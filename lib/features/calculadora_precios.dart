@@ -10,7 +10,16 @@ class PaginaCalculadoraPrecios extends StatefulWidget {
       _PaginaCalculadoraPreciosState();
 }
 
-class _PaginaCalculadoraPreciosState extends State<PaginaCalculadoraPrecios> {
+class _PaginaCalculadoraPreciosState extends State<PaginaCalculadoraPrecios>
+    with EstadoCatalogoPais<PaginaCalculadoraPrecios> {
+  @override
+  void alCambiarPais() {
+    _productos = [];
+    _noEncontrados = [];
+    _controller.clear();
+    _busquedaTexto = "";
+  }
+
   final TextEditingController _controller = TextEditingController();
   List<LineaProductoPrecio> _productos = [];
   List<String> _noEncontrados = [];
@@ -59,8 +68,8 @@ class _PaginaCalculadoraPreciosState extends State<PaginaCalculadoraPrecios> {
 
   String _mensajeNoDisponible(ProductoPrecio producto) {
     return txtApp(
-      '${producto.nombre} no dispone de precio $_etiquetaTipoPrecio.',
-      '${producto.nombre} does not have a $_etiquetaTipoPrecio price.',
+      '${producto.nombreVisible} no dispone de precio $_etiquetaTipoPrecio.',
+      '${producto.nombreVisible} does not have a $_etiquetaTipoPrecio price.',
     );
   }
 
@@ -188,6 +197,7 @@ class _PaginaCalculadoraPreciosState extends State<PaginaCalculadoraPrecios> {
   }
 
   void _agregarProducto(ProductoPrecio producto, {int cantidad = 1}) {
+    if (!seleccionProductoVigente(producto)) return;
     if (!_productoDisponibleParaPrecio(producto)) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(_mensajeNoDisponible(producto))),
@@ -421,7 +431,7 @@ class _PaginaCalculadoraPreciosState extends State<PaginaCalculadoraPrecios> {
     for (final linea in _productos) {
       final producto = linea.producto;
       final precio = _precioProductoSeleccionado(producto) ?? 0;
-      buffer.writeln('${linea.cantidad} x ${producto.nombre}');
+      buffer.writeln('${linea.cantidad} x ${producto.nombreVisible}');
       buffer.writeln(
           'Precio $_etiquetaTipoPrecio: ${_precio(precio * linea.cantidad)}');
       if (_mostrarLp) {
@@ -440,8 +450,8 @@ class _PaginaCalculadoraPreciosState extends State<PaginaCalculadoraPrecios> {
     final productosInformativos = _productos
         .map(
           (linea) => ProductoDocumento(
-            nombre: '${linea.cantidad} x ${linea.producto.nombre}',
-            imagenAsset: imagenesProducto4Life[linea.producto.nombre],
+            nombre: '${linea.cantidad} x ${linea.producto.nombreVisible}',
+            imagenAsset: imagenesProductoPaisActual[linea.producto.nombre],
           ),
         )
         .toList();
@@ -463,8 +473,8 @@ class _PaginaCalculadoraPreciosState extends State<PaginaCalculadoraPrecios> {
         productos: _productos
             .map(
               (linea) => ProductoDocumento(
-                nombre: '${linea.cantidad} x ${linea.producto.nombre}',
-                imagenAsset: imagenesProducto4Life[linea.producto.nombre],
+                nombre: '${linea.cantidad} x ${linea.producto.nombreVisible}',
+                imagenAsset: imagenesProductoPaisActual[linea.producto.nombre],
                 indicaciones: [
                   'Precio $_etiquetaTipoPrecio: '
                       '${_precio((_precioProductoSeleccionado(linea.producto) ?? 0) * linea.cantidad)}',
@@ -492,11 +502,12 @@ class _PaginaCalculadoraPreciosState extends State<PaginaCalculadoraPrecios> {
   }
 
   void _abrirCatalogo() {
-    final productosCatalogo =
-        productosConPrecio4Life.where(_productoDisponibleParaPrecio).toList()
-          ..sort((a, b) => normalizarTexto(a.nombre).compareTo(
-                normalizarTexto(b.nombre),
-              ));
+    final productosCatalogo = productosConPrecioPaisActual
+        .where(_productoDisponibleParaPrecio)
+        .toList()
+      ..sort((a, b) => normalizarTexto(a.nombre).compareTo(
+            normalizarTexto(b.nombre),
+          ));
     final busquedaCatalogoController = TextEditingController();
     var busquedaCatalogo = '';
 
@@ -611,7 +622,8 @@ class _PaginaCalculadoraPreciosState extends State<PaginaCalculadoraPrecios> {
                       itemCount: productosFiltrados.length,
                       itemBuilder: (context, index) {
                         final producto = productosFiltrados[index];
-                        final imagen = imagenesProducto4Life[producto.nombre];
+                        final imagen =
+                            imagenesProductoPaisActual[producto.nombre];
                         final cantidad = _productos
                             .where((item) =>
                                 item.producto.nombre == producto.nombre)
@@ -668,8 +680,7 @@ class _PaginaCalculadoraPreciosState extends State<PaginaCalculadoraPrecios> {
                                     top: 0,
                                     child: CircleAvatar(
                                       radius: 15,
-                                      backgroundColor:
-                                          const Color(0xFF17218D),
+                                      backgroundColor: const Color(0xFF17218D),
                                       child: Text(
                                         'x$cantidad',
                                         style: const TextStyle(
@@ -710,10 +721,14 @@ class _PaginaCalculadoraPreciosState extends State<PaginaCalculadoraPrecios> {
     for (final producto in productos) {
       final info = informacionProductoCatalogo(producto.nombre);
       final texto = normalizarTexto(
-        '${producto.nombre} ${info.descripcion} ${info.componentes} '
+        '${producto.nombreVisible} ${fichaProductoUsa(producto.nombre)?.alias.join(' ') ?? producto.nombre} ${info.descripcion} ${info.componentes} '
         '${info.uso} ${info.precauciones}',
       );
       var puntaje = texto.contains(textoConsulta) ? 10 : 0;
+      if (PaisService.actual.value == PaisApp.estadosUnidos) {
+        final ficha = fichaProductoUsa(producto.nombre);
+        if (ficha != null) puntaje += puntajeBusquedaUsa(consulta, ficha);
+      }
       for (final palabra in palabras) {
         if (texto.contains(palabra)) puntaje += 3;
         if (normalizarTexto(producto.nombre).startsWith(palabra)) puntaje += 4;
@@ -760,6 +775,14 @@ class _PaginaCalculadoraPreciosState extends State<PaginaCalculadoraPrecios> {
                   _encabezado(),
                   const SizedBox(height: 26),
                   _tarjetaSeleccion(),
+                  if (PaisService.actual.value == PaisApp.estadosUnidos)
+                    Padding(
+                        padding: const EdgeInsets.all(12),
+                        child: Text(
+                            txtApp(
+                                'USA · Precios USD. Se utiliza la primera presentación de cada ficha; verifica el artículo y tamaño antes de comprar.',
+                                'USA · USD prices. The first presentation of each sheet is used; check item and size before buying.'),
+                            style: const TextStyle(color: Color(0xFF172394)))),
                   const SizedBox(height: 18),
                   _tarjetaProductosSeleccionados(),
                   const SizedBox(height: 18),
@@ -1080,11 +1103,11 @@ class _PaginaCalculadoraPreciosState extends State<PaginaCalculadoraPrecios> {
   Widget _sugerenciasBusquedaTexto() {
     final consulta = _busquedaTexto.trim();
     if (consulta.length < 2) return const SizedBox.shrink();
-    final productosBase =
-        productosConPrecio4Life.where(_productoDisponibleParaPrecio).toList();
-    final sugerencias = _filtrarProductosInteligente(productosBase, consulta)
-        .take(5)
+    final productosBase = productosConPrecioPaisActual
+        .where(_productoDisponibleParaPrecio)
         .toList();
+    final sugerencias =
+        _filtrarProductosInteligente(productosBase, consulta).take(5).toList();
     if (sugerencias.isEmpty) return const SizedBox.shrink();
     return Padding(
       padding: const EdgeInsets.only(top: 10),
@@ -1098,7 +1121,7 @@ class _PaginaCalculadoraPreciosState extends State<PaginaCalculadoraPrecios> {
   }
 
   Widget _sugerenciaProductoTexto(ProductoPrecio producto) {
-    final imagen = imagenesProducto4Life[producto.nombre];
+    final imagen = imagenesProductoPaisActual[producto.nombre];
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: InkWell(
@@ -1130,7 +1153,7 @@ class _PaginaCalculadoraPreciosState extends State<PaginaCalculadoraPrecios> {
               const SizedBox(width: 12),
               Expanded(
                 child: Text(
-                  producto.nombre,
+                  producto.nombreVisible,
                   style: const TextStyle(
                     color: Color(0xFF12248B),
                     fontSize: 15,
@@ -1256,7 +1279,7 @@ class _PaginaCalculadoraPreciosState extends State<PaginaCalculadoraPrecios> {
                   width: 58,
                   height: 58,
                   child: Image.asset(
-                    imagenesProducto4Life[linea.producto.nombre] ?? '',
+                    imagenesProductoPaisActual[linea.producto.nombre] ?? '',
                     fit: BoxFit.contain,
                     errorBuilder: (_, __, ___) =>
                         const Icon(Icons.inventory_2_outlined),
@@ -1269,7 +1292,7 @@ class _PaginaCalculadoraPreciosState extends State<PaginaCalculadoraPrecios> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        linea.producto.nombre,
+                        linea.producto.nombreVisible,
                         style: const TextStyle(
                           color: Color(0xFF152179),
                           fontSize: 15,

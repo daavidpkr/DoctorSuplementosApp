@@ -60,6 +60,8 @@ class _FormularioPacienteState extends State<FormularioPaciente> {
     }
     setState(() => cargando = true);
 
+    final paisConsulta = PaisService.actual.value;
+    final idiomaConsulta = IdiomaService.actual.value;
     final model = GenerativeModel(
       model: 'gemini-3.1-flash-lite',
       apiKey: geminiApiKey,
@@ -87,7 +89,7 @@ class _FormularioPacienteState extends State<FormularioPaciente> {
     Actúa como un experto en inmunología, bioenergética y asesor profesional de la línea de suplementos de bienestar de 4Life. Tu objetivo es generar un reporte de recomendación altamente profesional, ético y optimizado exclusivamente para ser compartido por WhatsApp.
 
     REGLA CRÍTICA DE NEGOCIO: 
-    - Debes recomendar ÚNICAMENTE estos productos: $catalogoPermitido4Life.
+    - Debes recomendar ÚNICAMENTE estos productos: $catalogoPermitidoPaisActual.
     - Queda estrictamente prohibido inventar nombres de productos, sugerir medicamentos fármacos o marcas externas a 4Life.
 
     Instrucciones estrictas de formato y contenido:
@@ -176,7 +178,7 @@ class _FormularioPacienteState extends State<FormularioPaciente> {
     cura por si solo ni sustituye dieta, tratamiento o control medico.
 
     *SUSTRATO Y RESPALDO RECOMENDADO*
-    Recomienda normalmente 3 o 4 productos maximo y solo de $catalogoPermitido4Life.
+    Recomienda normalmente 3 o 4 productos maximo y solo de $catalogoPermitidoPaisActual.
     Para cada producto usa obligatoriamente este bloque, con cada campo en su linea:
     *1. [Nombre exacto del producto]*
     - *Dosis manana:* [cantidad si aplica]
@@ -201,25 +203,31 @@ class _FormularioPacienteState extends State<FormularioPaciente> {
     definitivos, sustitucion de medicamentos y miedo.
     """;
 
+    final consultaCatalogo =
+        'Síntomas: ${historialController.text}. Nombre: ${nombreController.text}. Edad: ${edadController.text}. Género: $_generoSeleccionado';
+    final promptPais = construirPromptProductosPais(consultaCatalogo, prompt,
+        pais: paisConsulta, idioma: idiomaConsulta);
     try {
       final content = [
         if (_adjunto == null)
-          Content.text(prompt)
+          Content.text(promptPais)
         else
           Content.multi([
             TextPart(
               _adjunto!.esAudio
-                  ? "$prompt\n\nAnaliza la nota de voz adjunta. Extrae los síntomas, contexto y datos relevantes mencionados por el paciente para orientar la recomendación; no guardes ni menciones que el audio fue almacenado."
-                  : "$prompt\n\nAnaliza también el archivo adjunto. Extrae solo la información relevante para orientar la recomendación y úsala como contexto complementario; no afirmes diagnósticos médicos definitivos.",
+                  ? "$promptPais\n\nAnaliza la nota de voz adjunta. Extrae los síntomas, contexto y datos relevantes mencionados por el paciente para orientar la recomendación; no guardes ni menciones que el audio fue almacenado."
+                  : "$promptPais\n\nAnaliza también el archivo adjunto. Extrae solo la información relevante para orientar la recomendación y úsala como contexto complementario; no afirmes diagnósticos médicos definitivos.",
             ),
             DataPart(_adjunto!.mimeType, _adjunto!.bytes),
           ]),
       ];
       final response = await model.generateContent(content);
-      String textoFinal = response.text ?? "Sin respuesta";
+      String textoFinal = procesarRespuestaProductosPais(
+          response.text ?? '', consultaCatalogo, paisConsulta, idiomaConsulta);
 
       await HistorialService.guardar(
           "Diagnóstico: ${nombreController.text}", textoFinal, {
+        'pais': paisConsulta.codigo,
         'nombre': nombreController.text,
         'edad': edadController.text,
         'genero': _generoSeleccionado!,
@@ -233,7 +241,7 @@ class _FormularioPacienteState extends State<FormularioPaciente> {
     } catch (e) {
       _mostrarDialogoSimple("Error", "No se pudo conectar con la IA.");
     } finally {
-      setState(() => cargando = false);
+      if (mounted) setState(() => cargando = false);
     }
   }
 
@@ -249,8 +257,8 @@ class _FormularioPacienteState extends State<FormularioPaciente> {
           especialidad: "Especialista en inmunología y bioenergética",
           resultado: mensaje,
           fecha: DateTime.now(),
-          imagenesProducto: imagenesProducto4Life,
-          preciosProducto: preciosResultado4Life,
+          imagenesProducto: imagenesProductoPaisActual,
+          preciosProducto: preciosResultadoPaisActual,
           ingles: IdiomaService.actual.value == IdiomaApp.ingles,
         ),
       ),

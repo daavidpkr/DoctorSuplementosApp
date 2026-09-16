@@ -25,12 +25,15 @@ import 'dart:io';
 import 'dart:math' as math;
 
 part 'core/catalogo_productos.dart';
+part 'core/catalogo_productos_usa.dart';
+part 'core/datos_catalogo_usa.dart';
 part 'core/servicios_app.dart';
 part 'core/servicios_historial.dart';
 part 'ui/selector_estilizado.dart';
 part 'features/inicio.dart';
 part 'features/inicio_legacy.dart';
 part 'features/perfil.dart';
+part 'features/seleccion_pais.dart';
 part 'features/impacto.dart';
 part 'features/diagnostico.dart';
 part 'features/cambio_fisico.dart';
@@ -114,7 +117,7 @@ class DoctorSuplementos extends StatelessWidget {
       valueListenable: IdiomaService.actual,
       builder: (context, idioma, _) {
         return MaterialApp(
-          key: ValueKey('app-${idioma.codigo}'),
+          key: const ValueKey('doctor-suplementos-app'),
           debugShowCheckedModeBanner: false,
           title: idioma == IdiomaApp.ingles
               ? 'Doctor Supplements'
@@ -159,6 +162,8 @@ class _ArranqueDoctorSuplementosState extends State<ArranqueDoctorSuplementos> {
   late final Future<bool> _primeraInstalacionFuture;
   bool _mostrandoPerfilInicial = false;
   bool _perfilInicialPreparado = false;
+  // Solo dura mientras vive este arranque; no se persiste entre sesiones.
+  bool _seleccionConfirmada = false;
 
   @override
   void initState() {
@@ -189,6 +194,16 @@ class _ArranqueDoctorSuplementosState extends State<ArranqueDoctorSuplementos> {
             onPerfilGuardado: () {
               if (mounted) {
                 setState(() => _mostrandoPerfilInicial = false);
+              }
+            },
+          );
+        }
+
+        if (!_seleccionConfirmada) {
+          return PaginaSeleccionPais(
+            onContinuar: () {
+              if (mounted) {
+                setState(() => _seleccionConfirmada = true);
               }
             },
           );

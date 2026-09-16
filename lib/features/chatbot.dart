@@ -6,7 +6,7 @@ Future<void> _compartirRespuestaChat(
 ) {
   final contenido = ContenidoResultadoFicha.desdeTexto(
     texto,
-    imagenesProducto4Life,
+    imagenesProductoPaisActual,
   );
   final productos = contenido.productos
       .map(
@@ -67,7 +67,16 @@ class PaginaChatbot extends StatefulWidget {
   State<PaginaChatbot> createState() => _PaginaChatbotState();
 }
 
-class _PaginaChatbotState extends State<PaginaChatbot> {
+class _PaginaChatbotState extends State<PaginaChatbot>
+    with EstadoCatalogoPais<PaginaChatbot> {
+  int _inicioContextoMercado = 0;
+  @override
+  void alCambiarPais() {
+    // Conserva mensajes e historial; solo corta el contexto de recomendaciones.
+    _inicioContextoMercado = mensajes.length;
+    _adjuntos.clear();
+  }
+
   final TextEditingController _controller = TextEditingController();
   final AudioRecorder _audioRecorder = AudioRecorder();
   final List<Map<String, String>> mensajes = [];
@@ -221,13 +230,16 @@ class _PaginaChatbotState extends State<PaginaChatbot> {
     });
     _controller.clear();
 
+    final paisConsulta = PaisService.actual.value;
+    final idiomaConsulta = IdiomaService.actual.value;
     final model = GenerativeModel(
       model: 'gemini-3.1-flash-lite',
       apiKey: geminiApiKey,
     );
 
     final historialPrevio = mensajes
-        .take(mensajes.length - 1)
+        .skip(_inicioContextoMercado)
+        .take(mensajes.length - 1 - _inicioContextoMercado)
         .map((mensaje) =>
             "${mensaje['rol'] == 'ia' ? 'Asesor IA' : 'Socio'}: ${mensaje['texto']}")
         .join("\n");
@@ -264,7 +276,7 @@ class _PaginaChatbotState extends State<PaginaChatbot> {
         ? "REGLA DE PRODUCTOS DESACTIVADA POR MODO CIENTIFICO: no hables de productos, suplementos ni catalogos."
         : """
     REGLA OBLIGATORIA DE PRODUCTOS: Cuando recomiendes, compares, armes rutinas o sugieras productos,
-    usa UNICAMENTE estos nombres del catalogo autorizado: $catalogoPermitido4Life.
+    usa UNICAMENTE estos nombres del catalogo autorizado: $catalogoPermitidoPaisActual.
     Si el socio pide algo que requiera un producto fuera de esa lista, explica que solo puedes recomendar
     productos del catalogo autorizado y ofrece alternativas dentro de esa lista.
     No inventes nombres, presentaciones ni productos adicionales.
@@ -316,15 +328,27 @@ class _PaginaChatbotState extends State<PaginaChatbot> {
     $textoVisible
     """;
 
+    final preguntasMercado = mensajes
+        .skip(_inicioContextoMercado)
+        .where((m) => m['rol'] == 'usuario')
+        .map((m) => m['texto'] ?? '')
+        .toList();
+    final consultaCatalogo =
+        [textoVisible, ...preguntasMercado.reversed.take(3)].join('\n');
+    final promptPais = _modoCientifico
+        ? promptLimpioParaChatbot
+        : construirPromptProductosPais(
+            consultaCatalogo, promptLimpioParaChatbot,
+            pais: paisConsulta, idioma: idiomaConsulta);
     try {
       final textoAdjuntos = _tieneAdjuntos
           ? (_adjuntosSoloAudio
-              ? "$promptLimpioParaChatbot\n\nAnaliza las notas de voz adjuntas como contexto temporal. Extrae la consulta y responde con base en el audio. No menciones que fueron guardadas, porque no se guardan en la app."
-              : "$promptLimpioParaChatbot\n\nAnaliza todos los archivos adjuntos como contexto temporal. Cruza la información entre documentos e imágenes cuando sea útil. No menciones que fueron guardados, porque no se guardan en la app.")
-          : promptLimpioParaChatbot;
+              ? "$promptPais\n\nAnaliza las notas de voz adjuntas como contexto temporal. Extrae la consulta y responde con base en el audio. No menciones que fueron guardadas, porque no se guardan en la app."
+              : "$promptPais\n\nAnaliza todos los archivos adjuntos como contexto temporal. Cruza la información entre documentos e imágenes cuando sea útil. No menciones que fueron guardados, porque no se guardan en la app.")
+          : promptPais;
       final response = await model.generateContent([
         if (!_tieneAdjuntos)
-          Content.text(promptLimpioParaChatbot)
+          Content.text(promptPais)
         else
           Content.multi([
             TextPart(textoAdjuntos),
@@ -332,7 +356,10 @@ class _PaginaChatbotState extends State<PaginaChatbot> {
               DataPart(adjunto.mimeType, adjunto.bytes),
           ]),
       ]);
-      final respuestaIA = response.text ?? "No pude generar una respuesta.";
+      final respuestaIA = _modoCientifico
+          ? response.text ?? 'Sin respuesta'
+          : procesarRespuestaProductosPais(response.text ?? '',
+              consultaCatalogo, paisConsulta, idiomaConsulta);
 
       if (!mounted) return;
       setState(() {

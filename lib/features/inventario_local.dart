@@ -7,8 +7,19 @@ class PaginaInventarioLocal extends StatefulWidget {
   State<PaginaInventarioLocal> createState() => _PaginaInventarioLocalState();
 }
 
-class _PaginaInventarioLocalState extends State<PaginaInventarioLocal> {
-  static const String _prefsKey = 'inventario_local_4life';
+class _PaginaInventarioLocalState extends State<PaginaInventarioLocal>
+    with EstadoCatalogoPais<PaginaInventarioLocal> {
+  @override
+  void alCambiarPais() {
+    _reordenarTimer?.cancel();
+    _stock = {};
+    _cargando = true;
+    _ordenProductos = productosConPrecioPaisActual.map((p) => p.nombre).toList()
+      ..sort();
+    unawaited(_cargarInventario());
+  }
+
+  String get _prefsKey => claveInventarioPais(PaisService.actual.value);
   static const Color _azul = Color(0xFF172394);
   static const Color _azulOscuro = Color(0xFF07125E);
   static const Color _tinta = Color(0xFF111B59);
@@ -23,7 +34,7 @@ class _PaginaInventarioLocalState extends State<PaginaInventarioLocal> {
   @override
   void initState() {
     super.initState();
-    _ordenProductos = productosConPrecio4Life.map((p) => p.nombre).toList()
+    _ordenProductos = productosConPrecioPaisActual.map((p) => p.nombre).toList()
       ..sort();
     _cargarInventario();
   }
@@ -36,8 +47,9 @@ class _PaginaInventarioLocalState extends State<PaginaInventarioLocal> {
   }
 
   Future<void> _cargarInventario() async {
+    final claveCarga = _prefsKey;
     final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getString(_prefsKey);
+    final raw = prefs.getString(claveCarga);
     final inventario = <String, int>{};
 
     if (raw != null && raw.isNotEmpty) {
@@ -45,20 +57,21 @@ class _PaginaInventarioLocalState extends State<PaginaInventarioLocal> {
         final datos = jsonDecode(raw) as Map<String, dynamic>;
         for (final entry in datos.entries) {
           final producto = buscarProductoConPrecio(entry.key);
-          if (producto == null) continue;
+
           final cantidad = int.tryParse(entry.value.toString()) ?? 0;
-          inventario[producto.nombre] = cantidad.clamp(0, 999).toInt();
+          inventario[producto?.nombre ?? entry.key] =
+              cantidad.clamp(0, 999).toInt();
         }
       } catch (e) {
         debugPrint('Local inventory could not be loaded: $e');
       }
     }
 
-    for (final producto in productosConPrecio4Life) {
+    for (final producto in productosConPrecioPaisActual) {
       inventario.putIfAbsent(producto.nombre, () => 0);
     }
 
-    if (!mounted) return;
+    if (!mounted || claveCarga != _prefsKey) return;
     setState(() {
       _stock = inventario;
       _ordenarProductosPorStock();
@@ -67,8 +80,10 @@ class _PaginaInventarioLocalState extends State<PaginaInventarioLocal> {
   }
 
   Future<void> _guardarInventario() async {
+    final claveGuardado = _prefsKey;
+    final contenidoGuardado = jsonEncode(_stock);
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_prefsKey, jsonEncode(_stock));
+    await prefs.setString(claveGuardado, contenidoGuardado);
   }
 
   Future<void> _actualizarStock(ProductoPrecio producto, int cantidad) async {
@@ -94,7 +109,7 @@ class _PaginaInventarioLocalState extends State<PaginaInventarioLocal> {
     setState(() {
       _busquedaController.clear();
       _stock = {
-        for (final producto in productosConPrecio4Life) producto.nombre: 0,
+        for (final producto in productosConPrecioPaisActual) producto.nombre: 0,
       };
     });
     await _guardarInventario();
@@ -279,7 +294,7 @@ class _PaginaInventarioLocalState extends State<PaginaInventarioLocal> {
   }
 
   void _ordenarProductosPorStock() {
-    _ordenProductos = productosConPrecio4Life.map((p) => p.nombre).toList()
+    _ordenProductos = productosConPrecioPaisActual.map((p) => p.nombre).toList()
       ..sort((a, b) {
         final cantidadB = _stock[b] ?? 0;
         final cantidadA = _stock[a] ?? 0;
@@ -322,8 +337,9 @@ class _PaginaInventarioLocalState extends State<PaginaInventarioLocal> {
         productos: productosConStock
             .map(
               (producto) => ProductoDocumento(
-                nombre: '${_stock[producto.nombre] ?? 0} x ${producto.nombre}',
-                imagenAsset: imagenesProducto4Life[producto.nombre],
+                nombre:
+                    '${_stock[producto.nombre] ?? 0} x ${producto.nombreVisible}',
+                imagenAsset: imagenesProductoPaisActual[producto.nombre],
                 indicaciones: [
                   '${_t('LP por unidad', 'LP per unit')}: ${producto.lp ?? 0}',
                   '${_t('Afiliado por unidad', 'Member per unit')}: ${_precio(producto.afiliado)}',
@@ -340,7 +356,8 @@ class _PaginaInventarioLocalState extends State<PaginaInventarioLocal> {
   List<ProductoPrecio> get _productos {
     final busqueda = normalizarTexto(_busquedaController.text);
     final porNombre = {
-      for (final producto in productosConPrecio4Life) producto.nombre: producto,
+      for (final producto in productosConPrecioPaisActual)
+        producto.nombre: producto,
     };
     final productos = [
       for (final nombre in _ordenProductos)
@@ -350,7 +367,9 @@ class _PaginaInventarioLocalState extends State<PaginaInventarioLocal> {
     if (busqueda.isEmpty) return productos;
     return productos
         .where(
-          (producto) => normalizarTexto(producto.nombre).contains(busqueda),
+          (producto) => normalizarTexto(
+                  '${producto.nombreVisible} ${fichaProductoUsa(producto.nombre)?.alias.join(' ') ?? producto.nombre}')
+              .contains(busqueda),
         )
         .toList();
   }
@@ -361,19 +380,19 @@ class _PaginaInventarioLocalState extends State<PaginaInventarioLocal> {
   int get _productosActivos =>
       _stock.values.where((cantidad) => cantidad > 0).length;
 
-  double get _valorAfiliado => productosConPrecio4Life.fold(
+  double get _valorAfiliado => productosConPrecioPaisActual.fold(
         0,
         (total, producto) =>
             total + (producto.afiliado * (_stock[producto.nombre] ?? 0)),
       );
 
-  double get _valorPublico => productosConPrecio4Life.fold(
+  double get _valorPublico => productosConPrecioPaisActual.fold(
         0,
         (total, producto) =>
             total + (producto.publico * (_stock[producto.nombre] ?? 0)),
       );
 
-  int get _lpDisponible => productosConPrecio4Life.fold(
+  int get _lpDisponible => productosConPrecioPaisActual.fold(
         0,
         (total, producto) =>
             total + ((producto.lp ?? 0) * (_stock[producto.nombre] ?? 0)),
@@ -400,10 +419,10 @@ class _PaginaInventarioLocalState extends State<PaginaInventarioLocal> {
       '${_t('Valor publico estimado', 'Estimated retail value')}: ${_precio(_valorPublico)}\n',
     );
 
-    for (final producto in productosConPrecio4Life) {
+    for (final producto in productosConPrecioPaisActual) {
       final cantidad = _stock[producto.nombre] ?? 0;
       if (cantidad <= 0) continue;
-      buffer.writeln('$cantidad x ${producto.nombre}');
+      buffer.writeln('$cantidad x ${producto.nombreVisible}');
       buffer.writeln('LP: ${(producto.lp ?? 0) * cantidad}');
       buffer.writeln(
         '${_t('Valor afiliado', 'Member value')}: ${_precio(producto.afiliado * cantidad)}',
@@ -837,7 +856,7 @@ class _PaginaInventarioLocalState extends State<PaginaInventarioLocal> {
             width: 54,
             height: 54,
             child: Image.asset(
-              imagenesProducto4Life[producto.nombre] ?? '',
+              imagenesProductoPaisActual[producto.nombre] ?? '',
               fit: BoxFit.contain,
               errorBuilder: (_, __, ___) =>
                   const Icon(Icons.inventory_2_outlined),
@@ -855,7 +874,7 @@ class _PaginaInventarioLocalState extends State<PaginaInventarioLocal> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      producto.nombre,
+                      producto.nombreVisible,
                       style: const TextStyle(
                         color: _tinta,
                         fontSize: 15,

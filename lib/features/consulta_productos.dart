@@ -14,7 +14,15 @@ class ConsultaProductoPagina extends StatefulWidget {
   State<ConsultaProductoPagina> createState() => _ConsultaProductoPaginaState();
 }
 
-class _ConsultaProductoPaginaState extends State<ConsultaProductoPagina> {
+class _ConsultaProductoPaginaState extends State<ConsultaProductoPagina>
+    with EstadoCatalogoPais<ConsultaProductoPagina> {
+  @override
+  void alCambiarPais() {
+    _seleccionMultiple.clear();
+    _busqueda = "";
+    _busquedaController.clear();
+  }
+
   final TextEditingController _busquedaController = TextEditingController();
   bool _modoMultiple = false;
   String _busqueda = '';
@@ -28,8 +36,8 @@ class _ConsultaProductoPaginaState extends State<ConsultaProductoPagina> {
 
   List<ProductoPrecio> get _productosCatalogo {
     final productos = _esMiTienda
-        ? [...productosMiTienda4Life]
-        : [...productosConPrecio4Life];
+        ? [...productosMiTiendaPaisActual]
+        : [...productosConPrecioPaisActual];
     productos.sort(
       (a, b) => normalizarTexto(a.nombre).compareTo(normalizarTexto(b.nombre)),
     );
@@ -57,10 +65,14 @@ class _ConsultaProductoPaginaState extends State<ConsultaProductoPagina> {
     for (final producto in productos) {
       final info = informacionProductoCatalogo(producto.nombre);
       final texto = normalizarTexto(
-        '${producto.nombre} ${info.descripcion} ${info.componentes} '
+        '${producto.nombreVisible} ${fichaProductoUsa(producto.nombre)?.alias.join(' ') ?? producto.nombre} ${info.descripcion} ${info.componentes} '
         '${info.uso} ${info.precauciones}',
       );
       var puntaje = texto.contains(textoConsulta) ? 10 : 0;
+      if (PaisService.actual.value == PaisApp.estadosUnidos) {
+        final ficha = fichaProductoUsa(producto.nombre);
+        if (ficha != null) puntaje += puntajeBusquedaUsa(consulta, ficha);
+      }
       for (final palabra in palabras) {
         if (texto.contains(palabra)) puntaje += 3;
         if (normalizarTexto(producto.nombre).startsWith(palabra)) puntaje += 4;
@@ -136,9 +148,9 @@ class _ConsultaProductoPaginaState extends State<ConsultaProductoPagina> {
       context: context,
       builder: (c) => _dialogoResultado(
         dialogContext: c,
-        titulo: producto.nombre,
+        titulo: producto.nombreVisible,
         resultado: resultado,
-        imagenProducto: imagenesProducto4Life[producto.nombre],
+        imagenProducto: imagenesProductoPaisActual[producto.nombre],
         productoIdentificado: producto.nombre,
         precioProducto: producto,
         precioPromocional: precioPromocional,
@@ -206,8 +218,13 @@ class _ConsultaProductoPaginaState extends State<ConsultaProductoPagina> {
     ProductoPrecio producto,
     IdiomaApp idioma,
   ) async {
+    if (PaisService.actual.value == PaisApp.estadosUnidos) {
+      return textoFichaProductoUsa(producto.nombre, idioma);
+    }
     final info = informacionProductoCatalogo(producto.nombre);
     final idiomaIa = idioma == IdiomaApp.ingles ? 'English' : 'espanol';
+    final paisConsulta = PaisService.actual.value;
+    final idiomaConsulta = IdiomaService.actual.value;
     final model = GenerativeModel(
       model: 'gemini-3.1-flash-lite',
       apiKey: geminiApiKey,
@@ -218,7 +235,7 @@ ROL: Eres especialista en nutricion celular y suplementacion avanzada. Explica
 los beneficios con rigor cientifico y sin promesas falsas de curacion. Usa solo
 la informacion comprobable suministrada; no inventes ingredientes ni efectos.
 
-PRODUCTO: ${producto.nombre}
+PRODUCTO: ${producto.nombreVisible}
 DATOS DISPONIBLES:
 - Descripcion: ${info.descripcion}
 - Ingredientes/componentes: ${info.componentes}
@@ -249,8 +266,12 @@ un ingrediente que no aparece en los datos.
 NOTA DE RESPONSABILIDAD: cierra indicando que es suplemento alimenticio, no
 medicamento, no sustituye tratamientos prescritos y no cura enfermedades.
 """;
-    final response = await model.generateContent([Content.text(prompt)]);
-    final texto = response.text?.trim() ?? '';
+    final consultaCatalogo = producto.nombre;
+    final promptPais = construirPromptProductosPais(consultaCatalogo, prompt,
+        pais: paisConsulta, idioma: idiomaConsulta);
+    final response = await model.generateContent([Content.text(promptPais)]);
+    final texto = procesarRespuestaProductosPais(response.text?.trim() ?? '',
+        consultaCatalogo, paisConsulta, idiomaConsulta);
     if (texto.isEmpty) throw StateError('Respuesta vacia de IA');
     return texto;
   }
@@ -731,7 +752,7 @@ Este producto no es medicina, no diagnostica, no trata, no cura ni previene enfe
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Image.asset(
-                  imagenesProducto4Life[producto.nombre] ?? '',
+                  imagenesProductoPaisActual[producto.nombre] ?? '',
                   fit: BoxFit.contain,
                   filterQuality: FilterQuality.high,
                   errorBuilder: (_, __, ___) =>
@@ -744,7 +765,7 @@ Este producto no es medicina, no diagnostica, no trata, no cura ni previene enfe
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      producto.nombre,
+                      producto.nombreVisible,
                       style: const TextStyle(
                         color: Color(0xFF111B59),
                         fontSize: 15,
@@ -837,7 +858,7 @@ Este producto no es medicina, no diagnostica, no trata, no cura ni previene enfe
     );
     for (final producto in productos) {
       final info = informacionProductoCatalogo(producto.nombre);
-      buffer.writeln(producto.nombre);
+      buffer.writeln(producto.nombreVisible);
       buffer.writeln(
           '${txtApp('Afiliado', 'Member')}: \$${producto.afiliado.toStringAsFixed(2)}');
       buffer.writeln(
@@ -875,8 +896,8 @@ Este producto no es medicina, no diagnostica, no trata, no cura ni previene enfe
         productos: productos
             .map(
               (producto) => ProductoDocumento(
-                nombre: producto.nombre,
-                imagenAsset: imagenesProducto4Life[producto.nombre],
+                nombre: producto.nombreVisible,
+                imagenAsset: imagenesProductoPaisActual[producto.nombre],
                 indicaciones: [
                   '${ingles ? 'Member' : 'Afiliado'}: \$${producto.afiliado.toStringAsFixed(2)}',
                   '${ingles ? 'Retail' : 'Público'}: \$${producto.publico.toStringAsFixed(2)}',
@@ -898,7 +919,7 @@ Este producto no es medicina, no diagnostica, no trata, no cura ni previene enfe
   }
 
   Widget _tarjetaProductoCatalogo(ProductoPrecio producto) {
-    final imagen = imagenesProducto4Life[producto.nombre];
+    final imagen = imagenesProductoPaisActual[producto.nombre];
     final ingles = IdiomaService.actual.value == IdiomaApp.ingles;
     final precioPromocional = precioPromocionalMiTienda(producto.nombre);
     final seleccionado = _seleccionMultiple.contains(producto.nombre);
@@ -983,7 +1004,7 @@ Este producto no es medicina, no diagnostica, no trata, no cura ni previene enfe
               ),
               const SizedBox(height: 10),
               Text(
-                producto.nombre,
+                producto.nombreVisible,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
                 textAlign: TextAlign.center,

@@ -7,7 +7,14 @@ class PaginaComparadorAB extends StatefulWidget {
   State<PaginaComparadorAB> createState() => _PaginaComparadorABState();
 }
 
-class _PaginaComparadorABState extends State<PaginaComparadorAB> {
+class _PaginaComparadorABState extends State<PaginaComparadorAB>
+    with EstadoCatalogoPais<PaginaComparadorAB> {
+  @override
+  void alCambiarPais() {
+    _productoA = productosConPrecioPaisActual.first;
+    _productoB = productosConPrecioPaisActual[1];
+  }
+
   static const Color _azul = Color(0xFF172394);
   static const Color _azulOscuro = Color(0xFF07125E);
   static const Color _tinta = Color(0xFF111B59);
@@ -19,15 +26,15 @@ class _PaginaComparadorABState extends State<PaginaComparadorAB> {
   @override
   void initState() {
     super.initState();
-    _productoA = productosConPrecio4Life.firstWhere(
+    _productoA = productosConPrecioPaisActual.firstWhere(
       (producto) => producto.nombre == 'Transfer factor plus',
-      orElse: () => productosConPrecio4Life.first,
+      orElse: () => productosConPrecioPaisActual.first,
     );
-    _productoB = productosConPrecio4Life.firstWhere(
+    _productoB = productosConPrecioPaisActual.firstWhere(
       (producto) => producto.nombre == 'Transfer factor MAX',
-      orElse: () => productosConPrecio4Life.length > 1
-          ? productosConPrecio4Life[1]
-          : productosConPrecio4Life.first,
+      orElse: () => productosConPrecioPaisActual.length > 1
+          ? productosConPrecioPaisActual[1]
+          : productosConPrecioPaisActual.first,
     );
   }
 
@@ -43,7 +50,11 @@ class _PaginaComparadorABState extends State<PaginaComparadorAB> {
         seleccionado: esA ? _productoA : _productoB,
       ),
     );
-    if (seleccionado == null) return;
+    if (!mounted ||
+        seleccionado == null ||
+        !seleccionProductoVigente(seleccionado)) {
+      return;
+    }
     setState(() {
       if (esA) {
         _productoA = seleccionado;
@@ -84,8 +95,8 @@ class _PaginaComparadorABState extends State<PaginaComparadorAB> {
         productos: [_productoA, _productoB]
             .map(
               (producto) => ProductoDocumento(
-                nombre: producto.nombre,
-                imagenAsset: imagenesProducto4Life[producto.nombre],
+                nombre: producto.nombreVisible,
+                imagenAsset: imagenesProductoPaisActual[producto.nombre],
                 indicaciones: [
                   '${_t('Enfoque', 'Focus')}: ${_enfoqueProducto(producto)}',
                   '${_t('Calidad principal', 'Main quality')}: ${_senalCalidad(producto)}',
@@ -104,7 +115,8 @@ class _PaginaComparadorABState extends State<PaginaComparadorAB> {
     final buffer = StringBuffer(
       '${_t('Comparación A/B de suplementos 4Life', '4Life A/B Supplement Comparison')}\n\n',
     );
-    buffer.writeln('${_t('Producto A', 'Product A')}: ${_productoA.nombre}');
+    buffer.writeln(
+        '${_t('Producto A', 'Product A')}: ${_productoA.nombreVisible}');
     buffer
         .writeln('${_t('Enfoque', 'Focus')}: ${_enfoqueProducto(_productoA)}');
     buffer.writeln(
@@ -118,7 +130,8 @@ class _PaginaComparadorABState extends State<PaginaComparadorAB> {
     buffer.writeln(
         '${_t('Como funciona', 'How it works')}: ${_funcionProducto(_productoA)}');
     buffer.writeln();
-    buffer.writeln('${_t('Producto B', 'Product B')}: ${_productoB.nombre}');
+    buffer.writeln(
+        '${_t('Producto B', 'Product B')}: ${_productoB.nombreVisible}');
     buffer
         .writeln('${_t('Enfoque', 'Focus')}: ${_enfoqueProducto(_productoB)}');
     buffer.writeln(
@@ -160,6 +173,11 @@ class _PaginaComparadorABState extends State<PaginaComparadorAB> {
       _limpiarDetalle(_informacion(producto).uso);
 
   String _decisionRapida() {
+    if (PaisService.actual.value == PaisApp.estadosUnidos) {
+      return _t(
+          'Compara las funciones e ingredientes declarados en las fichas oficiales. El catálogo no permite determinar superioridad clínica entre estos productos.',
+          'Compare declared functions and ingredients in the official sheets. The catalog does not establish clinical superiority between these products.');
+    }
     if (_productoA.nombre == _productoB.nombre) {
       return _t(
         'Seleccionaste el mismo producto en A y B: su formula, funcionamiento y uso son iguales. Cambia uno para obtener una comparacion real.',
@@ -168,35 +186,35 @@ class _PaginaComparadorABState extends State<PaginaComparadorAB> {
     }
     if (_enfoqueProducto(_productoA) != _enfoqueProducto(_productoB)) {
       return _t(
-        '${_productoA.nombre} conviene cuando se busca ${_enfoqueProducto(_productoA).toLowerCase()}, porque su formula se orienta a: ${_funcionProducto(_productoA)} En cambio, ${_productoB.nombre} conviene para ${_enfoqueProducto(_productoB).toLowerCase()}, porque: ${_funcionProducto(_productoB)}',
-        '${_productoA.nombre} fits ${_enfoqueProducto(_productoA).toLowerCase()} because its formula is designed for: ${_funcionProducto(_productoA)} By contrast, ${_productoB.nombre} fits ${_enfoqueProducto(_productoB).toLowerCase()} because: ${_funcionProducto(_productoB)}',
+        '${_productoA.nombreVisible} conviene cuando se busca ${_enfoqueProducto(_productoA).toLowerCase()}, porque su formula se orienta a: ${_funcionProducto(_productoA)} En cambio, ${_productoB.nombreVisible} conviene para ${_enfoqueProducto(_productoB).toLowerCase()}, porque: ${_funcionProducto(_productoB)}',
+        '${_productoA.nombreVisible} fits ${_enfoqueProducto(_productoA).toLowerCase()} because its formula is designed for: ${_funcionProducto(_productoA)} By contrast, ${_productoB.nombreVisible} fits ${_enfoqueProducto(_productoB).toLowerCase()} because: ${_funcionProducto(_productoB)}',
       );
     }
     final calidadA = _pesoCalidad(_productoA);
     final calidadB = _pesoCalidad(_productoB);
     if (calidadA > calidadB) {
       return _t(
-        '${_productoA.nombre} es la opcion mas especializada para este objetivo porque ${_funcionProducto(_productoA).toLowerCase()} y contiene ${_componentesProducto(_productoA)} ${_productoB.nombre} ofrece un apoyo mas amplio basado en ${_componentesProducto(_productoB)}',
-        '${_productoA.nombre} is the more specialized option for this goal because ${_funcionProducto(_productoA).toLowerCase()} and contains ${_componentesProducto(_productoA)} ${_productoB.nombre} offers broader support based on ${_componentesProducto(_productoB)}',
+        '${_productoA.nombreVisible} es la opcion mas especializada para este objetivo porque ${_funcionProducto(_productoA).toLowerCase()} y contiene ${_componentesProducto(_productoA)} ${_productoB.nombreVisible} ofrece un apoyo mas amplio basado en ${_componentesProducto(_productoB)}',
+        '${_productoA.nombreVisible} is the more specialized option for this goal because ${_funcionProducto(_productoA).toLowerCase()} and contains ${_componentesProducto(_productoA)} ${_productoB.nombreVisible} offers broader support based on ${_componentesProducto(_productoB)}',
       );
     }
     if (calidadB > calidadA) {
       return _t(
-        '${_productoB.nombre} es la opcion mas especializada para este objetivo porque ${_funcionProducto(_productoB).toLowerCase()} y contiene ${_componentesProducto(_productoB)} ${_productoA.nombre} ofrece un apoyo mas amplio basado en ${_componentesProducto(_productoA)}',
-        '${_productoB.nombre} is the more specialized option for this goal because ${_funcionProducto(_productoB).toLowerCase()} and contains ${_componentesProducto(_productoB)} ${_productoA.nombre} offers broader support based on ${_componentesProducto(_productoA)}',
+        '${_productoB.nombreVisible} es la opcion mas especializada para este objetivo porque ${_funcionProducto(_productoB).toLowerCase()} y contiene ${_componentesProducto(_productoB)} ${_productoA.nombreVisible} ofrece un apoyo mas amplio basado en ${_componentesProducto(_productoA)}',
+        '${_productoB.nombreVisible} is the more specialized option for this goal because ${_funcionProducto(_productoB).toLowerCase()} and contains ${_componentesProducto(_productoB)} ${_productoA.nombreVisible} offers broader support based on ${_componentesProducto(_productoA)}',
       );
     }
     return _t(
-      'Ambos cubren un enfoque parecido, pero no son iguales: ${_productoA.nombre} se diferencia por ${_componentesProducto(_productoA)}, mientras ${_productoB.nombre} incorpora ${_componentesProducto(_productoB)}. Decide segun el objetivo y el uso indicado de cada formula.',
-      'Both cover a similar focus, but they are not identical: ${_productoA.nombre} differs through ${_componentesProducto(_productoA)}, while ${_productoB.nombre} includes ${_componentesProducto(_productoB)}. Decide according to the goal and intended use of each formula.',
+      'Ambos cubren un enfoque parecido, pero no son iguales: ${_productoA.nombreVisible} se diferencia por ${_componentesProducto(_productoA)}, mientras ${_productoB.nombreVisible} incorpora ${_componentesProducto(_productoB)}. Decide segun el objetivo y el uso indicado de cada formula.',
+      'Both cover a similar focus, but they are not identical: ${_productoA.nombreVisible} differs through ${_componentesProducto(_productoA)}, while ${_productoB.nombreVisible} includes ${_componentesProducto(_productoB)}. Decide according to the goal and intended use of each formula.',
     );
   }
 
   String _lecturaComparativa() {
     if (_productoA.nombre == _productoB.nombre) return _decisionRapida();
     return _t(
-      '${_productoA.nombre}: ${_funcionProducto(_productoA)} Sus componentes son ${_componentesProducto(_productoA)} Su uso recomendado es: ${_usoProducto(_productoA)}\n\n${_productoB.nombre}: ${_funcionProducto(_productoB)} Sus componentes son ${_componentesProducto(_productoB)} Su uso recomendado es: ${_usoProducto(_productoB)}\n\nLa diferencia practica esta en el objetivo de cada formula, sus componentes y la forma en que se integra a la rutina; no solamente en que sus nombres o formatos sean distintos.',
-      '${_productoA.nombre}: ${_funcionProducto(_productoA)} Its components are ${_componentesProducto(_productoA)} Intended use: ${_usoProducto(_productoA)}\n\n${_productoB.nombre}: ${_funcionProducto(_productoB)} Its components are ${_componentesProducto(_productoB)} Intended use: ${_usoProducto(_productoB)}\n\nThe practical difference lies in each formula goal, its components, and how it fits the routine—not merely in different names or formats.',
+      '${_productoA.nombreVisible}: ${_funcionProducto(_productoA)} Sus componentes son ${_componentesProducto(_productoA)} Su uso recomendado es: ${_usoProducto(_productoA)}\n\n${_productoB.nombreVisible}: ${_funcionProducto(_productoB)} Sus componentes son ${_componentesProducto(_productoB)} Su uso recomendado es: ${_usoProducto(_productoB)}\n\nLa diferencia practica esta en el objetivo de cada formula, sus componentes y la forma en que se integra a la rutina; no solamente en que sus nombres o formatos sean distintos.',
+      '${_productoA.nombreVisible}: ${_funcionProducto(_productoA)} Its components are ${_componentesProducto(_productoA)} Intended use: ${_usoProducto(_productoA)}\n\n${_productoB.nombreVisible}: ${_funcionProducto(_productoB)} Its components are ${_componentesProducto(_productoB)} Intended use: ${_usoProducto(_productoB)}\n\nThe practical difference lies in each formula goal, its components, and how it fits the routine—not merely in different names or formats.',
     );
   }
 
@@ -208,6 +226,10 @@ class _PaginaComparadorABState extends State<PaginaComparadorAB> {
   }
 
   String _senalCalidad(ProductoPrecio producto) {
+    if (PaisService.actual.value == PaisApp.estadosUnidos) {
+      return _t(
+          "Información declarada en catálogo", "Declared catalog information");
+    }
     final nombre = normalizarTexto(producto.nombre);
     if (nombre.contains('max') ||
         nombre.contains('tri factor') ||
@@ -232,6 +254,10 @@ class _PaginaComparadorABState extends State<PaginaComparadorAB> {
   }
 
   String _nivelEspecializacion(ProductoPrecio producto) {
+    if (PaisService.actual.value == PaisApp.estadosUnidos) {
+      return _t(
+          "Información declarada en catálogo", "Declared catalog information");
+    }
     final enfoque = _enfoqueProducto(producto);
     if (enfoque == _t('Bienestar general', 'General wellness')) {
       return _t('Amplio', 'Broad');
@@ -248,6 +274,11 @@ class _PaginaComparadorABState extends State<PaginaComparadorAB> {
   }
 
   String _formatoProducto(ProductoPrecio producto) {
+    if (PaisService.actual.value == PaisApp.estadosUnidos) {
+      return fichaProductoUsa(producto.nombre)
+              ?.campo("size", IdiomaService.actual.value) ??
+          "";
+    }
     final nombre = normalizarTexto(producto.nombre);
     if (nombre.contains('stix') || nombre.contains('go')) {
       return _t('Stix portatil', 'Portable stix');
@@ -265,6 +296,9 @@ class _PaginaComparadorABState extends State<PaginaComparadorAB> {
   }
 
   String _enfoqueProducto(ProductoPrecio producto) {
+    if (PaisService.actual.value == PaisApp.estadosUnidos) {
+      return _informacion(producto).descripcion.split("\n").first;
+    }
     final nombre = normalizarTexto(producto.nombre);
     if (nombre.contains('energy')) {
       return _t('Energía y rendimiento diario', 'Energy and daily performance');
@@ -502,7 +536,7 @@ class _PaginaComparadorABState extends State<PaginaComparadorAB> {
             ),
             const SizedBox(height: 8),
             Text(
-              producto.nombre,
+              producto.nombreVisible,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(
@@ -572,7 +606,7 @@ class _PaginaComparadorABState extends State<PaginaComparadorAB> {
           SizedBox(
             height: 126,
             child: Image.asset(
-              imagenesProducto4Life[producto.nombre] ?? '',
+              imagenesProductoPaisActual[producto.nombre] ?? '',
               fit: BoxFit.contain,
               errorBuilder: (_, __, ___) =>
                   const Icon(Icons.inventory_2_outlined, size: 76),
@@ -581,7 +615,7 @@ class _PaginaComparadorABState extends State<PaginaComparadorAB> {
           ),
           const SizedBox(height: 12),
           Text(
-            producto.nombre,
+            producto.nombreVisible,
             textAlign: TextAlign.center,
             maxLines: 3,
             overflow: TextOverflow.ellipsis,
@@ -902,7 +936,14 @@ class _SelectorProductoAB extends StatefulWidget {
   State<_SelectorProductoAB> createState() => _SelectorProductoABState();
 }
 
-class _SelectorProductoABState extends State<_SelectorProductoAB> {
+class _SelectorProductoABState extends State<_SelectorProductoAB>
+    with EstadoCatalogoPais<_SelectorProductoAB> {
+  @override
+  void alCambiarPais() {
+    _busqueda = "";
+    _controller.clear();
+  }
+
   final TextEditingController _controller = TextEditingController();
   String _busqueda = '';
 
@@ -914,16 +955,20 @@ class _SelectorProductoABState extends State<_SelectorProductoAB> {
 
   List<ProductoPrecio> get _productos {
     final busqueda = normalizarTexto(_busqueda);
-    final productos = [...productosConPrecio4Life]
+    final productos = [...productosConPrecioPaisActual]
       ..sort((a, b) => a.nombre.compareTo(b.nombre));
     if (busqueda.isEmpty) return productos;
     return productos
-        .where(
-            (producto) => normalizarTexto(producto.nombre).contains(busqueda))
+        .where((producto) => normalizarTexto(
+                '${producto.nombreVisible} ${fichaProductoUsa(producto.nombre)?.alias.join(' ') ?? producto.nombre}')
+            .contains(busqueda))
         .toList();
   }
 
   String _resumenCalidad(ProductoPrecio producto) {
+    if (PaisService.actual.value == PaisApp.estadosUnidos) {
+      return fichaProductoUsa(producto.nombre)?.categoria ?? "";
+    }
     final nombre = normalizarTexto(producto.nombre);
     final enfoque = nombre.contains('riovida')
         ? txtApp('Antioxidante', 'Antioxidant')
@@ -1015,14 +1060,14 @@ class _SelectorProductoABState extends State<_SelectorProductoAB> {
                       width: 48,
                       height: 48,
                       child: Image.asset(
-                        imagenesProducto4Life[producto.nombre] ?? '',
+                        imagenesProductoPaisActual[producto.nombre] ?? '',
                         fit: BoxFit.contain,
                         errorBuilder: (_, __, ___) =>
                             const Icon(Icons.inventory_2_outlined),
                       ),
                     ),
                     title: Text(
-                      producto.nombre,
+                      producto.nombreVisible,
                       style: const TextStyle(
                         color: Color(0xFF111B59),
                         fontWeight: FontWeight.w900,
