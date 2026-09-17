@@ -903,6 +903,7 @@ ProductoPrecio? buscarProductoConPrecio(String consulta) {
 }
 
 String? buscarProductoPermitido(String consulta) {
+  if (esPaqueteExcluidoEstadosUnidos(consulta)) return null;
   if (PaisService.actual.value == PaisApp.estadosUnidos) {
     return buscarProductoUsa(consulta);
   }
@@ -1004,7 +1005,7 @@ List<ProductoPrecio> get productosConPrecioPaisActual =>
         : productosConPrecioEcuador;
 Map<String, String> get imagenesProductoPaisActual =>
     PaisService.actual.value == PaisApp.estadosUnidos
-        ? const {}
+        ? imagenesProductoEstadosUnidos
         : imagenesProductoEcuador;
 Map<String, double> get preciosPromocionalesMiTiendaPaisActual =>
     PaisService.actual.value == PaisApp.estadosUnidos

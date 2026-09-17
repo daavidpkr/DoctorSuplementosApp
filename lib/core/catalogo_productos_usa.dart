@@ -37,11 +37,143 @@ class ProductoCatalogoUsa {
       };
 }
 
+final List<ProductoCatalogoUsa> _catalogoUsaFuente =
+    (jsonDecode(_datosCatalogoUsaJson) as List)
+        .map((p) => ProductoCatalogoUsa(Map<String, dynamic>.from(p as Map)))
+        .toList(growable: false);
+final List<ProductoCatalogoUsa> _paquetesExcluidosEstadosUnidos =
+    List.unmodifiable(
+        _catalogoUsaFuente.where((producto) => producto.esPaquete));
 final List<ProductoCatalogoUsa> catalogoProductosEstadosUnidos =
-    List.unmodifiable((jsonDecode(_datosCatalogoUsaJson) as List)
-        .map((p) => ProductoCatalogoUsa(Map<String, dynamic>.from(p as Map))));
+    List.unmodifiable(
+        _catalogoUsaFuente.where((producto) => !producto.esPaquete));
 final List<String> productosPermitidosEstadosUnidos =
     List.unmodifiable(catalogoProductosEstadosUnidos.map((p) => p.id));
+
+bool esPaqueteExcluidoEstadosUnidos(String consulta) {
+  final normalizada = normalizarTexto(consulta);
+  return _paquetesExcluidosEstadosUnidos.any((paquete) => {
+        paquete.id,
+        paquete.nombreEspanol,
+        paquete.nombreIngles,
+        ...paquete.alias,
+      }.any((nombre) => normalizarTexto(nombre) == normalizada));
+}
+
+/// Fotografias disponibles para el catalogo de Estados Unidos.
+///
+/// Las claves usan el identificador comercial canonico para que una misma
+/// imagen se resuelva en galerias, diagnosticos, calculadoras y fichas.
+const Map<String, String> imagenesProductoEstadosUnidos = {
+  '4Life Transfer Factor Max':
+      'assets/productos/productos-eu/transfer_factor_max.webp',
+  '4Life Transfer Factor Plus Tri-Factor Formula':
+      'assets/productos/productos-eu/trasnfer_factor_plus.webp',
+  '4Life Transfer Factor Tri-Factor Formula':
+      'assets/productos/productos-eu/trasnfer_factor_tri_factor.webp',
+  '4Life Transfer Factor Classic':
+      'assets/productos/productos-eu/trasnfer_factor_classic.webp',
+  '4Life Transfer Factor Immune Spray':
+      'assets/productos/productos-eu/immune_spray.webp',
+  '4Life Transfer Factor RenewAll':
+      'assets/productos/productos-eu/renewall.webp',
+  '4Life Transfer Factor Chewable Tri-Factor Formula':
+      'assets/productos/productos-eu/trasnfer_factor_masticable.webp',
+  '4Life Transfer Factor Immune Boost':
+      'assets/productos/productos-eu/immune_boost.webp',
+  '4Life Immune Tea': 'assets/productos/productos-eu/immune_tea.webp',
+  'Super Greens': 'assets/productos/productos-eu/super_greens.webp',
+  '4Life Transfer Factor RioVida Superfruit Immune Shot':
+      'assets/productos/productos-eu/riovida_jugo.webp',
+  '4Life Transfer Factor RioVida Stix':
+      'assets/productos/productos-eu/riovida_stic.webp',
+  '4Life Transfer Factor RioVida Burst':
+      'assets/productos/productos-eu/riovida_burst.webp',
+  '4Life Transfer Factor RioVida Chews':
+      'assets/productos/productos-eu/riovida_chews.webp',
+  '4Life Transfer Factor Cardio': 'assets/productos/productos-eu/cardio.webp',
+  '4Life Transfer Factor ReCall': 'assets/productos/productos-eu/recall.webp',
+  '4Life Transfer Factor GluCoach':
+      'assets/productos/productos-eu/glucoach.webp',
+  '4Life Transfer Factor AgePro': 'assets/productos/productos-eu/agepro.webp',
+  '4Life Transfer Factor Collagen':
+      'assets/productos/productos-eu/colageno.webp',
+  '4Life Transfer Factor Collagen Type I':
+      'assets/productos/productos-eu/colageno_tipo_i.webp',
+  '4Life NanoFactor Glutamine Prime':
+      'assets/productos/productos-eu/glutamine_prime.webp',
+  '4Life Transfer Factor Metabolite':
+      'assets/productos/productos-eu/metabolite.webp',
+  '4Life Transfer Factor KBU': 'assets/productos/productos-eu/kbu.webp',
+  '4Life Transfer Factor Lung': 'assets/productos/productos-eu/lung.webp',
+  '4Life Transfer Factor Belle Vie':
+      'assets/productos/productos-eu/belle_vie.webp',
+  '4Life Transfer Factor MalePro':
+      'assets/productos/productos-eu/male_pro.webp',
+  '4Life Transfer Factor Reflexion':
+      'assets/productos/productos-eu/reflexion.webp',
+  '4Life Transfer Factor SleepRite':
+      'assets/productos/productos-eu/sleeprite.webp',
+  '4Life Transfer Factor Vista': 'assets/productos/productos-eu/vista.webp',
+  'RiteStart Women': 'assets/productos/productos-eu/ritestart_women_mujer.webp',
+  'RiteStart Men': 'assets/productos/productos-eu/ritestart_men_hombre.webp',
+  'RiteStart Kids & Teens':
+      'assets/productos/productos-eu/ritestart_kids_niños.webp',
+  'NutraStart Blue Vanilla': 'assets/productos/productos-eu/nutrastart.webp',
+  'Pre/o Biotics': 'assets/productos/productos-eu/preo_biotics.webp',
+  'Aloe Vera Stix': 'assets/productos/productos-eu/aloe_vera.webp',
+  'Digestive Enzymes': 'assets/productos/productos-eu/digestive.webp',
+  'Fibre System Plus': 'assets/productos/productos-eu/fibre.webp',
+  'PhytoLax': 'assets/productos/productos-eu/phytolax.webp',
+  'Super Detox': 'assets/productos/productos-eu/super_detox.webp',
+  'Tea4Life': 'assets/productos/productos-eu/tea4life.webp',
+  'Pro-TF': 'assets/productos/productos-eu/protf.webp',
+  '4LifeTransform PreZoom': 'assets/productos/productos-eu/prezoom.webp',
+  '4Life Transfer Factor Renuvo': 'assets/productos/productos-eu/renuvo.webp',
+  '4LifeTransform Burn': 'assets/productos/productos-eu/burn.webp',
+  'ShapeRite': 'assets/productos/productos-eu/shaperite.webp',
+  '4LifeTransform Woman': 'assets/productos/productos-eu/woman_mujer.webp',
+  '4LifeTransform Man': 'assets/productos/productos-eu/man_hombre.webp',
+  'Energy Go Stix Berry': 'assets/productos/productos-eu/energy_go_stix.webp',
+  'Energy Go Stix Orange Citrus':
+      'assets/productos/productos-eu/energy_go_naranja.webp',
+  'Energy Go Stix Pink Lemonade':
+      'assets/productos/productos-eu/energy_go_morado.webp',
+  'Energy Go Stix Kiwi Strawberry':
+      'assets/productos/productos-eu/energy_go_verderojo.webp',
+  'Energy Go Stix Tropical':
+      'assets/productos/productos-eu/energy_go_amarillo.webp',
+  'Gold Factor': 'assets/productos/productos-eu/gold.webp',
+  'Zinc Factor': 'assets/productos/productos-eu/zinc.webp',
+  'äKwä Oil-to-Foam Cleanser': 'assets/productos/productos-eu/fist_wave.webp',
+  'äKwä Vitamin Serum': 'assets/productos/productos-eu/precious_pool.webp',
+  'äKwä Refining Eye Cream': 'assets/productos/productos-eu/eye_creme.webp',
+  'äKwä Moisture Cream': 'assets/productos/productos-eu/crema.webp',
+  'äKwä SPF 30 Moisturizing Sunscreen':
+      'assets/productos/productos-eu/sunscream.webp',
+  'enummi Toothpaste': 'assets/productos/productos-eu/toothpaste.webp',
+  'enummi Intensive Body Lotion':
+      'assets/productos/productos-eu/body_lotion.webp',
+  'enummi Body Wash': 'assets/productos/productos-eu/body_wash.webp',
+  'enummi Shampoo': 'assets/productos/productos-eu/shampoo.webp',
+  'enummi Conditioner': 'assets/productos/productos-eu/acondicionador.webp',
+  'Cal-Mag Complex': 'assets/productos/productos-eu/cal_mag.webp',
+  'Essential Fatty Acid Complex':
+      'assets/productos/productos-eu/essential_fatty_acid.webp',
+  'Fibro AMJ Day-Time Formula': 'assets/productos/productos-eu/fibro_amj.webp',
+  'Flex4Life': 'assets/productos/productos-eu/flex4life.webp',
+  'Fortified Colostrum':
+      'assets/productos/productos-eu/fortified_colostrum.webp',
+  'Gurmar': 'assets/productos/productos-eu/gurmar.webp',
+  'Life C Chewable': 'assets/productos/productos-eu/life_c.webp',
+  'Menopause Support Formula':
+      'assets/productos/productos-eu/menopause_support.webp',
+  'Multiplex': 'assets/productos/productos-eu/multiplex.webp',
+  'MusculoSkeletal Formula':
+      'assets/productos/productos-eu/musculo_skeletal.webp',
+  'Stress Formula': 'assets/productos/productos-eu/stress_formula.webp',
+  '4Life Fortify': 'assets/productos/productos-eu/fottity.webp',
+};
 
 ProductoCatalogoUsa? fichaProductoUsa(String id) {
   for (final producto in catalogoProductosEstadosUnidos) {

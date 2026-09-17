@@ -29,12 +29,12 @@ void main() {
     expect(precioPromocionalMiTienda('Transfer factor MAX'), 116.24);
   });
 
-  test('USA has exactly 80 unique commercial IDs and verified source pages',
-      () {
+  test('USA has exactly 76 individual IDs and verified source pages', () {
     PaisService.actual.value = PaisApp.estadosUnidos;
-    expect(productosPermitidosPaisActual.length, 80);
-    expect(productosPermitidosPaisActual.toSet().length, 80);
-    expect(catalogoProductosEstadosUnidos.length, 80);
+    expect(productosPermitidosPaisActual.length, 76);
+    expect(productosPermitidosPaisActual.toSet().length, 76);
+    expect(catalogoProductosEstadosUnidos.length, 76);
+    expect(catalogoProductosEstadosUnidos.every((p) => !p.esPaquete), isTrue);
     expect(productosPermitidosPaisActual, isNot(contains('4LifeTransform')));
     for (final p in catalogoProductosEstadosUnidos) {
       expect(p.nombreEspanol, isNotEmpty);
@@ -53,16 +53,22 @@ void main() {
     }
   });
 
-  test('five energy flavors and three transform packs remain independent', () {
+  test('five energy flavors remain independent and packs stay excluded', () {
+    PaisService.actual.value = PaisApp.estadosUnidos;
     final energy = catalogoProductosEstadosUnidos
         .where((p) => p.categoria == 'Energy')
         .toList();
     expect(energy.length, 5);
     expect(energy.map((p) => p.presentaciones.first['item']).toSet().length, 5);
-    final packs = catalogoProductosEstadosUnidos
-        .where((p) => p.esPaquete && p.categoria == '4LifeTransform');
-    expect(packs.length, 3);
-    expect(packs.map((p) => p.id).toSet().length, 3);
+    for (final pack in [
+      'Digest4Life Reset System',
+      '4LifeTransform Get Burning Pack',
+      '4LifeTransform Lean and Fit Pack for Women',
+      '4LifeTransform Shred Pack for Men',
+    ]) {
+      expect(buscarProductoPermitido(pack), isNull, reason: pack);
+      expect(buscarProductoConPrecio(pack), isNull, reason: pack);
+    }
   });
 
   test('search never adapts market-exclusive names to another market', () {
@@ -107,7 +113,8 @@ void main() {
         fichaProductoUsa('Energy Go Stix Tropical')!
             .campo('size', IdiomaApp.ingles),
         '15 powder packets');
-    expect(imagenesProductoPaisActual, isEmpty);
+    expect(imagenesProductoPaisActual, same(imagenesProductoEstadosUnidos));
+    expect(imagenesProductoPaisActual.length, 76);
     final precioFicha = preciosResultadoPaisActual['Super Greens']!;
     expect((
       precioFicha.publico,
@@ -124,9 +131,7 @@ void main() {
     expect(seleccionProductoVigente(productosConPrecioEcuador.first), isFalse);
   });
 
-  test(
-      'Super Greens conserva ficha, precios, presentación y ausencia de imagen',
-      () {
+  test('Super Greens conserva ficha, precios, presentación e imagen', () {
     PaisService.actual.value = PaisApp.estadosUnidos;
     const nombre = 'Super Greens';
     final ficha = fichaProductoUsa(nombre)!;
@@ -141,7 +146,10 @@ void main() {
     expect(precioFicha.promocional, presentacion['discount']);
     expect(precioFicha.lp, presentacion['lp']);
     expect(precioFicha.presentacion, ficha.campo('size', IdiomaApp.espanol));
-    expect(imagenesProductoPaisActual[nombre], isNull);
+    expect(
+      imagenesProductoPaisActual[nombre],
+      'assets/productos/productos-eu/super_greens.webp',
+    );
     expect(texto, contains('FICHA TECNICA EJECUTIVA'));
     expect(texto, contains('PROTOCOLO DE USO'));
     expect(texto, contains('NOTA DE RESPONSABILIDAD'));
@@ -224,7 +232,7 @@ void main() {
   });
 
   testWidgets(
-      'Super Greens abre ficha normal con placeholder, precios y presentación',
+      'Super Greens abre ficha normal con imagen, precios y presentación',
       (tester) async {
     await PaisService.guardar(PaisApp.estadosUnidos);
     await tester.pumpWidget(const MaterialApp(home: ConsultaProductoPagina()));

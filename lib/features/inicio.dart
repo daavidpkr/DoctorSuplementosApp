@@ -383,6 +383,48 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
               painter: _MoleculaPainter(),
             ),
           ),
+          Positioned(
+            right: 24,
+            bottom: 20,
+            child: ValueListenableBuilder<PaisApp>(
+              valueListenable: PaisService.actual,
+              builder: (context, pais, _) => Semantics(
+                label: txtApp(
+                  'País seleccionado: ${pais.etiqueta}',
+                  'Selected country: ${pais.etiquetaIngles}',
+                ),
+                child: Container(
+                  key: ValueKey('bandera-pais-${pais.codigo}'),
+                  width: 50,
+                  height: 34,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.94),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: const Color(0xFFC9D2F5),
+                      width: 1.2,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF071451).withValues(alpha: 0.12),
+                        blurRadius: 8,
+                        offset: const Offset(0, 3),
+                      ),
+                    ],
+                  ),
+                  child: ExcludeSemantics(
+                    child: Text(
+                      pais == PaisApp.ecuador
+                          ? '\u{1F1EA}\u{1F1E8}'
+                          : '\u{1F1FA}\u{1F1F8}',
+                      style: const TextStyle(fontSize: 22, height: 1),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
           Padding(
             padding: const EdgeInsets.fromLTRB(24, 24, 120, 20),
             child: Column(

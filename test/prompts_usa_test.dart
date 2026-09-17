@@ -382,7 +382,7 @@ void main() {
   });
 
   test('Catálogos y dosis USA permanecen intactos', () {
-    expect(catalogoProductosEstadosUnidos.length, 80);
+    expect(catalogoProductosEstadosUnidos.length, 76);
     expect(productosPermitidosEcuador.length, 32);
     expect(
       catalogoProductosEstadosUnidos.every(

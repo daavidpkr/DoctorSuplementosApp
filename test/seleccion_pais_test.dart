@@ -45,6 +45,8 @@ void main() {
       expect(await PaisService.cargar(), pais);
       expect(find.byType(PantallaPrincipal), findsOneWidget);
       expect(find.byType(PaginaSeleccionPais), findsNothing);
+      expect(
+          find.byKey(ValueKey('bandera-pais-${pais.codigo}')), findsOneWidget);
       await tester.tap(find.byIcon(Icons.person_outline_rounded));
       await tester.pumpAndSettle();
       expect(
