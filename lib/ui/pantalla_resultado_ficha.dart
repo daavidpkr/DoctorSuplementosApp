@@ -28,12 +28,14 @@ class PrecioProductoResultadoFicha {
   final double publico;
   final double? promocional;
   final int? lp;
+  final String? presentacion;
 
   const PrecioProductoResultadoFicha({
     required this.afiliado,
     required this.publico,
     this.promocional,
     required this.lp,
+    this.presentacion,
   });
 }
 
@@ -54,8 +56,9 @@ class ContenidoResultadoFicha {
 
   static ContenidoResultadoFicha desdeTexto(
     String texto,
-    Map<String, String> imagenesProducto,
-  ) {
+    Map<String, String> imagenesProducto, {
+    Iterable<String> productosDisponibles = const [],
+  }) {
     final lineas = _separarBloques(texto)
         .replaceAll('\r', '')
         .split('\n')
@@ -145,7 +148,10 @@ class ContenidoResultadoFicha {
         continue;
       }
 
-      final producto = _detectarProducto(linea, imagenesProducto.keys);
+      final producto = _detectarProducto(
+        linea,
+        {...imagenesProducto.keys, ...productosDisponibles},
+      );
       final numerado = RegExp(r'^\s*\d+\s*[\.\)]\s*').hasMatch(linea);
       if (seccion == 'productos' &&
           producto != null &&
@@ -162,7 +168,10 @@ class ContenidoResultadoFicha {
         final contenido = linea.replaceFirst(RegExp(r'^[-•]\s*'), '').trim();
         if (contenido.isEmpty || contenido == '-') continue;
         final campo = _normalizar(contenido);
-        if (campo.startsWith('dosis ') || campo.startsWith('dose ')) {
+        if (campo.startsWith('dosis ') ||
+            campo.startsWith('dose ') ||
+            campo.startsWith('forma de uso') ||
+            campo.startsWith('directions')) {
           actual!.dosis.add(contenido);
         } else if (campo.startsWith('por que se elige') ||
             campo.startsWith('por que se recomienda') ||
@@ -218,7 +227,7 @@ class ContenidoResultadoFicha {
     );
     salida = salida.replaceAllMapped(
       RegExp(
-        r'\s+(?=-?\s*\*{0,2}(?:Dosis|Dose|Por qu.|Why it|Beneficio clave|Key benefit|Apoyo principal|Main support)\b)',
+        r'\s+(?=-?\s*\*{0,2}(?:Dosis|Dose|Forma de uso|Directions|Por qu.|Why it|Beneficio clave|Key benefit|Apoyo principal|Main support)\b)',
         caseSensitive: false,
       ),
       (_) => '\n',
@@ -345,6 +354,7 @@ class _PantallaResultadoFichaState extends State<PantallaResultadoFicha> {
     contenido = ContenidoResultadoFicha.desdeTexto(
       widget.resultado,
       widget.imagenesProducto,
+      productosDisponibles: widget.preciosProducto.keys,
     );
   }
 
@@ -831,7 +841,7 @@ class _PantallaResultadoFichaState extends State<PantallaResultadoFicha> {
                   ],
                 )
               : Row(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     imagen,
                     if (precio != null) ...[
@@ -908,7 +918,7 @@ class _PantallaResultadoFichaState extends State<PantallaResultadoFicha> {
         border: Border.all(color: const Color(0xFFE5E7F2)),
       ),
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        mainAxisSize: MainAxisSize.min,
         children: [
           _datoComercial(
             Icons.groups_2_outlined,
@@ -923,6 +933,22 @@ class _PantallaResultadoFichaState extends State<PantallaResultadoFicha> {
                 ? _txt('Precio a preguntar', 'Ask for price')
                 : '\$${precio.promocional!.toStringAsFixed(2)}',
           ),
+          const Divider(height: 1, color: Color(0xFFE8EAF2)),
+          _datoComercial(
+            Icons.handshake_outlined,
+            precio.presentacion == null
+                ? _txt('Precio afiliado', 'Member price')
+                : _txt('Precio mayorista', 'Wholesale price'),
+            '\$${precio.afiliado.toStringAsFixed(2)}',
+          ),
+          if (precio.presentacion?.trim().isNotEmpty == true) ...[
+            const Divider(height: 1, color: Color(0xFFE8EAF2)),
+            _datoComercial(
+              Icons.inventory_2_outlined,
+              _txt('Presentación', 'Presentation'),
+              precio.presentacion!,
+            ),
+          ],
           const Divider(height: 1, color: Color(0xFFE8EAF2)),
           _datoComercial(
             Icons.star_outline_rounded,

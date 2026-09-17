@@ -734,8 +734,10 @@ InformacionProductoCatalogo informacionProductoCatalogo(String nombre) {
       );
 }
 
-Map<String, PrecioProductoResultadoFicha> get preciosResultadoPaisActual => {
-      for (final producto in productosConPrecioPaisActual)
+Map<String, PrecioProductoResultadoFicha> get preciosResultadoPaisActual {
+  if (PaisService.actual.value == PaisApp.ecuador) {
+    return {
+      for (final producto in productosConPrecioEcuador)
         producto.nombre: PrecioProductoResultadoFicha(
           afiliado: producto.afiliado,
           publico: producto.publico,
@@ -743,6 +745,29 @@ Map<String, PrecioProductoResultadoFicha> get preciosResultadoPaisActual => {
           lp: producto.lp,
         ),
     };
+  }
+
+  final resultado = <String, PrecioProductoResultadoFicha>{};
+  final idioma = IdiomaService.actual.value;
+  for (final producto in catalogoProductosEstadosUnidos) {
+    final presentacion = producto.presentaciones.first;
+    final precio = PrecioProductoResultadoFicha(
+      afiliado: (presentacion['wholesale'] as num).toDouble(),
+      publico: (presentacion['retail'] as num).toDouble(),
+      promocional: (presentacion['discount'] as num).toDouble(),
+      lp: presentacion['lp'] as int,
+      presentacion: producto.campo('size', idioma),
+    );
+    for (final nombre in {
+      producto.id,
+      producto.nombreEspanol,
+      producto.nombreIngles,
+    }) {
+      resultado[nombre] = precio;
+    }
+  }
+  return resultado;
+}
 
 String normalizarTexto(String texto) {
   return texto
