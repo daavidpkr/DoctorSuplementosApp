@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:doctor_suplementos/main.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:google_generative_ai/google_generative_ai.dart';
 
 void main() {
   setUp(() {
@@ -272,6 +273,10 @@ void main() {
     expect(prompt, contains('La ausencia de productos no es un error'));
     expect(prompt, contains('sin recomendar productos'));
     expect(
+      diagnostico(PaisApp.estadosUnidos, sintomas: consulta),
+      isNot(contains('4Life Transfer Factor Max')),
+    );
+    expect(
       procesar(
         'No puedo confirmar un diagnóstico. Conviene valoración profesional y '
         'exámenes apropiados; no recomendaré productos sin una ficha pertinente.',
@@ -378,6 +383,16 @@ void main() {
     expect(
       mensajeErrorIa(FormatException('fallo controlado')),
       'No fue posible procesar la respuesta. Inténtalo nuevamente.',
+    );
+    expect(
+      mensajeErrorIa(
+        GenerativeAIException('Response was blocked due to SAFETY'),
+      ),
+      contains('no pudo responder a esa redacción'),
+    );
+    expect(
+      mensajeErrorIa(GenerativeAIException('Server Error [503]')),
+      contains('temporalmente ocupado'),
     );
   });
 

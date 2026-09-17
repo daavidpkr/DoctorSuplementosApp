@@ -9,10 +9,14 @@ String construirPromptDiagnosticoBase(
     required String edad,
     required String genero,
     required String sintomas}) {
-  final catalogoPermitidoPaisActual = (pais == PaisApp.ecuador
-          ? productosPermitidosEcuador
-          : productosPermitidosEstadosUnidos)
-      .join(', ');
+  final productosPermitidos = pais == PaisApp.ecuador
+      ? productosPermitidosEcuador
+      : productosUsaRelevantes(sintomas)
+          .map((producto) => producto.id)
+          .toList();
+  final catalogoPermitidoPaisActual = productosPermitidos.isEmpty
+      ? 'ninguno: no hay una ficha pertinente para esta consulta'
+      : productosPermitidos.join(', ');
   final reglaFormaUso = pais == PaisApp.estadosUnidos
       ? 'Usa únicamente directions/uso documentado en la ficha USA. Si está vacío, escribe exactamente: No documentado en el catálogo; revisa la etiqueta vigente. No deduzcas dosis, cantidades, frecuencias ni horarios.'
       : 'Resume en la misma línea la dosis y los horarios documentados para Ecuador. No inventes cantidades ni indicaciones ausentes.';

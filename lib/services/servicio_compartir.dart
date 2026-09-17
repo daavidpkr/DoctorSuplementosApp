@@ -1,5 +1,9 @@
+import 'dart:io';
+import 'dart:isolate';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:share_plus/share_plus.dart';
@@ -244,18 +248,29 @@ class ServicioCompartir {
       context,
       ingles: ingles,
     );
+    var dialogoProcesandoVisible = true;
     try {
       final bytes = await generarPdf(documentoElegido);
       if (!context.mounted) return;
       final nombre = '${_nombreArchivoPdf(documentoElegido.nombreArchivo)}.pdf';
 
+      // Compartir desde una ruta evita que Android tenga que materializar un
+      // XFile en memoria mientras abre el selector de aplicaciones.
+      final carpetaTemporal = await getTemporaryDirectory();
+      final archivo = File(
+        '${carpetaTemporal.path}${Platform.pathSeparator}$nombre',
+      );
+      await archivo.writeAsBytes(bytes, flush: true);
+      if (!context.mounted) return;
+
       Navigator.of(context, rootNavigator: true).pop();
+      dialogoProcesandoVisible = false;
       await Share.shareXFiles(
         [
-          XFile.fromData(
-            bytes,
-            name: nombre,
+          XFile(
+            archivo.path,
             mimeType: 'application/pdf',
+            name: nombre,
           ),
         ],
         subject: documentoElegido.titulo,
@@ -263,7 +278,9 @@ class ServicioCompartir {
       );
     } catch (error) {
       if (!context.mounted) return;
-      Navigator.of(context, rootNavigator: true).pop();
+      if (dialogoProcesandoVisible) {
+        Navigator.of(context, rootNavigator: true).pop();
+      }
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
@@ -377,18 +394,47 @@ class ServicioCompartir {
     DocumentoCompartible documento,
   ) async {
     final fuenteData = await rootBundle.load('assets/fonts/NotoSans.ttf');
-    final fuente = pw.Font.ttf(fuenteData);
+    final fuenteBytes = fuenteData.buffer.asUint8List(
+      fuenteData.offsetInBytes,
+      fuenteData.lengthInBytes,
+    );
+    final recursos = <String, Uint8List?>{
+      'assets/icon.webp': await _cargarBytes('assets/icon.webp'),
+    };
+    for (final producto in documento.productos) {
+      final ruta = producto.imagenAsset;
+      if (ruta != null && !recursos.containsKey(ruta)) {
+        recursos[ruta] = await _cargarBytes(ruta);
+      }
+    }
+
+    // El maquetado y la compresión del PDF son trabajo intensivo de CPU. Si se
+    // ejecutan en el isolate de la interfaz Android puede mostrar un ANR aunque
+    // el método sea async.
+    return Isolate.run(
+      () => _generarPdfEnSegundoPlano(documento, fuenteBytes, recursos),
+    );
+  }
+
+  static Future<Uint8List> _generarPdfEnSegundoPlano(
+    DocumentoCompartible documento,
+    Uint8List fuenteBytes,
+    Map<String, Uint8List?> recursos,
+  ) async {
+    final fuente = pw.Font.ttf(ByteData.sublistView(fuenteBytes));
     final pdf = pw.Document(
       title: documento.titulo,
       author: 'DoctorSuplementos',
       creator: 'DoctorSuplementos',
     );
-    final logo = await _cargarImagen('assets/icon.webp');
+    final logoBytes = recursos['assets/icon.webp'];
+    final logo = logoBytes == null ? null : pw.MemoryImage(logoBytes);
     final imagenes = <String, pw.MemoryImage?>{};
     for (final producto in documento.productos) {
       final ruta = producto.imagenAsset;
       if (ruta != null && !imagenes.containsKey(ruta)) {
-        imagenes[ruta] = await _cargarImagen(ruta);
+        final bytes = recursos[ruta];
+        imagenes[ruta] = bytes == null ? null : pw.MemoryImage(bytes);
       }
     }
 
@@ -891,12 +937,10 @@ class ServicioCompartir {
     );
   }
 
-  static Future<pw.MemoryImage?> _cargarImagen(String asset) async {
+  static Future<Uint8List?> _cargarBytes(String asset) async {
     try {
       final data = await rootBundle.load(asset);
-      return pw.MemoryImage(
-        data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes),
-      );
+      return data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
     } catch (_) {
       return null;
     }
