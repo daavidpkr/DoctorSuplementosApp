@@ -54,7 +54,7 @@ String construirPromptChatbotBase(
     nutriente o concepto general, explica el componente en si y NO lo conviertas automaticamente en un producto.
     Ejemplos de componentes/conceptos: $terminosComponentes.
     Ejemplo clave: si pregunta por factores de transferencia, explica que son los factores de transferencia,
-    su rol general y sus precauciones; no recomiendes ${pais == PaisApp.estadosUnidos ? 'productos del catálogo USA' : 'Transfer factor plus, Transfer factor tri factor ni otro producto'}
+    su rol general y sus precauciones; no recomiendes ningún producto
     salvo que el usuario pida explicitamente un producto, una rutina o una recomendacion de compra.
     $instruccionProducto
     $instruccionComponente
@@ -380,25 +380,34 @@ class _PaginaChatbotState extends State<PaginaChatbot>
         pais: paisConsulta,
         idioma: idiomaConsulta);
     try {
-      final textoAdjuntos = _tieneAdjuntos
-          ? (_adjuntosSoloAudio
-              ? "$promptPais\n\nAnaliza las notas de voz adjuntas como contexto temporal. Extrae la consulta y responde con base en el audio. No menciones que fueron guardadas, porque no se guardan en la app."
-              : "$promptPais\n\nAnaliza todos los archivos adjuntos como contexto temporal. Cruza la información entre documentos e imágenes cuando sea útil. No menciones que fueron guardados, porque no se guardan en la app.")
-          : promptPais;
-      final response = await model.generateContent([
-        if (!_tieneAdjuntos)
-          Content.text(promptPais)
-        else
-          Content.multi([
-            TextPart(textoAdjuntos),
-            for (final adjunto in _adjuntos)
-              DataPart(adjunto.mimeType, adjunto.bytes),
-          ]),
-      ]);
+      Future<String> generar(String promptGeneracion) async {
+        final textoAdjuntos = _tieneAdjuntos
+            ? (_adjuntosSoloAudio
+                ? "$promptGeneracion\n\nAnaliza las notas de voz adjuntas como contexto temporal. Extrae la consulta y responde con base en el audio. No menciones que fueron guardadas, porque no se guardan en la app."
+                : "$promptGeneracion\n\nAnaliza todos los archivos adjuntos como contexto temporal. Cruza la información entre documentos e imágenes cuando sea útil. No menciones que fueron guardados, porque no se guardan en la app.")
+            : promptGeneracion;
+        final response = await model.generateContent([
+          if (!_tieneAdjuntos)
+            Content.text(promptGeneracion)
+          else
+            Content.multi([
+              TextPart(textoAdjuntos),
+              for (final adjunto in _adjuntos)
+                DataPart(adjunto.mimeType, adjunto.bytes),
+            ]),
+        ]);
+        return response.text ?? '';
+      }
+
       final respuestaIA = _modoCientifico
-          ? response.text ?? 'Sin respuesta'
-          : procesarRespuestaProductosPais(response.text ?? '',
-              consultaCatalogo, paisConsulta, idiomaConsulta);
+          ? await generar(promptPais)
+          : await generarYProcesarRespuestaProductosPais(
+              generar: generar,
+              prompt: promptPais,
+              consulta: consultaCatalogo,
+              pais: paisConsulta,
+              idioma: idiomaConsulta,
+            );
 
       if (!mounted) return;
       setState(() {
@@ -430,13 +439,13 @@ class _PaginaChatbotState extends State<PaginaChatbot>
         }
         _detenerAnimacionRespuestaBot();
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
+      registrarErrorIa(e, stackTrace,
+          modulo: widget.modoLlamada ? 'chat_live' : 'chatbot',
+          pais: paisConsulta);
       if (!mounted) return;
       setState(() {
-        mensajes.add({
-          "rol": "ia",
-          "texto": "No se pudo conectar con la IA. Intenta nuevamente."
-        });
+        mensajes.add({"rol": "ia", "texto": mensajeErrorIa(e)});
         if (widget.modoLlamada) {
           _estadoLlamada = _txt(
             "No pude responder. Intenta nuevamente",

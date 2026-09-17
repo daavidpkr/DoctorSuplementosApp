@@ -1,4 +1,5 @@
-import 'dart:convert';
+import 'dart:io';
+
 import 'package:doctor_suplementos/main.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -8,316 +9,390 @@ void main() {
     IdiomaService.actual.value = IdiomaApp.espanol;
   });
 
-  String diagnostico(PaisApp pais) => construirPromptDiagnosticoBase(
-      pais: pais,
-      instruccionIdioma: 'Español',
-      contextoAnterior: 'HISTORIAL PREVIO: seguimiento de Ana',
-      saludoAsesor: 'Hola, soy David',
-      nombre: 'Ana',
-      edad: '42',
-      genero: 'Femenino',
-      sintomas: 'Tengo cansancio frecuente y dificultad para dormir.');
-  String procesar(String raw, [String query = 'Super Greens']) =>
-      procesarRespuestaProductosPais(
-          raw, query, PaisApp.estadosUnidos, IdiomaApp.espanol);
-
-  test(
-      'All 80 bilingual names can be validated without shorter-name collisions',
-      () {
-    for (final p in catalogoProductosEstadosUnidos) {
-      for (final idioma in IdiomaApp.values) {
-        final text = procesarRespuestaProductosPais(
-            jsonEncode({
-              'texto': p.nombre(idioma),
-              'productos': [p.id]
-            }),
-            p.id,
-            PaisApp.estadosUnidos,
-            idioma);
-        expect(text, startsWith(p.nombre(idioma)), reason: p.id);
-      }
-    }
-  });
-
-  test(
-      'Requested five offline scenarios preserve format, sources, sizes and market rejection',
-      () {
-    for (final pais in PaisApp.values) {
-      final base = diagnostico(pais);
-      final prompt = construirPromptProductosPais(
-          'Tengo cansancio frecuente y dificultad para dormir.', base,
-          pais: pais);
-      expect(prompt, contains(base));
-      expect(prompt, contains('NUESTRO OBJETIVO'));
-      if (pais == PaisApp.ecuador) expect(prompt, base);
-    }
-    const greens = '¿Qué es Super Greens y cómo se usa?';
-    expect(productosUsaRelevantes(greens).map((p) => p.id), ['Super Greens']);
-    expect(construirPromptProductosPais(greens, 'Consulta: $greens'),
-        contains('omite dosis, frecuencia, horario y cantidad'));
-    final comparacion = productosUsaRelevantes(
-        'Compara Energy Go Stix Berry con Energy Go Stix Tropical.');
-    expect(comparacion.length, 2);
-    expect(comparacion.map((p) => p.campo('size', IdiomaApp.espanol)).toSet(),
-        {'30 sobres', '15 sobres'});
-    expect(productosUsaRelevantes('Quiero Agpro.'), isEmpty);
-    expect(
-        () => procesar(
-            jsonEncode({'texto': 'Agpro', 'productos': []}), 'Quiero Agpro.'),
-        throwsStateError);
-    PaisService.actual.value = PaisApp.ecuador;
-    expect(productoDesdeTexto('Quiero Super Greens.'), isNull);
-    expect(
-        () => procesarRespuestaProductosPais('Super Greens',
-            'Quiero Super Greens.', PaisApp.ecuador, IdiomaApp.espanol),
-        throwsStateError);
-  });
-
-  test(
-      'Base is preserved verbatim, Ecuador unchanged, USA appends only USA sheets',
-      () {
-    const base =
-        'ROL DEL MODULO\nHistorial: seguimiento\nAdjuntos: nota de voz\nFORMATO: comparación';
-    expect(
-        construirPromptProductosPais('Super Greens', base,
-            pais: PaisApp.ecuador),
-        base);
-    final usa = construirPromptProductosPais('Super Greens', base);
-    expect(usa, startsWith('$base\n\n'));
-    expect(usa, contains('CONTEXTO ADICIONAL OBLIGATORIO DEL MERCADO USA'));
-    expect(usa, contains('"pagina_fuente"'));
-    expect(usa, contains('"ingredientes"'));
-    expect(usa, isNot(contains('Agpro')));
-    expect(usa, isNot(contains('Bioefa')));
-    // Market rules have priority without deleting functional instructions.
-    expect(construirPromptProductosPais('Super Greens', 'BASE: Agpro'),
-        startsWith('BASE: Agpro'));
-  });
-
-  test(
-      'Actual diagnosis builder retains sections, patient, history and greeting without undocumented doses',
-      () {
-    final base = diagnostico(PaisApp.estadosUnidos);
-    final prompt = construirPromptProductosPais(
-        'Tengo cansancio frecuente y dificultad para dormir.', base);
-    for (final value in [
-      'ANÁLISIS DEL CASO',
-      'NUESTRO OBJETIVO',
-      'SUSTRATO Y RESPALDO RECOMENDADO',
-      'RECOMENDACIONES DE BIENESTAR GENERAL',
-      'Nota de seguridad',
-      'Ana',
-      '42',
-      'Femenino',
-      'cansancio frecuente',
-      'HISTORIAL PREVIO: seguimiento de Ana',
-      'Hola, soy David',
-      '3 o 4'
-    ]) {
-      expect(prompt, contains(value));
-    }
-    expect(prompt, contains(base));
-    expect(base, isNot(contains('DOSIFICACIÓN EXACTA')));
-    expect(base, isNot(contains('[Cantidad exacta]')));
-    expect(base, isNot(contains('*Dosis manana:*')));
-    expect(prompt, contains('revisa la etiqueta vigente'));
-    expect(prompt, contains('deben estar dentro de texto'));
-    final response = procesar(jsonEncode({
-      'texto':
-          '*ANÁLISIS DEL CASO*\nAna\n*NUESTRO OBJETIVO*\nSeguimiento\n*SUSTRATO Y RESPALDO RECOMENDADO*\nNo hay opción documentada\n*RECOMENDACIONES DE BIENESTAR GENERAL*\nDescanso\n*Nota de seguridad*\nEvaluación profesional',
-      'productos': []
-    }));
-    expect(response, contains('*NUESTRO OBJETIVO*\nSeguimiento'));
-    expect(diagnostico(PaisApp.ecuador),
-        contains('DOSIFICACIÓN EXACTA Y DETALLADA'));
-    expect(diagnostico(PaisApp.ecuador), contains('*ANALISIS DEL CASO*'));
-  });
-
-  String chat(bool cientifico) => construirPromptChatbotBase(
-      pais: PaisApp.estadosUnidos,
-      modoCientifico: cientifico,
-      instruccionIdioma: 'Español',
-      instruccionVozHumana: 'VOZ HUMANA: cálida',
-      instruccionModoCientifico:
-          cientifico ? 'No recomiendes productos 4Life.' : '',
-      reglaProductos: cientifico
-          ? 'No hables de productos.'
-          : 'REGLA NORMAL: solo catálogo USA',
-      instruccionProducto: 'Producto identificado: Super Greens',
-      instruccionComponente: 'No conviertas ingredientes en recomendación',
-      instruccionVoz: 'LLAMADA: frases respirables',
-      historialPrevio: 'Socio: seguimiento de mi consulta actual',
-      textoVisible: '¿Qué es Super Greens y cómo se usa?',
-      terminosComponentes: 'vitaminas');
-
-  test(
-      'Actual chat preserves conversation, current query, voice, mode and product rules',
-      () {
-    final base = chat(false);
-    final prompt = componerPromptChatbotPais('Super Greens', base,
-        modoCientifico: false,
-        pais: PaisApp.estadosUnidos,
-        idioma: IdiomaApp.espanol);
-    for (final value in [
-      'Socio: seguimiento',
-      '¿Qué es Super Greens y cómo se usa?',
-      'VOZ HUMANA: cálida',
-      'LLAMADA: frases respirables',
-      'REGLA NORMAL',
-      'Producto identificado: Super Greens',
-      'No conviertas ingredientes',
-      'Ficha Tecnica Ejecutiva',
-      'comparación'
-    ]) {
-      expect(prompt, contains(value));
-    }
-    expect(prompt, startsWith(base));
-    expect(prompt, isNot(contains('Transfer factor tri factor')));
-  });
-
-  test('Scientific chat bypasses commercial JSON and keeps prohibition', () {
-    final base = chat(true);
-    final prompt = componerPromptChatbotPais('Super Greens', base,
-        modoCientifico: true,
-        pais: PaisApp.estadosUnidos,
-        idioma: IdiomaApp.espanol);
-    expect(prompt, base);
-    expect(prompt, contains('No recomiendes productos 4Life.'));
-    expect(prompt, isNot(contains('SALIDA OBLIGATORIA: JSON')));
-  });
-
-  test(
-      'Actual body-change builder preserves physical data and format with USA-only sheets',
-      () {
-    final base = construirPromptCambioFisicoBase(
-        pais: PaisApp.estadosUnidos,
+  String diagnostico(PaisApp pais, {String sintomas = 'cansancio frecuente'}) =>
+      construirPromptDiagnosticoBase(
+        pais: pais,
         instruccionIdioma: 'Español',
+        contextoAnterior: 'HISTORIAL PREVIO: seguimiento de Ana',
         saludoAsesor: 'Hola, soy David',
         nombre: 'Ana',
         edad: '42',
         genero: 'Femenino',
-        peso: '70',
-        altura: '1.65',
-        objetivo: 'Mejorar hábitos con Super Greens',
-        contextura: 'Media',
-        descripcionContextura: 'Perfil previo');
-    final prompt = construirPromptProductosPais('Super Greens', base);
-    for (final value in [
+        sintomas: sintomas,
+      );
+
+  String procesar(String texto, [String consulta = 'Super Greens']) =>
+      procesarRespuestaProductosPais(
+        texto,
+        consulta,
+        PaisApp.estadosUnidos,
+        IdiomaApp.espanol,
+      );
+
+  test('Ecuador conserva exactamente su respuesta normal', () {
+    PaisService.actual.value = PaisApp.ecuador;
+    const respuesta = 'Respuesta normal de Ecuador\ncon sus secciones.';
+    expect(
+      procesarRespuestaProductosPais(
+        respuesta,
+        'consulta',
+        PaisApp.ecuador,
+        IdiomaApp.espanol,
+      ),
+      respuesta,
+    );
+  });
+
+  test('USA acepta texto normal sin campos texto ni productos', () {
+    final resultado = procesar('Orientación general sin productos.');
+    expect(resultado, startsWith('Orientación general sin productos.'));
+    expect(resultado, contains('no medicamentos'));
+  });
+
+  test('El procesador USA no decodifica JSON', () {
+    final source =
+        File('lib/core/catalogo_productos_usa.dart').readAsStringSync();
+    final inicio = source.indexOf('String procesarRespuestaProductosPais(');
+    final fin = source.indexOf('void validarMercadoEstadosUnidos', inicio);
+    expect(source.substring(inicio, fin), isNot(contains('jsonDecode')));
+    expect(procesar('Texto libre: {sin contenedor válido'),
+        startsWith('Texto libre: {sin contenedor válido'));
+  });
+
+  test('USA añade contexto sin sustituir el prompt de diagnóstico', () {
+    final base = diagnostico(PaisApp.estadosUnidos);
+    final prompt = construirPromptProductosPais('cansancio frecuente', base);
+    expect(prompt, startsWith(base));
+    for (final seccion in [
+      'ANALISIS DEL CASO',
+      'NUESTRO OBJETIVO',
+      'SUSTRATO Y RESPALDO RECOMENDADO',
+      'RECOMENDACIONES DE BIENESTAR GENERAL',
+      'Nota de seguridad',
+      'HISTORIAL PREVIO: seguimiento de Ana',
+      'Hola, soy David',
+    ]) {
+      expect(prompt, contains(seccion));
+    }
+    expect(prompt, contains('Responde directamente en texto normal'));
+    expect(prompt, isNot(contains('SALIDA OBLIGATORIA: JSON')));
+  });
+
+  test('Cambio físico USA conserva datos y todas sus secciones', () {
+    final base = construirPromptCambioFisicoBase(
+      pais: PaisApp.estadosUnidos,
+      instruccionIdioma: 'Español',
+      saludoAsesor: 'Hola, soy David',
+      nombre: 'Ana',
+      edad: '42',
+      genero: 'Femenino',
+      peso: '70',
+      altura: '1.65',
+      objetivo: 'Mejorar hábitos',
+      contextura: 'Media',
+      descripcionContextura: 'Perfil previo',
+    );
+    final prompt = construirPromptProductosPais('Mejorar hábitos', base);
+    expect(prompt, startsWith(base));
+    for (final valor in [
       'SALUDO Y ANÁLISIS FÍSICO',
       'PLANIFICACIÓN DEL CASO',
       'PLAN DE APOYO 4LIFE',
       'HABITOS PARA EL OBJETIVO',
       '70 kg',
       '1.65 m',
-      'Mejorar hábitos',
-      'Media',
       'Perfil previo',
-      'Hola, soy David'
     ]) {
-      expect(prompt, contains(value));
+      expect(prompt, contains(valor));
     }
-    expect(prompt, startsWith(base));
-    expect(prompt, isNot(contains('BioEFA con CLA')));
-    expect(base, isNot(contains('*Dosis manana:*')));
   });
 
-  test('Technical sheet and comparison formats stay inside JSON text', () {
-    const query = 'Compara Energy Go Stix Berry con Energy Go Stix Tropical.';
-    const base =
-        'Consulta original: $query\nFICHA TECNICA EJECUTIVA\nCOMPONENTES PRINCIPALES Y ORIGEN\nPROTOCOLO DE USO\nCOMPARACIÓN A/B\nAdjunto: documento del usuario';
-    final prompt = construirPromptProductosPais(query, base);
+  test('Diagnóstico usa la misma estructura para Ecuador y USA', () {
+    const caso = 'Tengo cansancio frecuente y dificultad para dormir.';
+    final ecuador = diagnostico(PaisApp.ecuador, sintomas: caso);
+    final usa = diagnostico(PaisApp.estadosUnidos, sintomas: caso);
+    const estructura = [
+      '*ANALISIS DEL CASO*',
+      '*NUESTRO OBJETIVO*',
+      '*SUSTRATO Y RESPALDO RECOMENDADO*',
+      '*RECOMENDACIONES DE BIENESTAR GENERAL*',
+      '*Nota de seguridad:*',
+    ];
+
+    List<String> titulos(String prompt) => estructura
+        .where((titulo) => prompt.contains(titulo))
+        .toList(growable: false);
+
+    expect(titulos(ecuador), estructura);
+    expect(titulos(usa), estructura);
+    for (final titulo in estructura) {
+      expect(titulo.allMatches(ecuador), hasLength(1));
+      expect(titulo.allMatches(usa), hasLength(1));
+    }
+    const bloqueProducto = [
+      '*1. [Nombre exacto del producto]*',
+      '- *Forma de uso:*',
+      '- *Por qué se elige:*',
+      '- *Beneficio clave:*',
+    ];
+    for (final campo in bloqueProducto) {
+      expect(ecuador, contains(campo));
+      expect(usa, contains(campo));
+    }
+    expect(ecuador, isNot(contains('LECTURA CLÍNICA ORIENTATIVA')));
+    expect(ecuador, isNot(contains('SALUDO Y ANÁLISIS DEL CASO')));
+    expect(usa, isNot(contains('INSTRUCCION MAESTRA NUEVA')));
+  });
+
+  test('Cambio físico y Chat conservan estructura entre mercados', () {
+    String cambio(PaisApp pais) => construirPromptCambioFisicoBase(
+          pais: pais,
+          instruccionIdioma: 'Español',
+          saludoAsesor: 'Hola, soy David',
+          nombre: 'Ana',
+          edad: '42',
+          genero: 'Femenino',
+          peso: '70',
+          altura: '1.65',
+          objetivo: 'Dormir mejor',
+          contextura: 'Media',
+          descripcionContextura: 'Perfil previo',
+        );
+    const titulosCambio = [
+      '*SALUDO Y ANÁLISIS FÍSICO*',
+      '*PLANIFICACIÓN DEL CASO*',
+      '*PLAN DE APOYO 4LIFE (Máx. 3-4 productos; más solo si el caso es extremo/especial)*',
+      '*HABITOS PARA EL OBJETIVO*',
+      '*Nota responsable:*',
+    ];
+    for (final titulo in titulosCambio) {
+      expect(cambio(PaisApp.ecuador), contains(titulo));
+      expect(cambio(PaisApp.estadosUnidos), contains(titulo));
+    }
+
+    String chatPais(PaisApp pais) => construirPromptChatbotBase(
+          pais: pais,
+          modoCientifico: false,
+          instruccionIdioma: 'Español',
+          instruccionVozHumana: 'VOZ HUMANA',
+          instruccionModoCientifico: '',
+          reglaProductos: 'Solo productos autorizados',
+          instruccionProducto: '',
+          instruccionComponente: '',
+          instruccionVoz: 'VOZ',
+          historialPrevio: 'Historial',
+          textoVisible: '¿Qué es Super Greens?',
+          terminosComponentes: 'vitaminas',
+        );
+    expect(chatPais(PaisApp.ecuador), chatPais(PaisApp.estadosUnidos));
+  });
+
+  String chat(bool cientifico) => construirPromptChatbotBase(
+        pais: PaisApp.estadosUnidos,
+        modoCientifico: cientifico,
+        instruccionIdioma: 'Español',
+        instruccionVozHumana: 'VOZ HUMANA: cálida',
+        instruccionModoCientifico:
+            cientifico ? 'No recomiendes productos 4Life.' : '',
+        reglaProductos:
+            cientifico ? 'No hables de productos.' : 'Solo catálogo USA',
+        instruccionProducto: 'Producto identificado: Super Greens',
+        instruccionComponente: 'No conviertas ingredientes en recomendación',
+        instruccionVoz: 'LLAMADA: frases respirables',
+        historialPrevio: 'Socio: seguimiento de mi consulta actual',
+        textoVisible: '¿Qué es Super Greens?',
+        terminosComponentes: 'vitaminas',
+      );
+
+  test('Chat y Chat Live conservan historial, tono y voz', () {
+    final base = chat(false);
+    final prompt = componerPromptChatbotPais(
+      'Super Greens',
+      base,
+      modoCientifico: false,
+      pais: PaisApp.estadosUnidos,
+      idioma: IdiomaApp.espanol,
+    );
     expect(prompt, startsWith(base));
-    final relevantes = productosUsaRelevantes(query);
-    expect(relevantes.take(2).map((p) => p.id).toSet(),
-        {'Energy Go Stix Berry', 'Energy Go Stix Tropical'});
+    for (final valor in [
+      'Socio: seguimiento',
+      'VOZ HUMANA: cálida',
+      'LLAMADA: frases respirables',
+      'Producto identificado: Super Greens',
+      'No conviertas ingredientes',
+    ]) {
+      expect(prompt, contains(valor));
+    }
+  });
+
+  test('Modo científico evita contexto y validación comercial', () {
+    final base = chat(true);
+    final prompt = componerPromptChatbotPais(
+      'Agpro',
+      base,
+      modoCientifico: true,
+      pais: PaisApp.estadosUnidos,
+      idioma: IdiomaApp.espanol,
+    );
+    expect(prompt, base);
+    expect(prompt, isNot(contains('CONTEXTO ADICIONAL')));
+    expect(prompt, contains('No recomiendes productos 4Life.'));
+  });
+
+  test('Ficha técnica y comparación conservan formato y ambas fichas', () {
+    const consulta =
+        'Compara Energy Go Stix Berry con Energy Go Stix Tropical.';
+    const base = 'FICHA TECNICA EJECUTIVA\nPROTOCOLO DE USO\nCOMPARACIÓN A/B';
+    final prompt = construirPromptProductosPais(consulta, base);
+    expect(prompt, startsWith(base));
     expect(prompt, contains('30 sobres'));
     expect(prompt, contains('15 sobres'));
-    final text = procesar(
-        jsonEncode({
-          'texto':
-              'COMPARACIÓN A/B\nEnergy Go Stix Berry frente a Energy Go Stix Tropical',
-          'productos': ['Energy Go Stix Berry', 'Energy Go Stix Tropical']
-        }),
-        query);
-    expect(text, startsWith('COMPARACIÓN A/B\n'));
-    expect(textoFichaProductoUsa('Super Greens', IdiomaApp.espanol),
-        contains('No documentado en el catálogo'));
-  });
-
-  test(
-      'Relevance prioritizes bilingual exact names and typos, ignores generic and foreign terms',
-      () {
-    for (final query in [
-      'Quiero Super Greens.',
-      '¿Qué es Super Greens y cómo se usa?',
-      'Quiero Super Grens.',
-      'Super Greens'
-    ]) {
-      expect(productosUsaRelevantes(query).first.id, 'Super Greens');
-    }
-    expect(productosUsaRelevantes('Energy Go Stix Moras').first.id,
-        'Energy Go Stix Berry');
+    final ids = productosUsaRelevantes(consulta).map((p) => p.id).toSet();
     expect(
-        productosUsaRelevantes(
-            'informacion general sobre productos de bienestar y salud'),
-        isEmpty);
-    expect(productosUsaRelevantes('Quiero Agpro.'), isEmpty);
-    expect(productosUsaRelevantes('zxqv inexplicable'), isEmpty);
-    final sintomas = productosUsaRelevantes(
-        'Tengo cansancio frecuente y dificultad para dormir.');
-    expect(sintomas.length, lessThanOrEqualTo(6));
-    for (final p in sintomas) {
-      final fuente = normalizarTexto(
-          '${p.campo('description', IdiomaApp.espanol)} ${p.campo('description', IdiomaApp.ingles)} ${p.campo('ingredients', IdiomaApp.espanol)} ${p.campo('ingredients', IdiomaApp.ingles)}');
-      expect(
-          fuente
-              .split(' ')
-              .any({'cansancio', 'dormir', 'fatigue', 'sleep'}.contains),
-          isTrue,
-          reason: p.id);
-    }
+        ids,
+        containsAll(<String>{
+          'Energy Go Stix Berry',
+          'Energy Go Stix Tropical',
+        }));
+    expect(
+      procesar('COMPARACIÓN A/B\nEnergy Go Stix Berry frente a '
+          'Energy Go Stix Tropical'),
+      startsWith('COMPARACIÓN A/B'),
+    );
   });
 
-  for (final malformed in [
-    'no es JSON',
-    '[]',
-    'null',
-    '{}',
-    '{"texto":3,"productos":[]}',
-    '{"texto":"ok","productos":"Super Greens"}',
-    '{"texto":"ok","productos":[3]}',
-    '{"texto":"","productos":[]}'
-  ]) {
-    test('Controlled failure for malformed response: $malformed', () {
-      expect(() => procesar(malformed), throwsStateError);
-    });
-  }
-  test(
-      'Validation accepts fenced JSON, rejects unauthorized IDs, foreign names and missing declared IDs',
-      () {
-    final valid = jsonEncode({
-      'texto': 'Super Greens: revisa la etiqueta vigente.',
-      'productos': ['Super Greens']
-    });
-    expect(procesar('```json\n$valid\n```'), contains('Super Greens'));
-    for (final salida in [
-      {
-        'texto': 'ok',
-        'productos': ['Agpro']
-      },
-      {
-        'texto': 'ok',
-        'productos': ['Renuvo']
-      },
-      {'texto': 'Agpro', 'productos': []},
-      {'texto': '4Life Transfer Factor BCV', 'productos': []},
-      {'texto': 'Energy Go Stix Moras', 'productos': []},
-      {'texto': 'Super Greens', 'productos': []},
-    ]) {
-      expect(() => procesar(jsonEncode(salida)), throwsStateError);
+  test('Consulta sin fichas, incluida anemia menstrual, no es un error', () {
+    const consulta =
+        'Me puedes dar algo para la anemia causada por la menstruación.';
+    expect(productosUsaRelevantes(consulta), isEmpty);
+    final prompt = construirPromptProductosPais(
+      consulta,
+      diagnostico(PaisApp.estadosUnidos, sintomas: consulta),
+    );
+    expect(prompt, contains('La ausencia de productos no es un error'));
+    expect(prompt, contains('sin recomendar productos'));
+    expect(
+      procesar(
+        'No puedo confirmar un diagnóstico. Conviene valoración profesional y '
+        'exámenes apropiados; no recomendaré productos sin una ficha pertinente.',
+        consulta,
+      ),
+      contains('valoración profesional'),
+    );
+  });
+
+  test('USA acepta respuesta sin productos y evita duplicar el descargo', () {
+    const texto =
+        'Orientación general. Los suplementos no son medicamentos y no están '
+        'destinados a diagnosticar, tratar, curar ni prevenir enfermedades.';
+    final resultado = procesar(texto, 'consulta general');
+    expect(resultado, texto);
+  });
+
+  test('Respuesta vacía produce una excepción y mensaje específicos', () {
+    expect(() => procesar('  '), throwsA(isA<RespuestaIaVaciaException>()));
+    expect(
+      mensajeErrorIa(const RespuestaIaVaciaException()),
+      'La IA no generó una respuesta. Inténtalo nuevamente.',
+    );
+  });
+
+  test('Solo nombres completos inequívocos de Ecuador se rechazan', () {
+    for (final nombre in ['Agpro', 'Bioefa', 'Vistari']) {
+      expect(() => procesar('Recomiendo $nombre.'),
+          throwsA(isA<ProductoNoAutorizadoException>()));
     }
-    expect(procesar(valid), contains('no medicamentos'));
+    expect(
+      procesar(
+          'La vista mejora con energía; el factor puede ser máximo, plus.'),
+      startsWith('La vista mejora'),
+    );
+    expect(procesar('Recall y lung son palabras en inglés.'),
+        startsWith('Recall y lung'));
+  });
+
+  test('Producto de Ecuador activa un solo reintento y muestra la corrección',
+      () async {
+    var llamadas = 0;
+    final resultado = await generarYProcesarRespuestaProductosPais(
+      prompt: 'PROMPT COMPLETO',
+      consulta: 'Quiero Agpro',
+      pais: PaisApp.estadosUnidos,
+      idioma: IdiomaApp.espanol,
+      generar: (prompt) async {
+        llamadas++;
+        if (llamadas == 1) return 'Recomiendo Agpro.';
+        expect(prompt, contains('Reescribe la respuesta'));
+        expect(prompt, contains('PROMPT COMPLETO'));
+        return 'Ese producto no está disponible en el catálogo USA.';
+      },
+    );
+    expect(llamadas, 2);
+    expect(resultado, startsWith('Ese producto no está disponible'));
+  });
+
+  test('Un segundo resultado inválido falla sin crear ciclos', () async {
+    var llamadas = 0;
+    await expectLater(
+      generarYProcesarRespuestaProductosPais(
+        prompt: 'PROMPT',
+        consulta: 'Agpro',
+        pais: PaisApp.estadosUnidos,
+        idioma: IdiomaApp.espanol,
+        generar: (_) async {
+          llamadas++;
+          return llamadas == 1 ? 'Agpro' : 'Bioefa';
+        },
+      ),
+      throwsA(isA<RespuestaIaBloqueadaException>()),
+    );
+    expect(llamadas, 2);
+    expect(
+      mensajeErrorIa(const RespuestaIaBloqueadaException()),
+      'La respuesta incluyó productos que no corresponden al país seleccionado. Inténtalo nuevamente.',
+    );
+  });
+
+  test('Cambio de país produce una excepción y mensaje específicos', () {
     PaisService.actual.value = PaisApp.ecuador;
-    expect(() => procesar(valid), throwsStateError);
+    expect(
+      () => procesarRespuestaProductosPais(
+        'respuesta',
+        'consulta',
+        PaisApp.estadosUnidos,
+        IdiomaApp.espanol,
+      ),
+      throwsA(isA<PaisConsultaCambioException>()),
+    );
+    expect(
+      mensajeErrorIa(const PaisConsultaCambioException()),
+      'El país cambió mientras se generaba la respuesta. Genera nuevamente la consulta.',
+    );
+  });
+
+  test('Errores de API e inesperados tienen mensajes distintos', () {
+    expect(
+      mensajeErrorIa(const SocketException('fallo controlado')),
+      'No se pudo conectar con la IA. Verifica tu conexión e inténtalo nuevamente.',
+    );
+    expect(
+      mensajeErrorIa(FormatException('fallo controlado')),
+      'No fue posible procesar la respuesta. Inténtalo nuevamente.',
+    );
+  });
+
+  test('Catálogos y dosis USA permanecen intactos', () {
+    expect(catalogoProductosEstadosUnidos.length, 80);
+    expect(productosPermitidosEcuador.length, 32);
+    expect(
+      catalogoProductosEstadosUnidos.every(
+        (p) => p.campo('directions', IdiomaApp.espanol).isEmpty,
+      ),
+      isTrue,
+    );
+    expect(
+      construirPromptProductosPais('Super Greens', 'BASE'),
+      contains('No documentado en el catálogo;\nrevisa la etiqueta vigente'),
+    );
   });
 }

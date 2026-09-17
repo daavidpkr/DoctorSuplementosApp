@@ -16,11 +16,8 @@ String construirPromptCambioFisicoBase(
       ? productosCambioFisicoEcuador.join(', ')
       : productosPermitidosEstadosUnidos.join(', ');
   final instruccionDosis = pais == PaisApp.estadosUnidos
-      ? '4. Incluye únicamente uso documentado en la ficha USA. Si falta uso/directions, indica: No documentado en el catálogo; revisa la etiqueta vigente. No inventes dosis, frecuencia, cantidad ni horario.'
-      : '4. Para cada producto incluye dosis general por horario si corresponde.';
-  final bloqueDosis = pais == PaisApp.estadosUnidos
-      ? '- *Forma de uso:* [Solo uso documentado; si falta, revisa la etiqueta vigente]'
-      : '- *Dosis manana:* [Cantidad]\n    - *Dosis tarde:* [Cantidad, si aplica]\n    - *Dosis noche:* [Cantidad, si aplica]';
+      ? '4. En Forma de uso incluye únicamente uso documentado en la ficha USA. Si falta uso/directions, escribe exactamente: No documentado en el catálogo; revisa la etiqueta vigente. No inventes dosis, frecuencia, cantidad ni horario.'
+      : '4. En Forma de uso resume la dosis general y los horarios documentados para Ecuador, sin inventar indicaciones.';
 
   final prompt = """
     IDIOMA OBLIGATORIO:
@@ -69,9 +66,9 @@ String construirPromptCambioFisicoBase(
     *PLAN DE APOYO 4LIFE (Máx. 3-4 productos; más solo si el caso es extremo/especial)*
 
     *1. [Nombre exacto del producto]*
-    $bloqueDosis
+    - *Forma de uso:* [uso o dosis documentada según la regla del mercado]
     - *Por qué se elige:* [Razón precisa conectada con el caso]
-    - *Apoyo principal:* [Explicacion breve]
+    - *Beneficio clave:* [Explicación breve]
 
     [Repetir solo hasta 3 o 4 productos]
 
@@ -185,9 +182,17 @@ class _FormularioCambioFisicoState extends State<FormularioCambioFisico> {
     final promptPais = construirPromptProductosPais(consultaCatalogo, prompt,
         pais: paisConsulta, idioma: idiomaConsulta);
     try {
-      final response = await model.generateContent([Content.text(promptPais)]);
-      final textoFinal = procesarRespuestaProductosPais(
-          response.text ?? '', consultaCatalogo, paisConsulta, idiomaConsulta);
+      final textoFinal = await generarYProcesarRespuestaProductosPais(
+        prompt: promptPais,
+        consulta: consultaCatalogo,
+        pais: paisConsulta,
+        idioma: idiomaConsulta,
+        generar: (promptGeneracion) async {
+          final response =
+              await model.generateContent([Content.text(promptGeneracion)]);
+          return response.text ?? '';
+        },
+      );
 
       await HistorialService.guardar(
         "Cambio físico: ${nombreController.text}",
@@ -206,8 +211,10 @@ class _FormularioCambioFisicoState extends State<FormularioCambioFisico> {
       );
 
       _mostrarResultado(textoFinal, perfilAsesor);
-    } catch (e) {
-      _mostrarDialogoSimple("Error", "No se pudo conectar con la IA.");
+    } catch (e, stackTrace) {
+      registrarErrorIa(e, stackTrace,
+          modulo: 'cambio_fisico', pais: paisConsulta);
+      _mostrarDialogoSimple("Error", mensajeErrorIa(e));
     } finally {
       if (mounted) setState(() => cargando = false);
     }

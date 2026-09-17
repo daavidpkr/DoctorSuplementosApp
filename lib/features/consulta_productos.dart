@@ -118,14 +118,13 @@ class _ConsultaProductoPaginaState extends State<ConsultaProductoPagina>
     String resultado;
     try {
       resultado = await _generarFichaProducto(producto, idioma);
-    } catch (_) {
+    } catch (e, stackTrace) {
+      registrarErrorIa(e, stackTrace,
+          modulo: 'consulta_productos', pais: PaisService.actual.value);
       if (mounted) Navigator.of(context, rootNavigator: true).pop();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(txtApp(
-            'Se necesita conexion para consultar la ficha con IA.',
-            'An internet connection is required to generate the AI product sheet.',
-          )),
+          content: Text(mensajeErrorIa(e)),
         ));
       }
       return;
@@ -269,11 +268,17 @@ medicamento, no sustituye tratamientos prescritos y no cura enfermedades.
     final consultaCatalogo = producto.nombre;
     final promptPais = construirPromptProductosPais(consultaCatalogo, prompt,
         pais: paisConsulta, idioma: idiomaConsulta);
-    final response = await model.generateContent([Content.text(promptPais)]);
-    final texto = procesarRespuestaProductosPais(response.text?.trim() ?? '',
-        consultaCatalogo, paisConsulta, idiomaConsulta);
-    if (texto.isEmpty) throw StateError('Respuesta vacia de IA');
-    return texto;
+    return generarYProcesarRespuestaProductosPais(
+      prompt: promptPais,
+      consulta: consultaCatalogo,
+      pais: paisConsulta,
+      idioma: idiomaConsulta,
+      generar: (promptGeneracion) async {
+        final response =
+            await model.generateContent([Content.text(promptGeneracion)]);
+        return response.text ?? '';
+      },
+    );
   }
 
   // Conservado solo para compatibilidad de estructura; las galerias ya no lo usan.
@@ -1074,19 +1079,23 @@ Este producto no es medicina, no diagnostica, no trata, no cura ni previene enfe
                       LayoutBuilder(
                         builder: (context, constraints) {
                           final compacta = constraints.maxWidth < 430;
-                          final imagen = imagenProducto == null
-                              ? const SizedBox.shrink()
-                              : Container(
-                                  height: 220,
-                                  padding: const EdgeInsets.all(10),
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFFF8F9FF),
-                                    borderRadius: BorderRadius.circular(16),
-                                    border: Border.all(
-                                      color: const Color(0xFFE1E4F0),
-                                    ),
-                                  ),
-                                  child: Image.asset(
+                          final imagen = Container(
+                            height: 220,
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF8F9FF),
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                color: const Color(0xFFE1E4F0),
+                              ),
+                            ),
+                            child: imagenProducto == null
+                                ? const Icon(
+                                    Icons.inventory_2_outlined,
+                                    color: Color(0xFF12248B),
+                                    size: 54,
+                                  )
+                                : Image.asset(
                                     imagenProducto,
                                     fit: BoxFit.contain,
                                     filterQuality: FilterQuality.high,
@@ -1096,14 +1105,13 @@ Este producto no es medicina, no diagnostica, no trata, no cura ni previene enfe
                                       size: 54,
                                     ),
                                   ),
-                                );
+                          );
                           if (compacta) {
                             return Column(
                               crossAxisAlignment: CrossAxisAlignment.stretch,
                               children: [
-                                if (imagenProducto != null) imagen,
-                                if (imagenProducto != null &&
-                                    precioProducto != null)
+                                imagen,
+                                if (precioProducto != null)
                                   const SizedBox(height: 12),
                                 if (precioProducto != null)
                                   _precioResumenProducto(
@@ -1113,25 +1121,20 @@ Este producto no es medicina, no diagnostica, no trata, no cura ni previene enfe
                               ],
                             );
                           }
-                          return SizedBox(
-                            height: 230,
-                            child: Row(
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                              children: [
-                                if (imagenProducto != null)
-                                  Expanded(child: imagen),
-                                if (imagenProducto != null &&
-                                    precioProducto != null)
-                                  const SizedBox(width: 12),
-                                if (precioProducto != null)
-                                  Expanded(
-                                    child: _precioResumenProducto(
-                                      precioProducto,
-                                      precioPromocional: precioPromocional,
-                                    ),
+                          return Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Expanded(child: imagen),
+                              if (precioProducto != null) ...[
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: _precioResumenProducto(
+                                    precioProducto,
+                                    precioPromocional: precioPromocional,
                                   ),
+                                ),
                               ],
-                            ),
+                            ],
                           );
                         },
                       ),
@@ -1192,6 +1195,13 @@ Este producto no es medicina, no diagnostica, no trata, no cura ni previene enfe
     required double? precioPromocional,
   }) {
     final ingles = IdiomaService.actual.value == IdiomaApp.ingles;
+    final esUsa = PaisService.actual.value == PaisApp.estadosUnidos;
+    final presentacion = esUsa
+        ? fichaProductoUsa(producto.nombre)?.campo(
+            'size',
+            IdiomaService.actual.value,
+          )
+        : null;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
       decoration: BoxDecoration(
@@ -1200,16 +1210,18 @@ Este producto no es medicina, no diagnostica, no trata, no cura ni previene enfe
         border: Border.all(color: const Color(0xFFE1E4F0)),
       ),
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        mainAxisSize: MainAxisSize.min,
         children: [
           _datoPrecio(
-            ingles ? "Member" : "Afiliado",
+            esUsa
+                ? (ingles ? "Wholesale" : "Mayorista")
+                : (ingles ? "Member" : "Afiliado"),
             '\$${producto.afiliado.toStringAsFixed(2)}',
             Icons.person_outline_rounded,
           ),
           const Divider(height: 1),
           _datoPrecio(
-            ingles ? "Retail" : "Publico",
+            ingles ? "Retail" : (esUsa ? "Minorista" : "Público"),
             '\$${producto.publico.toStringAsFixed(2)}',
             Icons.groups_2_outlined,
           ),
@@ -1219,7 +1231,7 @@ Este producto no es medicina, no diagnostica, no trata, no cura ni previene enfe
             producto.lp?.toString() ?? (ingles ? 'No data' : 'Sin dato'),
             Icons.star_outline_rounded,
           ),
-          if (!_esMiTienda) ...[
+          if (!esUsa && !_esMiTienda) ...[
             const Divider(height: 1),
             _datoPrecio(
               ingles ? "Exchange LP" : "LP canje",
@@ -1231,9 +1243,19 @@ Este producto no es medicina, no diagnostica, no trata, no cura ni previene enfe
           if (precioPromocional != null) ...[
             const Divider(height: 1),
             _datoPrecio(
-              ingles ? "Promo" : "Promocional",
+              esUsa
+                  ? (ingles ? "MyShop" : "MiTienda")
+                  : (ingles ? "Promo" : "Promocional"),
               '\$${precioPromocional.toStringAsFixed(2)}',
               Icons.local_offer_outlined,
+            ),
+          ],
+          if (presentacion?.isNotEmpty == true) ...[
+            const Divider(height: 1),
+            _datoPrecio(
+              ingles ? "Presentation" : "Presentación",
+              presentacion!,
+              Icons.inventory_2_outlined,
             ),
           ],
         ],
@@ -1390,12 +1412,17 @@ Este producto no es medicina, no diagnostica, no trata, no cura ni previene enfe
               ),
             ),
           ),
-          Text(
-            valor,
-            style: const TextStyle(
-              color: Color(0xFF1227A7),
-              fontSize: 17,
-              fontWeight: FontWeight.w900,
+          Flexible(
+            child: Text(
+              valor,
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.right,
+              style: const TextStyle(
+                color: Color(0xFF1227A7),
+                fontSize: 17,
+                fontWeight: FontWeight.w900,
+              ),
             ),
           ),
         ],

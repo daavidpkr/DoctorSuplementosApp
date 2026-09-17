@@ -19,7 +19,7 @@ void main() {
     expect(
         () => procesarRespuestaProductosPais('Recomiendo Super Greens',
             'bienestar', PaisApp.ecuador, IdiomaApp.espanol),
-        throwsStateError);
+        throwsA(isA<ProductoNoAutorizadoException>()));
     expect(productosPermitidosEcuador.length, 32);
     expect(productosPermitidosPaisActual, same(productosPermitidosEcuador));
     expect(productosConPrecioPaisActual, same(productosConPrecioEcuador));
@@ -108,7 +108,45 @@ void main() {
             .campo('size', IdiomaApp.ingles),
         '15 powder packets');
     expect(imagenesProductoPaisActual, isEmpty);
+    final precioFicha = preciosResultadoPaisActual['Super Greens']!;
+    expect((
+      precioFicha.publico,
+      precioFicha.promocional,
+      precioFicha.afiliado,
+      precioFicha.lp,
+    ), (
+      58,
+      48,
+      46,
+      32
+    ));
+    expect(precioFicha.presentacion, isNotEmpty);
     expect(seleccionProductoVigente(productosConPrecioEcuador.first), isFalse);
+  });
+
+  test(
+      'Super Greens conserva ficha, precios, presentación y ausencia de imagen',
+      () {
+    PaisService.actual.value = PaisApp.estadosUnidos;
+    const nombre = 'Super Greens';
+    final ficha = fichaProductoUsa(nombre)!;
+    final presentacion = ficha.presentaciones.first;
+    final precioBusqueda = buscarProductoConPrecio(nombre)!;
+    final precioFicha = preciosResultadoPaisActual[nombre]!;
+    final texto = textoFichaProductoUsa(nombre, IdiomaApp.espanol);
+
+    expect(productoDesdeTexto('¿Qué es Super Greens?'), nombre);
+    expect(precioBusqueda.publico, presentacion['retail']);
+    expect(precioBusqueda.afiliado, presentacion['wholesale']);
+    expect(precioFicha.promocional, presentacion['discount']);
+    expect(precioFicha.lp, presentacion['lp']);
+    expect(precioFicha.presentacion, ficha.campo('size', IdiomaApp.espanol));
+    expect(imagenesProductoPaisActual[nombre], isNull);
+    expect(texto, contains('FICHA TECNICA EJECUTIVA'));
+    expect(texto, contains('PROTOCOLO DE USO'));
+    expect(texto, contains('NOTA DE RESPONSABILIDAD'));
+    expect(texto, isNot(contains('{')));
+    expect(texto, isNot(contains('```')));
   });
 
   test(
@@ -140,35 +178,16 @@ void main() {
     const query = 'Super Greens';
     expect(
         () => procesarRespuestaProductosPais(
-            jsonEncode({
-              'texto': 'Agpro',
-              'productos': ['Agpro']
-            }),
-            query,
-            PaisApp.estadosUnidos,
-            IdiomaApp.espanol),
-        throwsStateError);
-    expect(
-        () => procesarRespuestaProductosPais(
-            jsonEncode({'texto': 'Agpro', 'productos': []}),
-            query,
-            PaisApp.estadosUnidos,
-            IdiomaApp.espanol),
-        throwsStateError);
+            'Agpro', query, PaisApp.estadosUnidos, IdiomaApp.espanol),
+        throwsA(isA<ProductoNoAutorizadoException>()));
     final text = procesarRespuestaProductosPais(
-        jsonEncode({
-          'texto': 'Super Greens',
-          'productos': ['Super Greens']
-        }),
-        query,
-        PaisApp.estadosUnidos,
-        IdiomaApp.espanol);
+        'Super Greens', query, PaisApp.estadosUnidos, IdiomaApp.espanol);
     expect(text, contains('no medicamentos'));
     PaisService.actual.value = PaisApp.ecuador;
     expect(
         () => procesarRespuestaProductosPais(
             '{}', query, PaisApp.estadosUnidos, IdiomaApp.espanol),
-        throwsStateError);
+        throwsA(isA<PaisConsultaCambioException>()));
   });
 
   test('inventory namespaces and country updates preserve old preferences',
@@ -202,6 +221,35 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byWidgetPredicate((w) => w is Text && w.data == 'Super Greens'),
         findsNothing);
+  });
+
+  testWidgets(
+      'Super Greens abre ficha normal con placeholder, precios y presentación',
+      (tester) async {
+    await PaisService.guardar(PaisApp.estadosUnidos);
+    await tester.pumpWidget(const MaterialApp(home: ConsultaProductoPagina()));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField).first, 'Super Greens');
+    await tester.pumpAndSettle();
+    final producto =
+        find.byWidgetPredicate((w) => w is Text && w.data == 'Super Greens');
+    await tester.tap(producto.first);
+    await tester.pumpAndSettle();
+
+    expect(find.byType(Dialog), findsOneWidget);
+    expect(find.byIcon(Icons.inventory_2_outlined), findsWidgets);
+    expect(find.text('Mayorista'), findsOneWidget);
+    expect(find.text('\$46.00'), findsOneWidget);
+    expect(find.text('Minorista'), findsOneWidget);
+    expect(find.text('\$58.00'), findsOneWidget);
+    expect(find.text('MiTienda'), findsOneWidget);
+    expect(find.text('\$48.00'), findsOneWidget);
+    expect(find.text('LP'), findsOneWidget);
+    expect(find.text('32'), findsOneWidget);
+    expect(find.text('Presentación'), findsOneWidget);
+    expect(find.text('15 sobres individuales'), findsOneWidget);
+    expect(find.textContaining('{"texto"'), findsNothing);
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('profile country selection updates the gallery beneath its route',
