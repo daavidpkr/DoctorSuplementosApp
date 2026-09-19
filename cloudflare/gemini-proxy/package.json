@@ -1,0 +1,12 @@
+{
+  "name": "doctor-suplementos-gemini-proxy",
+  "private": true,
+  "scripts": {
+    "test": "vitest run",
+    "deploy": "wrangler deploy"
+  },
+  "devDependencies": {
+    "vitest": "^3.2.4",
+    "wrangler": "^4.135.0"
+  }
+}

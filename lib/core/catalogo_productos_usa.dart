@@ -597,6 +597,7 @@ Future<String> _generarIaConReintento(
 }
 
 bool _esErrorIaTransitorio(Object error) {
+  if (error is IaProxyException) return error.esTransitorio;
   if (error is SocketException || error is TimeoutException) return true;
   if (error is DioException) {
     return error.type == DioExceptionType.connectionError ||
@@ -615,6 +616,29 @@ bool _esErrorIaTransitorio(Object error) {
 }
 
 String mensajeErrorIa(Object error) {
+  if (error is IaProxyException) {
+    if (error.codigo == 'AUTENTICACION_REQUERIDA' ||
+        error.codigo == 'TOKEN_INVALIDO') {
+      return 'No fue posible validar la sesión. Cierra y abre la aplicación e inténtalo nuevamente.';
+    }
+    if (error.codigo == 'PROXY_NO_CONFIGURADO' ||
+        error.codigo == 'SERVICIO_NO_CONFIGURADO') {
+      return 'El servicio de IA necesita ser configurado nuevamente.';
+    }
+    if (error.codigo == 'ADJUNTOS_NO_ADMITIDOS') {
+      return 'En la versión web, genera este diagnóstico solo con texto.';
+    }
+    if (error.codigo == 'RESPUESTA_VACIA') {
+      return 'La IA no generó una respuesta. Inténtalo nuevamente.';
+    }
+    if (error.estadoHttp == 422) {
+      return 'La IA no pudo responder a esa redacción. Inténtalo nuevamente con una descripción más breve.';
+    }
+    if (error.esTransitorio) {
+      return 'El servicio de IA está temporalmente ocupado. Inténtalo nuevamente en unos segundos.';
+    }
+    return 'No fue posible conectar con el servicio de IA. Inténtalo nuevamente.';
+  }
   if (error is RespuestaIaVaciaException) {
     return 'La IA no generó una respuesta. Inténtalo nuevamente.';
   }

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:google_generative_ai/google_generative_ai.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -28,6 +28,7 @@ import 'dart:math' as math;
 part 'core/catalogo_productos.dart';
 part 'core/catalogo_productos_usa.dart';
 part 'core/datos_catalogo_usa.dart';
+part 'core/cliente_ia.dart';
 part 'core/servicio_autenticacion_firebase.dart';
 part 'core/servicios_app.dart';
 part 'core/servicios_historial.dart';
@@ -62,7 +63,6 @@ const FirebaseOptions _firebaseOptionsEscritorio = FirebaseOptions(
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await inicializarVariablesEntorno();
   final firebaseInicializado = await inicializarFirebaseSeguro();
   if (firebaseInicializado) {
     await AutenticacionFirebaseService.autenticarSilenciosamente();
@@ -72,29 +72,17 @@ Future<void> main() async {
   runApp(const DoctorSuplementos());
 }
 
-Future<void> inicializarVariablesEntorno() async {
-  try {
-    await dotenv.load(fileName: '.env');
-  } catch (e) {
-    debugPrint('No se pudo cargar .env: $e');
-  }
-}
-
 String get geminiApiKey {
-  final apiKey = dotenv.env['API_KEY']?.trim() ?? '';
+  const apiKey = String.fromEnvironment('GEMINI_API_KEY');
   if (apiKey.isEmpty) {
-    throw StateError('Falta configurar API_KEY en el archivo .env.');
+    throw StateError('Falta configurar GEMINI_API_KEY para esta plataforma.');
   }
   return apiKey;
 }
 
 String get copyrightOwner {
-  try {
-    final owner = dotenv.env['COPYRIGHT_OWNER']?.trim() ?? '';
-    return owner.isEmpty ? 'DoctorSuplementos' : owner;
-  } catch (_) {
-    return 'DoctorSuplementos';
-  }
+  const owner = String.fromEnvironment('COPYRIGHT_OWNER');
+  return owner.isEmpty ? 'DoctorSuplementos' : owner;
 }
 
 Future<bool> inicializarFirebaseSeguro() async {

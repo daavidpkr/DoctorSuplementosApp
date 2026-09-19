@@ -115,21 +115,23 @@ class _ConsultaProductoPaginaState extends State<ConsultaProductoPagina>
   Future<void> _abrirProducto(ProductoPrecio producto) async {
     final idioma = IdiomaService.actual.value;
     _mostrarCargandoIa();
-    String resultado;
+    final navigator = Navigator.of(context, rootNavigator: true);
+    String? resultado;
     try {
       resultado = await _generarFichaProducto(producto, idioma);
     } catch (e, stackTrace) {
       registrarErrorIa(e, stackTrace,
           modulo: 'consulta_productos', pais: PaisService.actual.value);
-      if (mounted) Navigator.of(context, rootNavigator: true).pop();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text(mensajeErrorIa(e)),
         ));
       }
       return;
+    } finally {
+      if (navigator.mounted) navigator.pop();
     }
-    if (mounted) Navigator.of(context, rootNavigator: true).pop();
+    final resultadoFinal = resultado;
     final precioPromocional = precioPromocionalMiTienda(producto.nombre);
     if (!mounted) return;
     unawaited(ImpactoService.registrar(
@@ -148,7 +150,7 @@ class _ConsultaProductoPaginaState extends State<ConsultaProductoPagina>
       builder: (c) => _dialogoResultado(
         dialogContext: c,
         titulo: producto.nombreVisible,
-        resultado: resultado,
+        resultado: resultadoFinal,
         imagenProducto: imagenesProductoPaisActual[producto.nombre],
         productoIdentificado: producto.nombre,
         precioProducto: producto,
@@ -224,10 +226,6 @@ class _ConsultaProductoPaginaState extends State<ConsultaProductoPagina>
     final idiomaIa = idioma == IdiomaApp.ingles ? 'English' : 'espanol';
     final paisConsulta = PaisService.actual.value;
     final idiomaConsulta = IdiomaService.actual.value;
-    final model = GenerativeModel(
-      model: 'gemini-3.1-flash-lite',
-      apiKey: geminiApiKey,
-    );
     final prompt = """
 Responde exclusivamente en $idiomaIa.
 ROL: Eres especialista en nutricion celular y suplementacion avanzada. Explica
@@ -274,9 +272,7 @@ medicamento, no sustituye tratamientos prescritos y no cura enfermedades.
       pais: paisConsulta,
       idioma: idiomaConsulta,
       generar: (promptGeneracion) async {
-        final response =
-            await model.generateContent([Content.text(promptGeneracion)]);
-        return response.text ?? '';
+        return ClienteIa.generarTexto(promptGeneracion);
       },
     );
   }

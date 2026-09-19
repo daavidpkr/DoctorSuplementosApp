@@ -85,7 +85,13 @@ String construirPromptDiagnosticoBase(
 
 class FormularioPaciente extends StatefulWidget {
   final Map<String, dynamic>? infoPrevia;
-  const FormularioPaciente({super.key, this.infoPrevia});
+  final Future<String> Function(String prompt)? generarTexto;
+
+  const FormularioPaciente({
+    super.key,
+    this.infoPrevia,
+    this.generarTexto,
+  });
 
   @override
   State<FormularioPaciente> createState() => _FormularioPacienteState();
@@ -144,58 +150,54 @@ class _FormularioPacienteState extends State<FormularioPaciente> {
     setState(() => cargando = true);
 
     final paisConsulta = PaisService.actual.value;
-    final idiomaConsulta = IdiomaService.actual.value;
-    final model = GenerativeModel(
-      model: 'gemini-3.1-flash-lite',
-      apiKey: geminiApiKey,
-    );
-
-    String contextoAnterior = widget.infoPrevia != null
-        ? "HISTORIAL PREVIO: El paciente anteriormente reportó: ${widget.infoPrevia!['datos']['sintomas']}. El resultado anterior fue: ${widget.infoPrevia!['resultado']}. "
-        : "";
-
-    final perfilAsesor = await PerfilService.cargar();
-    final instruccionIdioma = await IdiomaService.instruccionIa();
-    final saludoAsesor = perfilAsesor.tieneNombre
-        ? "Dentro de ANALISIS DEL CASO integra este saludo personalizado: Hola, ¿cómo estás?, mi nombre es ${perfilAsesor.nombre.trim()}."
-        : "Dentro de ANALISIS DEL CASO integra un saludo empático breve.";
-
-    final prompt = construirPromptDiagnosticoBase(
-        pais: paisConsulta,
-        instruccionIdioma: instruccionIdioma,
-        contextoAnterior: contextoAnterior,
-        saludoAsesor: saludoAsesor,
-        nombre: nombreController.text,
-        edad: edadController.text,
-        genero: _generoSeleccionado!,
-        sintomas: historialController.text);
-
-    final consultaCatalogo =
-        'Síntomas: ${historialController.text}. Nombre: ${nombreController.text}. Edad: ${edadController.text}. Género: $_generoSeleccionado';
-    final promptPais = construirPromptProductosPais(consultaCatalogo, prompt,
-        pais: paisConsulta, idioma: idiomaConsulta);
     try {
+      final idiomaConsulta = IdiomaService.actual.value;
+      final contextoAnterior = widget.infoPrevia != null
+          ? "HISTORIAL PREVIO: El paciente anteriormente reportó: ${widget.infoPrevia!['datos']['sintomas']}. El resultado anterior fue: ${widget.infoPrevia!['resultado']}. "
+          : "";
+      final perfilAsesor = await PerfilService.cargar();
+      final instruccionIdioma = await IdiomaService.instruccionIa();
+      final saludoAsesor = perfilAsesor.tieneNombre
+          ? "Dentro de ANALISIS DEL CASO integra este saludo personalizado: Hola, ¿cómo estás?, mi nombre es ${perfilAsesor.nombre.trim()}."
+          : "Dentro de ANALISIS DEL CASO integra un saludo empático breve.";
+      final prompt = construirPromptDiagnosticoBase(
+          pais: paisConsulta,
+          instruccionIdioma: instruccionIdioma,
+          contextoAnterior: contextoAnterior,
+          saludoAsesor: saludoAsesor,
+          nombre: nombreController.text,
+          edad: edadController.text,
+          genero: _generoSeleccionado!,
+          sintomas: historialController.text);
+      final consultaCatalogo =
+          'Síntomas: ${historialController.text}. Nombre: ${nombreController.text}. Edad: ${edadController.text}. Género: $_generoSeleccionado';
+      final promptPais = construirPromptProductosPais(consultaCatalogo, prompt,
+          pais: paisConsulta, idioma: idiomaConsulta);
       final textoFinal = await generarYProcesarRespuestaProductosPais(
         prompt: promptPais,
         consulta: consultaCatalogo,
         pais: paisConsulta,
         idioma: idiomaConsulta,
         generar: (promptGeneracion) async {
-          final content = [
-            if (_adjunto == null)
-              Content.text(promptGeneracion)
-            else
-              Content.multi([
-                TextPart(
-                  _adjunto!.esAudio
-                      ? "$promptGeneracion\n\nAnaliza la nota de voz adjunta. Extrae los síntomas, contexto y datos relevantes mencionados por el paciente para orientar la recomendación; no guardes ni menciones que el audio fue almacenado."
-                      : "$promptGeneracion\n\nAnaliza también el archivo adjunto. Extrae solo la información relevante para orientar la recomendación y úsala como contexto complementario; no afirmes diagnósticos médicos definitivos.",
-                ),
-                DataPart(_adjunto!.mimeType, _adjunto!.bytes),
-              ]),
-          ];
-          final response = await model.generateContent(content);
-          return response.text ?? '';
+          if (widget.generarTexto != null) {
+            return widget.generarTexto!(promptGeneracion);
+          }
+          final contenidoNativo = _adjunto == null
+              ? null
+              : [
+                  Content.multi([
+                    TextPart(
+                      _adjunto!.esAudio
+                          ? "$promptGeneracion\n\nAnaliza la nota de voz adjunta. Extrae los síntomas, contexto y datos relevantes mencionados por el paciente para orientar la recomendación; no guardes ni menciones que el audio fue almacenado."
+                          : "$promptGeneracion\n\nAnaliza también el archivo adjunto. Extrae solo la información relevante para orientar la recomendación y úsala como contexto complementario; no afirmes diagnósticos médicos definitivos.",
+                    ),
+                    DataPart(_adjunto!.mimeType, _adjunto!.bytes),
+                  ]),
+                ];
+          return ClienteIa.generarTexto(
+            promptGeneracion,
+            contenidoNativo: contenidoNativo,
+          );
         },
       );
 
