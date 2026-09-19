@@ -182,23 +182,17 @@ class _FormularioPacienteState extends State<FormularioPaciente> {
           if (widget.generarTexto != null) {
             return widget.generarTexto!(promptGeneracion);
           }
-          final contenidoNativo = _adjunto == null
-              ? null
-              : [
-                  Content.multi([
-                    TextPart(
-                      _adjunto!.esAudio
-                          ? "$promptGeneracion\n\nAnaliza la nota de voz adjunta. Extrae los síntomas, contexto y datos relevantes mencionados por el paciente para orientar la recomendación; no guardes ni menciones que el audio fue almacenado."
-                          : "$promptGeneracion\n\nAnaliza también el archivo adjunto. Extrae solo la información relevante para orientar la recomendación y úsala como contexto complementario; no afirmes diagnósticos médicos definitivos.",
-                    ),
-                    DataPart(_adjunto!.mimeType, _adjunto!.bytes),
-                  ]),
-                ];
+          final promptConAdjunto = _adjunto == null
+              ? promptGeneracion
+              : _adjunto!.esAudio
+                  ? "$promptGeneracion\n\nAnaliza la nota de voz adjunta. Extrae los síntomas, contexto y datos relevantes mencionados por el paciente para orientar la recomendación; no guardes ni menciones que el audio fue almacenado."
+                  : "$promptGeneracion\n\nAnaliza también el archivo adjunto. Extrae solo la información relevante para orientar la recomendación y úsala como contexto complementario; no afirmes diagnósticos médicos definitivos.";
           return ClienteIa.generarTexto(
-            promptGeneracion,
-            contenidoNativo: contenidoNativo,
+            promptConAdjunto,
+            adjuntos: _adjunto == null ? const [] : [_adjunto!],
           );
         },
+        permitirReintento: _adjunto == null,
       );
 
       await HistorialService.guardar(

@@ -303,11 +303,6 @@ class _PaginaChatbotState extends State<PaginaChatbot>
 
     final paisConsulta = PaisService.actual.value;
     final idiomaConsulta = IdiomaService.actual.value;
-    final model = GenerativeModel(
-      model: 'gemini-3.1-flash-lite',
-      apiKey: geminiApiKey,
-    );
-
     final historialPrevio = mensajes
         .skip(_inicioContextoMercado)
         .take(mensajes.length - 1 - _inicioContextoMercado)
@@ -386,17 +381,10 @@ class _PaginaChatbotState extends State<PaginaChatbot>
                 ? "$promptGeneracion\n\nAnaliza las notas de voz adjuntas como contexto temporal. Extrae la consulta y responde con base en el audio. No menciones que fueron guardadas, porque no se guardan en la app."
                 : "$promptGeneracion\n\nAnaliza todos los archivos adjuntos como contexto temporal. Cruza la información entre documentos e imágenes cuando sea útil. No menciones que fueron guardados, porque no se guardan en la app.")
             : promptGeneracion;
-        final response = await model.generateContent([
-          if (!_tieneAdjuntos)
-            Content.text(promptGeneracion)
-          else
-            Content.multi([
-              TextPart(textoAdjuntos),
-              for (final adjunto in _adjuntos)
-                DataPart(adjunto.mimeType, adjunto.bytes),
-            ]),
-        ]);
-        return response.text ?? '';
+        return ClienteIa.generarTexto(
+          textoAdjuntos,
+          adjuntos: List<ArchivoAdjuntoIA>.unmodifiable(_adjuntos),
+        );
       }
 
       final respuestaIA = _modoCientifico
@@ -407,6 +395,7 @@ class _PaginaChatbotState extends State<PaginaChatbot>
               consulta: consultaCatalogo,
               pais: paisConsulta,
               idioma: idiomaConsulta,
+              permitirReintento: !_tieneAdjuntos,
             );
 
       if (!mounted) return;

@@ -2,7 +2,7 @@ name: doctor_suplementos
 description: "App de asesoramiento técnico para socios de 4Life."
 publish_to: 'none'
 
-version: 1.3.0
+version: 1.3.1+2
 
 environment:
   sdk: '>=3.1.0 <4.0.0'
@@ -16,9 +16,6 @@ dependencies:
   pdf: ^3.12.0
   lottie: ^3.1.3
 
-  # Inteligencia Artificial: Gemini 3.1
-  google_generative_ai: ^0.4.7
-  
   # Firebase: Conexión y Base de Datos
   firebase_core: ^4.9.0
   firebase_auth: 6.5.1

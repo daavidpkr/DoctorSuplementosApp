@@ -557,13 +557,19 @@ Future<String> generarYProcesarRespuestaProductosPais({
   required String consulta,
   required PaisApp pais,
   required IdiomaApp idioma,
+  bool permitirReintento = true,
 }) async {
-  final primeraRespuesta = await _generarIaConReintento(generar, prompt);
+  final primeraRespuesta = await _generarIaConReintento(
+    generar,
+    prompt,
+    permitirReintento: permitirReintento,
+  );
   try {
     return procesarRespuestaProductosPais(
         primeraRespuesta, consulta, pais, idioma);
   } on ProductoNoAutorizadoException {
     if (pais != PaisApp.estadosUnidos) rethrow;
+    if (!permitirReintento) throw const RespuestaIaBloqueadaException();
     final promptCorreccion = '''
 $prompt
 
@@ -572,8 +578,11 @@ $_instruccionCorreccionMercadoUsa
 Respuesta anterior que debes corregir:
 $primeraRespuesta
 ''';
-    final segundaRespuesta =
-        await _generarIaConReintento(generar, promptCorreccion);
+    final segundaRespuesta = await _generarIaConReintento(
+      generar,
+      promptCorreccion,
+      permitirReintento: permitirReintento,
+    );
     try {
       return procesarRespuestaProductosPais(
           segundaRespuesta, consulta, pais, idioma);
@@ -585,12 +594,13 @@ $primeraRespuesta
 
 Future<String> _generarIaConReintento(
   Future<String> Function(String prompt) generar,
-  String prompt,
-) async {
+  String prompt, {
+  bool permitirReintento = true,
+}) async {
   try {
     return await generar(prompt).timeout(const Duration(seconds: 75));
   } catch (error) {
-    if (!_esErrorIaTransitorio(error)) rethrow;
+    if (!permitirReintento || !_esErrorIaTransitorio(error)) rethrow;
     await Future<void>.delayed(const Duration(milliseconds: 700));
     return generar(prompt).timeout(const Duration(seconds: 75));
   }
@@ -606,13 +616,7 @@ bool _esErrorIaTransitorio(Object error) {
         error.type == DioExceptionType.sendTimeout ||
         (error.response?.statusCode ?? 0) >= 500;
   }
-  if (error is! GenerativeAIException) return false;
-  final mensaje = error.message.toLowerCase();
-  return RegExp(r'\b(429|500|502|503|504)\b').hasMatch(mensaje) ||
-      mensaje.contains('resource_exhausted') ||
-      mensaje.contains('overloaded') ||
-      mensaje.contains('temporarily unavailable') ||
-      mensaje.contains('deadline exceeded');
+  return false;
 }
 
 String mensajeErrorIa(Object error) {
@@ -625,8 +629,18 @@ String mensajeErrorIa(Object error) {
         error.codigo == 'SERVICIO_NO_CONFIGURADO') {
       return 'El servicio de IA necesita ser configurado nuevamente.';
     }
-    if (error.codigo == 'ADJUNTOS_NO_ADMITIDOS') {
-      return 'En la versión web, genera este diagnóstico solo con texto.';
+    if (error.codigo == 'MIME_NO_ADMITIDO' ||
+        error.codigo == 'MIME_NO_COINCIDE' ||
+        error.codigo == 'ADJUNTOS_INVALIDOS') {
+      return 'El tipo de archivo adjunto no es compatible.';
+    }
+    if (error.codigo == 'DEMASIADOS_ADJUNTOS') {
+      return 'Adjunta como máximo ${ClienteIa.maximoAdjuntos} archivos.';
+    }
+    if (error.codigo == 'ADJUNTO_DEMASIADO_GRANDE' ||
+        error.codigo == 'ADJUNTOS_DEMASIADO_GRANDES' ||
+        error.codigo == 'PAYLOAD_DEMASIADO_GRANDE') {
+      return 'Los archivos adjuntos superan el tamaño permitido. Reduce su tamaño e inténtalo nuevamente.';
     }
     if (error.codigo == 'RESPUESTA_VACIA') {
       return 'La IA no generó una respuesta. Inténtalo nuevamente.';
@@ -649,28 +663,6 @@ String mensajeErrorIa(Object error) {
   if (error is PaisConsultaCambioException) {
     return 'El país cambió mientras se generaba la respuesta. Genera nuevamente la consulta.';
   }
-  if (error is UnsupportedUserLocation) {
-    return 'El servicio de IA no está disponible desde esta ubicación.';
-  }
-  if (error is InvalidApiKey) {
-    return 'La conexión con la IA necesita ser configurada nuevamente.';
-  }
-  if (error is GenerativeAIException) {
-    final mensaje = error.message.toLowerCase();
-    if (mensaje.contains('blocked') ||
-        mensaje.contains('safety') ||
-        mensaje.contains('recitation')) {
-      return 'La IA no pudo responder a esa redacción. Describe los síntomas '
-          'sin solicitar una cura o un diagnóstico definitivo e inténtalo nuevamente.';
-    }
-    if (_esErrorIaTransitorio(error)) {
-      return 'El servicio de IA está temporalmente ocupado. Inténtalo nuevamente en unos segundos.';
-    }
-    if (mensaje.contains('not found') || mensaje.contains('model')) {
-      return 'El modelo de IA configurado no está disponible. Actualiza la app o contacta a soporte.';
-    }
-    return 'La IA rechazó la solicitud. Inténtalo nuevamente con una descripción más breve.';
-  }
   if (error is SocketException ||
       error is TimeoutException ||
       (error is DioException && _esErrorIaTransitorio(error))) {
@@ -681,9 +673,10 @@ String mensajeErrorIa(Object error) {
 
 void registrarErrorIa(Object error, StackTrace stackTrace,
     {required String modulo, required PaisApp pais}) {
-  debugPrint(
-      'Error IA | módulo=$modulo | país=${pais.codigo} | tipo=${error.runtimeType} | mensaje=$error');
-  debugPrintStack(stackTrace: stackTrace, maxFrames: 12);
+  final codigo = error is IaProxyException ? error.codigo : 'ERROR_CLIENTE';
+  final estado = error is IaProxyException ? error.estadoHttp : null;
+  debugPrint('Error IA | módulo=$modulo | país=${pais.codigo} | '
+      'tipo=${error.runtimeType} | código=$codigo | estado=${estado ?? '-'}');
 }
 
 String claveInventarioPais(PaisApp pais) => pais == PaisApp.ecuador

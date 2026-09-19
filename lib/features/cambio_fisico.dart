@@ -153,11 +153,6 @@ class _FormularioCambioFisicoState extends State<FormularioCambioFisico> {
 
     final paisConsulta = PaisService.actual.value;
     final idiomaConsulta = IdiomaService.actual.value;
-    final model = GenerativeModel(
-      model: 'gemini-3.1-flash-lite',
-      apiKey: geminiApiKey,
-    );
-
     final perfilAsesor = await PerfilService.cargar();
     final instruccionIdioma = await IdiomaService.instruccionIa();
     final saludoAsesor = perfilAsesor.tieneNombre
@@ -188,9 +183,7 @@ class _FormularioCambioFisicoState extends State<FormularioCambioFisico> {
         pais: paisConsulta,
         idioma: idiomaConsulta,
         generar: (promptGeneracion) async {
-          final response =
-              await model.generateContent([Content.text(promptGeneracion)]);
-          return response.text ?? '';
+          return ClienteIa.generarTexto(promptGeneracion);
         },
       );
 

@@ -2,7 +2,6 @@ import 'dart:io';
 
 import 'package:doctor_suplementos/main.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:google_generative_ai/google_generative_ai.dart';
 
 void main() {
   setUp(() {
@@ -385,15 +384,32 @@ void main() {
       'No fue posible procesar la respuesta. Inténtalo nuevamente.',
     );
     expect(
-      mensajeErrorIa(
-        GenerativeAIException('Response was blocked due to SAFETY'),
-      ),
+      mensajeErrorIa(const IaProxyException('GEMINI_RECHAZO', estadoHttp: 422)),
       contains('no pudo responder a esa redacción'),
     );
     expect(
-      mensajeErrorIa(GenerativeAIException('Server Error [503]')),
+      mensajeErrorIa(const IaProxyException('GEMINI_TIMEOUT', estadoHttp: 504)),
       contains('temporalmente ocupado'),
     );
+  });
+
+  test('una solicitud con archivos no se reintenta automaticamente', () async {
+    var intentos = 0;
+    await expectLater(
+      generarYProcesarRespuestaProductosPais(
+        generar: (_) async {
+          intentos++;
+          throw const IaProxyException('GEMINI_TIMEOUT', estadoHttp: 504);
+        },
+        prompt: 'prompt',
+        consulta: 'consulta',
+        pais: PaisApp.estadosUnidos,
+        idioma: IdiomaApp.espanol,
+        permitirReintento: false,
+      ),
+      throwsA(isA<IaProxyException>()),
+    );
+    expect(intentos, 1);
   });
 
   test('Catálogos y dosis USA permanecen intactos', () {

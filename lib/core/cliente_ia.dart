@@ -17,40 +17,37 @@ class IaProxyException implements Exception {
 }
 
 class ClienteIa {
-  static const String modelo = 'gemini-3.1-flash-lite';
   static const String _urlProxy = String.fromEnvironment('IA_PROXY_URL');
   static const int _maximoBytesPrompt = 60000;
+  static const int maximoAdjuntos = 5;
+  static const int maximoBytesPorAdjunto = 8 * 1024 * 1024;
+  static const int maximoBytesAdjuntos = 12 * 1024 * 1024;
+  static const Set<String> _mimeAdmitidos = {
+    'image/jpeg',
+    'image/png',
+    'image/webp',
+    'application/pdf',
+    'audio/mp4',
+  };
 
   static Future<String> generarTexto(
     String prompt, {
-    List<Content>? contenidoNativo,
+    List<ArchivoAdjuntoIA> adjuntos = const [],
     Dio? clienteHttp,
     Future<String?> Function()? obtenerToken,
     String? urlProxy,
-    bool? usarProxy,
   }) async {
     try {
-      final usarProxyWeb = usarProxy ?? kIsWeb;
-      if (!usarProxyWeb) {
-        final model = GenerativeModel(model: modelo, apiKey: geminiApiKey);
-        final response = await model.generateContent(
-          contenidoNativo ?? [Content.text(prompt)],
-        );
-        return response.text ?? '';
-      }
-
-      if (contenidoNativo != null) {
-        throw const IaProxyException('ADJUNTOS_NO_ADMITIDOS', estadoHttp: 400);
-      }
       final bytesPrompt = utf8.encode(prompt).length;
       if (prompt.trim().isEmpty || bytesPrompt > _maximoBytesPrompt) {
         throw const IaProxyException('PAYLOAD_INVALIDO', estadoHttp: 400);
       }
+      _validarAdjuntos(adjuntos);
 
       final endpoint = (urlProxy ?? _urlProxy).trim();
       final uri = Uri.tryParse(endpoint);
-      final origenLocal = uri != null &&
-          (uri.host == 'localhost' || uri.host == '127.0.0.1');
+      final origenLocal =
+          uri != null && (uri.host == 'localhost' || uri.host == '127.0.0.1');
       if (uri == null ||
           !uri.hasScheme ||
           (!origenLocal && uri.scheme != 'https') ||
@@ -61,7 +58,8 @@ class ClienteIa {
       final tokenProvider = obtenerToken ?? _obtenerFirebaseIdToken;
       final token = (await tokenProvider())?.trim() ?? '';
       if (token.isEmpty) {
-        throw const IaProxyException('AUTENTICACION_REQUERIDA', estadoHttp: 401);
+        throw const IaProxyException('AUTENTICACION_REQUERIDA',
+            estadoHttp: 401);
       }
 
       final dio = clienteHttp ??
@@ -72,7 +70,17 @@ class ClienteIa {
           ));
       final response = await dio.postUri<Map<String, dynamic>>(
         uri,
-        data: {'prompt': prompt},
+        data: {
+          'prompt': prompt,
+          if (adjuntos.isNotEmpty)
+            'attachments': [
+              for (final adjunto in adjuntos)
+                {
+                  'mimeType': adjunto.mimeType,
+                  'data': base64Encode(adjunto.bytes),
+                },
+            ],
+        },
         options: Options(
           contentType: Headers.jsonContentType,
           responseType: ResponseType.json,
@@ -101,11 +109,68 @@ class ClienteIa {
       rethrow;
     } on TimeoutException {
       rethrow;
-    } on GenerativeAIException {
-      rethrow;
     } catch (_) {
       throw const IaProxyException('ERROR_CLIENTE');
     }
+  }
+
+  static void _validarAdjuntos(List<ArchivoAdjuntoIA> adjuntos) {
+    if (adjuntos.length > maximoAdjuntos) {
+      throw const IaProxyException('DEMASIADOS_ADJUNTOS', estadoHttp: 400);
+    }
+    var total = 0;
+    for (final adjunto in adjuntos) {
+      if (!_mimeAdmitidos.contains(adjunto.mimeType)) {
+        throw const IaProxyException('MIME_NO_ADMITIDO', estadoHttp: 415);
+      }
+      final cantidad = adjunto.bytes.length;
+      if (cantidad == 0 || cantidad > maximoBytesPorAdjunto) {
+        throw const IaProxyException(
+          'ADJUNTO_DEMASIADO_GRANDE',
+          estadoHttp: 413,
+        );
+      }
+      if (!_firmaCoincide(adjunto.mimeType, adjunto.bytes)) {
+        throw const IaProxyException('MIME_NO_COINCIDE', estadoHttp: 415);
+      }
+      total += cantidad;
+      if (total > maximoBytesAdjuntos) {
+        throw const IaProxyException(
+          'ADJUNTOS_DEMASIADO_GRANDES',
+          estadoHttp: 413,
+        );
+      }
+    }
+  }
+
+  static bool _firmaCoincide(String mimeType, Uint8List bytes) {
+    // Comparaciones directas para no interpretar ni conservar el contenido.
+    bool coincideEn(int inicio, List<int> firma) {
+      if (bytes.length < inicio + firma.length) return false;
+      for (var i = 0; i < firma.length; i++) {
+        if (bytes[inicio + i] != firma[i]) return false;
+      }
+      return true;
+    }
+
+    return switch (mimeType) {
+      'image/jpeg' => coincideEn(0, const [0xFF, 0xD8, 0xFF]),
+      'image/png' => coincideEn(0, const [
+          0x89,
+          0x50,
+          0x4E,
+          0x47,
+          0x0D,
+          0x0A,
+          0x1A,
+          0x0A,
+        ]),
+      'image/webp' => coincideEn(0, const [0x52, 0x49, 0x46, 0x46]) &&
+          coincideEn(8, const [0x57, 0x45, 0x42, 0x50]),
+      'application/pdf' => coincideEn(0, const [0x25, 0x50, 0x44, 0x46, 0x2D]),
+      'audio/mp4' => coincideEn(4, const [0x66, 0x74, 0x79, 0x70]),
+      _ => false,
+    };
   }
 
   static Future<String?> _obtenerFirebaseIdToken() async {

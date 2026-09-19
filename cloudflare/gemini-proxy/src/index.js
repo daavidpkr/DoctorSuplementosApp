@@ -1,9 +1,20 @@
 const PROJECT_ID = 'doctorsuplementos-4bbb1';
 const MODEL = 'gemini-3.1-flash-lite';
-const MAX_BODY_BYTES = 70000;
+const MAX_BODY_BYTES = 18 * 1024 * 1024;
 const MAX_PROMPT_BYTES = 60000;
+const MAX_ATTACHMENTS = 5;
+const MAX_ATTACHMENT_BYTES = 8 * 1024 * 1024;
+const MAX_TOTAL_ATTACHMENT_BYTES = 12 * 1024 * 1024;
 const MAX_OUTPUT_TOKENS = 4096;
+const AUTH_TIMEOUT_MS = 10000;
 const UPSTREAM_TIMEOUT_MS = 55000;
+const ALLOWED_MIME_TYPES = new Set([
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+  'application/pdf',
+  'audio/mp4',
+]);
 const ALLOWED_ORIGINS = new Set([
   'https://daavidpkr.github.io',
   'http://localhost:7357',
@@ -27,15 +38,18 @@ function response(origin, status, code, message) {
 }
 
 function success(origin, text) {
+  const headers = {
+    'Content-Type': 'application/json; charset=utf-8',
+    'Cache-Control': 'no-store',
+    'X-Content-Type-Options': 'nosniff',
+  };
+  if (origin && ALLOWED_ORIGINS.has(origin)) {
+    headers['Access-Control-Allow-Origin'] = origin;
+    headers.Vary = 'Origin';
+  }
   return new Response(JSON.stringify({text}), {
     status: 200,
-    headers: {
-      'Content-Type': 'application/json; charset=utf-8',
-      'Cache-Control': 'no-store',
-      'X-Content-Type-Options': 'nosniff',
-      'Access-Control-Allow-Origin': origin,
-      Vary: 'Origin',
-    },
+    headers,
   });
 }
 
@@ -68,22 +82,88 @@ async function validateFirebaseToken(token, firebaseApiKey) {
     return false;
   }
 
-  const verification = await fetch(
-    'https://identitytoolkit.googleapis.com/v1/accounts:lookup',
-    {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Goog-Api-Key': firebaseApiKey,
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), AUTH_TIMEOUT_MS);
+  let verification;
+  try {
+    verification = await fetch(
+      'https://identitytoolkit.googleapis.com/v1/accounts:lookup',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Goog-Api-Key': firebaseApiKey,
+        },
+        body: JSON.stringify({idToken: token}),
+        signal: controller.signal,
       },
-      body: JSON.stringify({idToken: token}),
-    },
-  );
+    );
+  } finally {
+    clearTimeout(timeout);
+  }
   if (!verification.ok) return false;
   const body = await verification.json();
   return Array.isArray(body.users) &&
       body.users.length === 1 &&
       body.users[0]?.localId === claims.sub;
+}
+
+function decodedBase64Bytes(data) {
+  if (typeof data !== 'string' || data.length === 0 || data.length % 4 !== 0 ||
+      !/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(data)) {
+    return -1;
+  }
+  const padding = data.endsWith('==') ? 2 : data.endsWith('=') ? 1 : 0;
+  return (data.length / 4) * 3 - padding;
+}
+
+function attachmentSignatureMatches(mimeType, data) {
+  let prefix;
+  try {
+    prefix = Uint8Array.from(atob(data.slice(0, 64)), (char) => char.charCodeAt(0));
+  } catch (_) {
+    return false;
+  }
+  const matchesAt = (offset, signature) =>
+    prefix.length >= offset + signature.length &&
+    signature.every((value, index) => prefix[offset + index] === value);
+  switch (mimeType) {
+    case 'image/jpeg':
+      return matchesAt(0, [0xFF, 0xD8, 0xFF]);
+    case 'image/png':
+      return matchesAt(0, [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]);
+    case 'image/webp':
+      return matchesAt(0, [0x52, 0x49, 0x46, 0x46]) &&
+        matchesAt(8, [0x57, 0x45, 0x42, 0x50]);
+    case 'application/pdf':
+      return matchesAt(0, [0x25, 0x50, 0x44, 0x46, 0x2D]);
+    case 'audio/mp4':
+      return matchesAt(4, [0x66, 0x74, 0x79, 0x70]);
+    default:
+      return false;
+  }
+}
+
+function validateAttachments(value) {
+  if (value === undefined) return {attachments: [], totalBytes: 0};
+  if (!Array.isArray(value) || value.length === 0 || value.length > MAX_ATTACHMENTS) {
+    return null;
+  }
+  let totalBytes = 0;
+  for (const attachment of value) {
+    if (!attachment || typeof attachment !== 'object' || Array.isArray(attachment) ||
+        Object.keys(attachment).length !== 2 ||
+        typeof attachment.mimeType !== 'string' ||
+        !ALLOWED_MIME_TYPES.has(attachment.mimeType)) {
+      return null;
+    }
+    const bytes = decodedBase64Bytes(attachment.data);
+    if (bytes <= 0 || bytes > MAX_ATTACHMENT_BYTES) return null;
+    if (!attachmentSignatureMatches(attachment.mimeType, attachment.data)) return null;
+    totalBytes += bytes;
+    if (totalBytes > MAX_TOTAL_ATTACHMENT_BYTES) return null;
+  }
+  return {attachments: value, totalBytes};
 }
 
 function extractText(body) {
@@ -98,7 +178,7 @@ function extractText(body) {
 export default {
   async fetch(request, env) {
     const origin = request.headers.get('Origin') || '';
-    if (!ALLOWED_ORIGINS.has(origin)) {
+    if (origin && !ALLOWED_ORIGINS.has(origin)) {
       return response(null, 403, 'ORIGEN_NO_PERMITIDO', 'Origen no permitido.');
     }
 
@@ -181,13 +261,17 @@ export default {
     if (!payload ||
         typeof payload !== 'object' ||
         Array.isArray(payload) ||
-        Object.keys(payload).length !== 1 ||
+        !Object.keys(payload).every((key) => key === 'prompt' || key === 'attachments') ||
         typeof payload.prompt !== 'string') {
       return response(origin, 400, 'PAYLOAD_INVALIDO', 'Solicitud inválida.');
     }
     const promptBytes = new TextEncoder().encode(payload.prompt).length;
     if (payload.prompt.trim().length === 0 || promptBytes > MAX_PROMPT_BYTES) {
       return response(origin, 400, 'PROMPT_INVALIDO', 'Texto inválido.');
+    }
+    const validatedAttachments = validateAttachments(payload.attachments);
+    if (!validatedAttachments) {
+      return response(origin, 400, 'ADJUNTOS_INVALIDOS', 'Archivos adjuntos inválidos.');
     }
 
     const controller = new AbortController();
@@ -203,7 +287,18 @@ export default {
             'X-Goog-Api-Key': env.GEMINI_API_KEY,
           },
           body: JSON.stringify({
-            contents: [{role: 'user', parts: [{text: payload.prompt}]}],
+            contents: [{
+              role: 'user',
+              parts: [
+                {text: payload.prompt},
+                ...validatedAttachments.attachments.map((attachment) => ({
+                  inlineData: {
+                    mimeType: attachment.mimeType,
+                    data: attachment.data,
+                  },
+                })),
+              ],
+            }],
             generationConfig: {maxOutputTokens: MAX_OUTPUT_TOKENS},
           }),
           signal: controller.signal,

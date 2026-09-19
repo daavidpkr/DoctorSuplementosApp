@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
-import 'package:google_generative_ai/google_generative_ai.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -70,14 +68,6 @@ Future<void> main() async {
   await IdiomaService.inicializar();
   await PaisService.inicializar();
   runApp(const DoctorSuplementos());
-}
-
-String get geminiApiKey {
-  const apiKey = String.fromEnvironment('GEMINI_API_KEY');
-  if (apiKey.isEmpty) {
-    throw StateError('Falta configurar GEMINI_API_KEY para esta plataforma.');
-  }
-  return apiKey;
 }
 
 String get copyrightOwner {
