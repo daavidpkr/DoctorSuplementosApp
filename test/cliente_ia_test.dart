@@ -5,6 +5,8 @@ import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:doctor_suplementos/main.dart';
 
+const _proxyPrueba = 'https://localhost:8787/v1/generate';
+
 class _AdaptadorPrueba implements HttpClientAdapter {
   final Future<ResponseBody> Function(RequestOptions options) responder;
 
@@ -31,6 +33,44 @@ Dio _dioCon(
 }
 
 void main() {
+  test('build sin dart-define usa el Worker de produccion', () {
+    expect(
+      ClienteIa.resolverEndpoint(),
+      Uri.parse('${ClienteIa.workerPredeterminado}/v1/generate'),
+    );
+  });
+
+  test('valor personalizado HTTPS y autorizado se acepta', () {
+    expect(
+      ClienteIa.resolverEndpoint(urlProxy: 'https://localhost:9443'),
+      Uri.parse('https://localhost:9443/v1/generate'),
+    );
+    expect(
+      ClienteIa.resolverEndpoint(
+        urlProxy: '${ClienteIa.workerPredeterminado}/v1/generate',
+      ),
+      Uri.parse('${ClienteIa.workerPredeterminado}/v1/generate'),
+    );
+  });
+
+  test('URL vacia, HTTP o host no autorizado se rechazan', () {
+    for (final valor in [
+      '',
+      'http://localhost:8787',
+      'http://doctor-suplementos-gemini-proxy.octor-uplementos.workers.dev',
+      'https://proxy.example/v1/generate',
+    ]) {
+      expect(
+        () => ClienteIa.resolverEndpoint(urlProxy: valor),
+        throwsA(
+          isA<IaProxyException>().having(
+              (error) => error.codigo, 'codigo', 'PROXY_NO_CONFIGURADO'),
+        ),
+        reason: valor,
+      );
+    }
+  });
+
   test('cliente proxy envia token y devuelve texto', () async {
     late RequestOptions solicitud;
     final dio = _dioCon((options) async {
@@ -46,7 +86,7 @@ void main() {
 
     final respuesta = await ClienteIa.generarTexto(
       'Prompt sin cambios',
-      urlProxy: 'https://proxy.example/v1/generate',
+      urlProxy: _proxyPrueba,
       obtenerToken: () async => 'firebase-id-token',
       clienteHttp: dio,
     );
@@ -66,7 +106,7 @@ void main() {
     await expectLater(
       ClienteIa.generarTexto(
         'Prompt',
-        urlProxy: 'https://proxy.example/v1/generate',
+        urlProxy: _proxyPrueba,
         obtenerToken: () async => null,
         clienteHttp: dio,
       ),
@@ -92,7 +132,7 @@ void main() {
     await expectLater(
       ClienteIa.generarTexto(
         'Prompt',
-        urlProxy: 'https://proxy.example/v1/generate',
+        urlProxy: _proxyPrueba,
         obtenerToken: () async => 'token',
         clienteHttp: dio,
       ),
@@ -126,7 +166,7 @@ void main() {
           bytes: Uint8List.fromList([0x25, 0x50, 0x44, 0x46, 0x2D]),
         ),
       ],
-      urlProxy: 'https://proxy.example/v1/generate',
+      urlProxy: _proxyPrueba,
       obtenerToken: () async => 'firebase-id-token',
       clienteHttp: dio,
     );
@@ -153,7 +193,7 @@ void main() {
         adjuntos: [
           ArchivoAdjuntoIA(nombre: 'archivo', mimeType: mime, bytes: bytes),
         ],
-        urlProxy: 'https://proxy.example/v1/generate',
+        urlProxy: _proxyPrueba,
         obtenerToken: () async => 'token',
         clienteHttp: dio,
       );
@@ -195,7 +235,7 @@ void main() {
     try {
       await ClienteIa.generarTexto(
         'Prompt',
-        urlProxy: 'https://proxy.example/v1/generate',
+        urlProxy: _proxyPrueba,
         obtenerToken: () async => 'token',
         clienteHttp: dio,
       );

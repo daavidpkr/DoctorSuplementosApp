@@ -17,7 +17,17 @@ class IaProxyException implements Exception {
 }
 
 class ClienteIa {
-  static const String _urlProxy = String.fromEnvironment('IA_PROXY_URL');
+  static const String workerPredeterminado =
+      'https://doctor-suplementos-gemini-proxy.octor-uplementos.workers.dev';
+  static const String _workerConfigurado = String.fromEnvironment(
+    'GEMINI_PROXY_URL',
+    defaultValue: workerPredeterminado,
+  );
+  static const Set<String> _hostsProxyAutorizados = {
+    'doctor-suplementos-gemini-proxy.octor-uplementos.workers.dev',
+    'localhost',
+    '127.0.0.1',
+  };
   static const int _maximoBytesPrompt = 60000;
   static const int maximoAdjuntos = 5;
   static const int maximoBytesPorAdjunto = 8 * 1024 * 1024;
@@ -44,16 +54,7 @@ class ClienteIa {
       }
       _validarAdjuntos(adjuntos);
 
-      final endpoint = (urlProxy ?? _urlProxy).trim();
-      final uri = Uri.tryParse(endpoint);
-      final origenLocal =
-          uri != null && (uri.host == 'localhost' || uri.host == '127.0.0.1');
-      if (uri == null ||
-          !uri.hasScheme ||
-          (!origenLocal && uri.scheme != 'https') ||
-          (origenLocal && uri.scheme != 'http' && uri.scheme != 'https')) {
-        throw const IaProxyException('PROXY_NO_CONFIGURADO');
-      }
+      final uri = resolverEndpoint(urlProxy: urlProxy);
 
       final tokenProvider = obtenerToken ?? _obtenerFirebaseIdToken;
       final token = (await tokenProvider())?.trim() ?? '';
@@ -112,6 +113,29 @@ class ClienteIa {
     } catch (_) {
       throw const IaProxyException('ERROR_CLIENTE');
     }
+  }
+
+  static Uri resolverEndpoint({String? urlProxy}) {
+    final valor = (urlProxy ?? _workerConfigurado).trim();
+    final uri = Uri.tryParse(valor);
+    if (valor.isEmpty ||
+        uri == null ||
+        uri.scheme != 'https' ||
+        uri.host.isEmpty ||
+        !_hostsProxyAutorizados.contains(uri.host.toLowerCase()) ||
+        uri.userInfo.isNotEmpty ||
+        uri.hasQuery ||
+        uri.hasFragment ||
+        (uri.host ==
+                'doctor-suplementos-gemini-proxy.octor-uplementos.workers.dev' &&
+            uri.hasPort &&
+            uri.port != 443) ||
+        (uri.path.isNotEmpty &&
+            uri.path != '/' &&
+            uri.path != '/v1/generate')) {
+      throw const IaProxyException('PROXY_NO_CONFIGURADO');
+    }
+    return uri.replace(path: '/v1/generate');
   }
 
   static void _validarAdjuntos(List<ArchivoAdjuntoIA> adjuntos) {
