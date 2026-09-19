@@ -26,13 +26,23 @@ class HistorialService {
     raw.insert(0, jsonEncode(registro));
     await prefs.setStringList(prefsKey, raw);
 
-    try {
-      await FirebaseFirestore.instance.collection('diagnosticos').add({
-        ...registro,
-        'creadoEn': FieldValue.serverTimestamp(),
-      });
-    } catch (e) {
-      debugPrint('No se pudo guardar el diagnostico en Firebase: $e');
+    final usuario =
+        await AutenticacionFirebaseService.autenticarSilenciosamente();
+    if (usuario == null) {
+      debugPrint(
+        'Diagnostico guardado localmente; no se sincronizo porque no hay un usuario autenticado.',
+      );
+    } else {
+      try {
+        await FirebaseFirestore.instance.collection('diagnosticos').add({
+          ...registro,
+          'propietarioUid': usuario.uid,
+          'pais': datos['pais'] ?? PaisService.actual.value.codigo,
+          'creadoEn': FieldValue.serverTimestamp(),
+        });
+      } catch (e) {
+        debugPrint('No se pudo guardar el diagnostico en Firebase: $e');
+      }
     }
 
     await ImpactoService.registrar(

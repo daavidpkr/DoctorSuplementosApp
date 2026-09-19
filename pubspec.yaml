@@ -22,6 +22,7 @@ dependencies:
   
   # Firebase: Conexión y Base de Datos
   firebase_core: ^4.9.0
+  firebase_auth: 6.5.1
   cloud_firestore: ^6.4.1
   shared_preferences: ^2.3.2
   image_picker: ^1.1.2

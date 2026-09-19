@@ -1,0 +1,167 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function autenticado() {
+      return request.auth != null;
+    }
+
+    function esUsuario(uid) {
+      return autenticado() && request.auth.uid == uid;
+    }
+
+    function paisValido(pais) {
+      return pais is string && pais in ['ec', 'us'];
+    }
+
+    function propietarioValido(data) {
+      return autenticado()
+        && data.propietarioUid is string
+        && data.propietarioUid == request.auth.uid;
+    }
+
+    function propietarioInmutable() {
+      return request.resource.data.propietarioUid
+        == resource.data.propietarioUid;
+    }
+
+    function perfilValido(uid) {
+      let data = request.resource.data;
+      return esUsuario(uid)
+        && propietarioValido(data)
+        && data.keys().hasAll([
+          'nombre',
+          'fotoBase64',
+          'codigoSocio',
+          'telefonoSocio',
+          'propietarioUid',
+          'pais',
+          'actualizadoEn'
+        ])
+        && data.keys().hasOnly([
+          'nombre',
+          'fotoBase64',
+          'codigoSocio',
+          'telefonoSocio',
+          'propietarioUid',
+          'pais',
+          'actualizadoEn'
+        ])
+        && data.nombre is string
+        && data.nombre.size() <= 200
+        && data.fotoBase64 is string
+        && data.fotoBase64.size() <= 1500000
+        && data.codigoSocio is string
+        && data.codigoSocio.size() <= 100
+        && data.telefonoSocio is string
+        && data.telefonoSocio.size() <= 40
+        && paisValido(data.pais)
+        && data.actualizadoEn is timestamp;
+    }
+
+    function diagnosticoValido() {
+      let data = request.resource.data;
+      return propietarioValido(data)
+        && data.keys().hasAll([
+          'fecha',
+          'titulo',
+          'nombre',
+          'resultado',
+          'datos',
+          'tipo',
+          'propietarioUid',
+          'pais',
+          'creadoEn'
+        ])
+        && data.keys().hasOnly([
+          'fecha',
+          'titulo',
+          'nombre',
+          'resultado',
+          'datos',
+          'tipo',
+          'propietarioUid',
+          'pais',
+          'creadoEn'
+        ])
+        && data.fecha is string
+        && data.fecha.size() <= 40
+        && data.titulo is string
+        && data.titulo.size() <= 300
+        && data.nombre is string
+        && data.nombre.size() <= 200
+        && data.resultado is string
+        && data.resultado.size() <= 900000
+        && data.datos is map
+        && data.datos.size() <= 20
+        && data.tipo is string
+        && data.tipo.size() <= 80
+        && paisValido(data.pais)
+        && data.creadoEn is timestamp;
+    }
+
+    function impactoValido() {
+      let data = request.resource.data;
+      return propietarioValido(data)
+        && data.keys().hasAll([
+          'tipo',
+          'titulo',
+          'fecha',
+          'datos',
+          'propietarioUid',
+          'pais',
+          'creadoEn'
+        ])
+        && data.keys().hasOnly([
+          'tipo',
+          'titulo',
+          'fecha',
+          'datos',
+          'propietarioUid',
+          'pais',
+          'creadoEn'
+        ])
+        && data.tipo is string
+        && data.tipo.size() <= 80
+        && data.titulo is string
+        && data.titulo.size() <= 300
+        && data.fecha is string
+        && data.fecha.size() <= 40
+        && data.datos is map
+        && data.datos.size() <= 30
+        && paisValido(data.pais)
+        && data.creadoEn is timestamp;
+    }
+
+    match /perfiles_asesores/{uid} {
+      allow read: if esUsuario(uid)
+        && resource.data.propietarioUid == request.auth.uid;
+      allow create: if perfilValido(uid);
+      allow update: if perfilValido(uid) && propietarioInmutable();
+      allow delete: if esUsuario(uid)
+        && resource.data.propietarioUid == request.auth.uid;
+    }
+
+    match /diagnosticos/{documentoId} {
+      allow read: if autenticado()
+        && resource.data.propietarioUid == request.auth.uid;
+      allow create: if diagnosticoValido();
+      allow update: if diagnosticoValido() && propietarioInmutable();
+      allow delete: if autenticado()
+        && resource.data.propietarioUid == request.auth.uid;
+    }
+
+    match /impacto_4life/{documentoId} {
+      allow read: if autenticado()
+        && resource.data.propietarioUid == request.auth.uid;
+      allow create: if impactoValido();
+      allow update: if impactoValido() && propietarioInmutable();
+      allow delete: if autenticado()
+        && resource.data.propietarioUid == request.auth.uid;
+    }
+
+    match /{documento=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -57,7 +57,6 @@ class PerfilAsesor {
 
 class PerfilService {
   static const String prefsKey = 'perfil_asesor_4life';
-  static const String _documentId = 'perfil_principal';
 
   static Future<PerfilAsesor> cargar() async {
     final prefs = await SharedPreferences.getInstance();
@@ -73,12 +72,23 @@ class PerfilService {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(prefsKey, jsonEncode(perfil.toJson()));
 
+    final usuario =
+        await AutenticacionFirebaseService.autenticarSilenciosamente();
+    if (usuario == null) {
+      debugPrint(
+        'Perfil guardado localmente; no se sincronizo porque no hay un usuario autenticado.',
+      );
+      return;
+    }
+
     try {
       await FirebaseFirestore.instance
           .collection('perfiles_asesores')
-          .doc(_documentId)
+          .doc(usuario.uid)
           .set({
         ...perfil.toJson(),
+        'propietarioUid': usuario.uid,
+        'pais': PaisService.actual.value.codigo,
         'actualizadoEn': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
     } catch (e) {
@@ -329,9 +339,20 @@ class ImpactoService {
 
     if (!guardarEnFirebase) return;
 
+    final usuario =
+        await AutenticacionFirebaseService.autenticarSilenciosamente();
+    if (usuario == null) {
+      debugPrint(
+        'Impacto guardado localmente; no se sincronizo porque no hay un usuario autenticado.',
+      );
+      return;
+    }
+
     try {
       await FirebaseFirestore.instance.collection('impacto_4life').add({
         ...registro,
+        'propietarioUid': usuario.uid,
+        'pais': PaisService.actual.value.codigo,
         'creadoEn': FieldValue.serverTimestamp(),
       });
     } catch (e) {

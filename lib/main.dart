@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_generative_ai/google_generative_ai.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/services.dart';
@@ -27,6 +28,7 @@ import 'dart:math' as math;
 part 'core/catalogo_productos.dart';
 part 'core/catalogo_productos_usa.dart';
 part 'core/datos_catalogo_usa.dart';
+part 'core/servicio_autenticacion_firebase.dart';
 part 'core/servicios_app.dart';
 part 'core/servicios_historial.dart';
 part 'ui/selector_estilizado.dart';
@@ -61,7 +63,10 @@ const FirebaseOptions _firebaseOptionsEscritorio = FirebaseOptions(
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await inicializarVariablesEntorno();
-  await inicializarFirebaseSeguro();
+  final firebaseInicializado = await inicializarFirebaseSeguro();
+  if (firebaseInicializado) {
+    await AutenticacionFirebaseService.autenticarSilenciosamente();
+  }
   await IdiomaService.inicializar();
   await PaisService.inicializar();
   runApp(const DoctorSuplementos());
@@ -92,7 +97,7 @@ String get copyrightOwner {
   }
 }
 
-Future<void> inicializarFirebaseSeguro() async {
+Future<bool> inicializarFirebaseSeguro() async {
   try {
     try {
       await Firebase.initializeApp().timeout(const Duration(seconds: 5));
@@ -103,8 +108,11 @@ Future<void> inicializarFirebaseSeguro() async {
     FirebaseFirestore.instance.settings = const Settings(
       persistenceEnabled: true,
     );
+    AutenticacionFirebaseService.habilitarFirebase();
+    return true;
   } catch (e) {
     debugPrint('Firebase no se pudo inicializar en este dispositivo: $e');
+    return false;
   }
 }
 
