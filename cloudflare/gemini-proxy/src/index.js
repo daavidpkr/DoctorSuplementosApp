@@ -14,6 +14,7 @@ const ALLOWED_MIME_TYPES = new Set([
   'image/webp',
   'application/pdf',
   'audio/mp4',
+  'audio/webm',
 ]);
 const ALLOWED_ORIGINS = new Set([
   'https://daavidpkr.github.io',
@@ -139,6 +140,8 @@ function attachmentSignatureMatches(mimeType, data) {
       return matchesAt(0, [0x25, 0x50, 0x44, 0x46, 0x2D]);
     case 'audio/mp4':
       return matchesAt(4, [0x66, 0x74, 0x79, 0x70]);
+    case 'audio/webm':
+      return matchesAt(0, [0x1A, 0x45, 0xDF, 0xA3]);
     default:
       return false;
   }

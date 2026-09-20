@@ -158,6 +158,7 @@ describe('Gemini proxy', () => {
       ['image/webp', [0x52, 0x49, 0x46, 0x46, 0, 0, 0, 0, 0x57, 0x45, 0x42, 0x50]],
       ['application/pdf', [0x25, 0x50, 0x44, 0x46, 0x2D]],
       ['audio/mp4', [0, 0, 0, 0, 0x66, 0x74, 0x79, 0x70]],
+      ['audio/webm', [0x1A, 0x45, 0xDF, 0xA3]],
     ];
     vi.spyOn(globalThis, 'fetch').mockImplementation(async (url) => {
       if (String(url).includes('identitytoolkit')) return validIdentity();
