@@ -244,16 +244,30 @@ class _PaginaTestimonios4LifeState extends State<PaginaTestimonios4Life> {
     setState(() => _compartiendoVideo = true);
 
     try {
-      final carpetaTemporal = await getTemporaryDirectory();
       final nombreArchivo = '${_nombreArchivoSeguro(testimonio.titulo)}.mp4';
-      final ruta =
-          '${carpetaTemporal.path}${Platform.pathSeparator}$nombreArchivo';
-      await Dio().download(testimonio.videoUrl, ruta);
-      await Share.shareXFiles(
-        [XFile(ruta, mimeType: 'video/mp4', name: nombreArchivo)],
-        subject: testimonio.titulo,
-        text: testimonio.descripcion,
+      final respuesta = await Dio(BaseOptions(
+        connectTimeout: const Duration(seconds: 10),
+        receiveTimeout: const Duration(minutes: 5),
+      )).get<List<int>>(
+        testimonio.videoUrl,
+        options: Options(responseType: ResponseType.bytes),
       );
+      final datos = respuesta.data;
+      if (datos == null || datos.isEmpty) {
+        throw const FormatException('Video vacío.');
+      }
+      final resultado = await compartirArchivoBytes(
+        bytes: Uint8List.fromList(datos),
+        nombre: nombreArchivo,
+        mimeType: 'video/mp4',
+        asunto: testimonio.titulo,
+        texto: testimonio.descripcion,
+      );
+      if (resultado == ResultadoCompartirArchivo.cancelado && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Acción cancelada.')),
+        );
+      }
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

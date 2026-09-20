@@ -1,12 +1,10 @@
-import 'dart:io';
-import 'dart:isolate';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
-import 'package:share_plus/share_plus.dart';
+
+import '../platform/archivo_plataforma.dart';
+import '../platform/tarea_pesada.dart';
 
 class SeccionDocumento {
   final String titulo;
@@ -254,28 +252,22 @@ class ServicioCompartir {
       if (!context.mounted) return;
       final nombre = '${_nombreArchivoPdf(documentoElegido.nombreArchivo)}.pdf';
 
-      // Compartir desde una ruta evita que Android tenga que materializar un
-      // XFile en memoria mientras abre el selector de aplicaciones.
-      final carpetaTemporal = await getTemporaryDirectory();
-      final archivo = File(
-        '${carpetaTemporal.path}${Platform.pathSeparator}$nombre',
-      );
-      await archivo.writeAsBytes(bytes, flush: true);
-      if (!context.mounted) return;
-
       Navigator.of(context, rootNavigator: true).pop();
       dialogoProcesandoVisible = false;
-      await Share.shareXFiles(
-        [
-          XFile(
-            archivo.path,
-            mimeType: 'application/pdf',
-            name: nombre,
-          ),
-        ],
-        subject: documentoElegido.titulo,
-        text: documentoElegido.titulo,
+      final resultado = await compartirArchivoBytes(
+        bytes: bytes,
+        nombre: nombre,
+        mimeType: 'application/pdf',
+        asunto: documentoElegido.titulo,
+        texto: documentoElegido.titulo,
       );
+      if (resultado == ResultadoCompartirArchivo.cancelado && context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content:
+                  Text(ingles ? 'Action cancelled.' : 'Acción cancelada.')),
+        );
+      }
     } catch (error) {
       if (!context.mounted) return;
       if (dialogoProcesandoVisible) {
@@ -411,7 +403,7 @@ class ServicioCompartir {
     // El maquetado y la compresión del PDF son trabajo intensivo de CPU. Si se
     // ejecutan en el isolate de la interfaz Android puede mostrar un ANR aunque
     // el método sea async.
-    return Isolate.run(
+    return ejecutarTareaPesada(
       () => _generarPdfEnSegundoPlano(documento, fuenteBytes, recursos),
     );
   }

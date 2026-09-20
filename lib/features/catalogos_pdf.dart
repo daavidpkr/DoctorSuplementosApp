@@ -80,13 +80,22 @@ class _PaginaCatalogosPdf4LifeState extends State<PaginaCatalogosPdf4Life> {
     setState(() => _compartiendoId = catalogo.id);
 
     try {
-      final archivo = await _obtenerArchivoCatalogoPdf(catalogo);
-      final nombreArchivo = archivo.uri.pathSegments.last;
-      await Share.shareXFiles(
-        [XFile(archivo.path, mimeType: 'application/pdf', name: nombreArchivo)],
-        subject: catalogo.titulo,
-        text: catalogo.descripcion,
+      final bytes = await _obtenerBytesCatalogoPdf(catalogo);
+      final nombreArchivo =
+          '${_nombreArchivoCatalogoSeguro(catalogo.titulo)}.pdf';
+      final resultado = await compartirArchivoBytes(
+        bytes: bytes,
+        nombre: nombreArchivo,
+        mimeType: 'application/pdf',
+        asunto: catalogo.titulo,
+        texto: catalogo.descripcion,
       );
+      if (resultado == ResultadoCompartirArchivo.cancelado && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content: Text(txtApp('Acción cancelada.', 'Action cancelled.'))),
+        );
+      }
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -306,7 +315,7 @@ class _VisorCatalogoPdf4Life extends StatefulWidget {
 }
 
 class _VisorCatalogoPdf4LifeState extends State<_VisorCatalogoPdf4Life> {
-  File? _archivoPdf;
+  Uint8List? _bytesPdf;
   bool _cargando = true;
   String? _error;
 
@@ -323,13 +332,13 @@ class _VisorCatalogoPdf4LifeState extends State<_VisorCatalogoPdf4Life> {
     });
 
     try {
-      final archivo = await _obtenerArchivoCatalogoPdf(
+      final bytes = await _obtenerBytesCatalogoPdf(
         widget.catalogo,
         forzarDescarga: forzarDescarga,
       );
       if (!mounted) return;
       setState(() {
-        _archivoPdf = archivo;
+        _bytesPdf = bytes;
         _cargando = false;
       });
     } catch (_) {
@@ -416,8 +425,8 @@ class _VisorCatalogoPdf4LifeState extends State<_VisorCatalogoPdf4Life> {
                     ),
                   ),
                 )
-              : SfPdfViewer.file(
-                  _archivoPdf!,
+              : SfPdfViewer.memory(
+                  _bytesPdf!,
                   canShowScrollHead: true,
                   canShowScrollStatus: true,
                   enableDoubleTapZooming: false,
@@ -434,26 +443,37 @@ class _VisorCatalogoPdf4LifeState extends State<_VisorCatalogoPdf4Life> {
   }
 }
 
-Future<File> _obtenerArchivoCatalogoPdf(
+final Map<String, Uint8List> _cacheCatalogosPdf = {};
+
+Future<Uint8List> _obtenerBytesCatalogoPdf(
   CatalogoPdf4Life catalogo, {
   bool forzarDescarga = false,
 }) async {
-  final carpetaTemporal = await getTemporaryDirectory();
-  final nombreArchivo = '${_nombreArchivoCatalogoSeguro(catalogo.titulo)}.pdf';
-  final archivo = File(
-    '${carpetaTemporal.path}${Platform.pathSeparator}$nombreArchivo',
-  );
-
-  if (!forzarDescarga && await archivo.exists() && await archivo.length() > 0) {
-    return archivo;
+  if (!forzarDescarga) {
+    final cache = _cacheCatalogosPdf[catalogo.url];
+    if (cache != null) return cache;
   }
-
-  await Dio().download(
+  final respuesta = await Dio(BaseOptions(
+    connectTimeout: const Duration(seconds: 10),
+    receiveTimeout: const Duration(seconds: 60),
+  )).get<List<int>>(
     catalogo.url,
-    archivo.path,
     options: Options(responseType: ResponseType.bytes),
   );
-  return archivo;
+  final datos = respuesta.data;
+  if (datos == null || datos.length < 5) {
+    throw const FormatException('PDF vacío.');
+  }
+  final bytes = Uint8List.fromList(datos);
+  if (bytes[0] != 0x25 ||
+      bytes[1] != 0x50 ||
+      bytes[2] != 0x44 ||
+      bytes[3] != 0x46 ||
+      bytes[4] != 0x2D) {
+    throw const FormatException('El contenido descargado no es un PDF.');
+  }
+  _cacheCatalogosPdf[catalogo.url] = bytes;
+  return bytes;
 }
 
 String _nombreArchivoCatalogoSeguro(String texto) {

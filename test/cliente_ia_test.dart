@@ -223,6 +223,73 @@ void main() {
     expect(llamadas, 0);
   });
 
+  test('selección por bytes acepta JPEG, PNG, WebP, PDF y WebM', () {
+    final muestras = <String, Uint8List>{
+      'foto.jpg': Uint8List.fromList([0xFF, 0xD8, 0xFF]),
+      'foto.png': Uint8List.fromList(
+        [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A],
+      ),
+      'foto.webp': Uint8List.fromList(
+        [0x52, 0x49, 0x46, 0x46, 0, 0, 0, 0, 0x57, 0x45, 0x42, 0x50],
+      ),
+      'documento.pdf': Uint8List.fromList([0x25, 0x50, 0x44, 0x46, 0x2D]),
+      'nota.webm': Uint8List.fromList([0x1A, 0x45, 0xDF, 0xA3]),
+    };
+
+    final adjuntos = muestras.entries
+        .map((muestra) => crearAdjuntoIaValidado(
+              nombre: muestra.key,
+              bytes: muestra.value,
+            ))
+        .toList();
+
+    expect(adjuntos.map((item) => item.mimeType), [
+      'image/jpeg',
+      'image/png',
+      'image/webp',
+      'application/pdf',
+      'audio/webm',
+    ]);
+    expect(() => ClienteIa.validarAdjuntos(adjuntos), returnsNormally);
+  });
+
+  test('validación conserva límites de cantidad y total', () {
+    final seisPdfs = List.generate(
+      6,
+      (indice) => ArchivoAdjuntoIA(
+        nombre: '$indice.pdf',
+        mimeType: 'application/pdf',
+        bytes: Uint8List.fromList([0x25, 0x50, 0x44, 0x46, 0x2D]),
+      ),
+    );
+    expect(
+      () => ClienteIa.validarAdjuntos(seisPdfs),
+      throwsA(isA<IaProxyException>().having(
+        (error) => error.codigo,
+        'codigo',
+        'DEMASIADOS_ADJUNTOS',
+      )),
+    );
+
+    final adjuntosGrandes = List.generate(
+      2,
+      (indice) => ArchivoAdjuntoIA(
+        nombre: '$indice.pdf',
+        mimeType: 'application/pdf',
+        bytes: Uint8List(7 * 1024 * 1024)
+          ..setAll(0, const [0x25, 0x50, 0x44, 0x46, 0x2D]),
+      ),
+    );
+    expect(
+      () => ClienteIa.validarAdjuntos(adjuntosGrandes),
+      throwsA(isA<IaProxyException>().having(
+        (error) => error.codigo,
+        'codigo',
+        'ADJUNTOS_DEMASIADO_GRANDES',
+      )),
+    );
+  });
+
   test('timeout se propaga y produce mensaje util', () async {
     final dio = _dioCon((options) async {
       throw DioException(

@@ -38,6 +38,7 @@ class ClienteIa {
     'image/webp',
     'application/pdf',
     'audio/mp4',
+    'audio/webm',
   };
 
   static Future<String> generarTexto(
@@ -52,7 +53,7 @@ class ClienteIa {
       if (prompt.trim().isEmpty || bytesPrompt > _maximoBytesPrompt) {
         throw const IaProxyException('PAYLOAD_INVALIDO', estadoHttp: 400);
       }
-      _validarAdjuntos(adjuntos);
+      validarAdjuntos(adjuntos);
 
       final uri = resolverEndpoint(urlProxy: urlProxy);
 
@@ -138,7 +139,7 @@ class ClienteIa {
     return uri.replace(path: '/v1/generate');
   }
 
-  static void _validarAdjuntos(List<ArchivoAdjuntoIA> adjuntos) {
+  static void validarAdjuntos(List<ArchivoAdjuntoIA> adjuntos) {
     if (adjuntos.length > maximoAdjuntos) {
       throw const IaProxyException('DEMASIADOS_ADJUNTOS', estadoHttp: 400);
     }
@@ -193,6 +194,7 @@ class ClienteIa {
           coincideEn(8, const [0x57, 0x45, 0x42, 0x50]),
       'application/pdf' => coincideEn(0, const [0x25, 0x50, 0x44, 0x46, 0x2D]),
       'audio/mp4' => coincideEn(4, const [0x66, 0x74, 0x79, 0x70]),
+      'audio/webm' => coincideEn(0, const [0x1A, 0x45, 0xDF, 0xA3]),
       _ => false,
     };
   }

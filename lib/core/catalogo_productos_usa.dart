@@ -608,7 +608,7 @@ Future<String> _generarIaConReintento(
 
 bool _esErrorIaTransitorio(Object error) {
   if (error is IaProxyException) return error.esTransitorio;
-  if (error is SocketException || error is TimeoutException) return true;
+  if (esSocketException(error) || error is TimeoutException) return true;
   if (error is DioException) {
     return error.type == DioExceptionType.connectionError ||
         error.type == DioExceptionType.connectionTimeout ||
@@ -663,7 +663,7 @@ String mensajeErrorIa(Object error) {
   if (error is PaisConsultaCambioException) {
     return 'El país cambió mientras se generaba la respuesta. Genera nuevamente la consulta.';
   }
-  if (error is SocketException ||
+  if (esSocketException(error) ||
       error is TimeoutException ||
       (error is DioException && _esErrorIaTransitorio(error))) {
     return 'No se pudo conectar con la IA. Verifica tu conexión e inténtalo nuevamente.';

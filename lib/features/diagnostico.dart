@@ -243,22 +243,35 @@ class _FormularioPacienteState extends State<FormularioPaciente> {
         builder: (c) => AlertDialog(title: Text(t), content: Text(m)));
   }
 
+  void _avisarAdjunto(String mensaje) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(mensaje)),
+    );
+  }
+
   Future<void> _tomarFotoDiagnostico() async {
     final imagen = await ImagePicker().pickImage(
       source: ImageSource.camera,
       imageQuality: 88,
     );
-    if (imagen == null) return;
+    if (imagen == null) {
+      _avisarAdjunto(txtApp('Captura cancelada.', 'Capture cancelled.'));
+      return;
+    }
 
-    final bytes = await imagen.readAsBytes();
-    if (!mounted) return;
-    setState(() {
-      _adjunto = ArchivoAdjuntoIA(
+    try {
+      final bytes = await imagen.readAsBytes();
+      final adjunto = crearAdjuntoIaValidado(
         nombre: imagen.name,
-        mimeType: imagen.mimeType ?? 'image/jpeg',
+        mimeDeclarado: imagen.mimeType ?? 'image/jpeg',
         bytes: bytes,
       );
-    });
+      if (!mounted) return;
+      setState(() => _adjunto = adjunto);
+    } catch (error) {
+      _avisarAdjunto(mensajeErrorIa(error));
+    }
   }
 
   Future<void> _seleccionarArchivoDiagnostico() async {
@@ -267,71 +280,94 @@ class _FormularioPacienteState extends State<FormularioPaciente> {
       allowedExtensions: ['pdf', 'png', 'jpg', 'jpeg', 'webp'],
       withData: true,
     );
-    final archivo = resultado?.files.single;
-    final bytes = archivo?.bytes;
-    if (archivo == null || bytes == null) return;
-
-    final extension = (archivo.extension ?? '').toLowerCase();
-    final mime = switch (extension) {
-      'pdf' => 'application/pdf',
-      'png' => 'image/png',
-      'webp' => 'image/webp',
-      _ => 'image/jpeg',
-    };
-
-    if (!mounted) return;
-    setState(() {
-      _adjunto = ArchivoAdjuntoIA(
+    if (resultado == null) {
+      _avisarAdjunto(txtApp('Selección cancelada.', 'Selection cancelled.'));
+      return;
+    }
+    final archivo = resultado.files.single;
+    final bytes = archivo.bytes;
+    try {
+      if (archivo.size <= 0 || archivo.size > ClienteIa.maximoBytesPorAdjunto) {
+        throw const IaProxyException(
+          'ADJUNTO_DEMASIADO_GRANDE',
+          estadoHttp: 413,
+        );
+      }
+      if (bytes == null) {
+        throw StateError(
+          txtApp('No se pudo leer el archivo.', 'The file could not be read.'),
+        );
+      }
+      final adjunto = crearAdjuntoIaValidado(
         nombre: archivo.name,
-        mimeType: mime,
         bytes: bytes,
       );
-    });
+      if (!mounted) return;
+      setState(() => _adjunto = adjunto);
+    } catch (error) {
+      _avisarAdjunto(
+        error is StateError ? error.message : mensajeErrorIa(error),
+      );
+    }
   }
 
   Future<void> _alternarAudioDiagnostico() async {
     if (_grabandoAudio) {
-      final path = await _audioRecorder.stop();
-      if (!mounted) return;
-      setState(() => _grabandoAudio = false);
-      if (path == null) return;
-
-      final archivo = File(path);
-      final bytes = await archivo.readAsBytes();
-      await archivo.delete().catchError((_) => archivo);
-      if (bytes.isEmpty || !mounted) return;
-
-      setState(() {
-        _adjunto = ArchivoAdjuntoIA(
-          nombre: 'Nota de voz para diagnóstico.m4a',
-          mimeType: 'audio/mp4',
+      try {
+        final path = await _audioRecorder.stop();
+        if (path == null) {
+          _avisarAdjunto(txtApp(
+            'Grabación cancelada.',
+            'Recording cancelled.',
+          ));
+          return;
+        }
+        final bytes = await leerYEliminarArchivoTemporal(path);
+        final adjunto = crearAdjuntoIaValidado(
+          nombre: 'Nota de voz para diagnóstico.${kIsWeb ? 'webm' : 'm4a'}',
+          mimeDeclarado: kIsWeb ? 'audio/webm' : 'audio/mp4',
           bytes: bytes,
         );
-      });
+        if (!mounted) return;
+        setState(() => _adjunto = adjunto);
+      } catch (error) {
+        _avisarAdjunto(
+          error is StateError ? error.message : mensajeErrorIa(error),
+        );
+      } finally {
+        if (mounted) setState(() => _grabandoAudio = false);
+      }
       return;
     }
-
-    if (!await _audioRecorder.hasPermission()) {
-      _mostrarDialogoSimple(
-        "Permiso de micrófono",
-        "Activa el permiso del micrófono para grabar la nota de voz.",
+    try {
+      if (!await _audioRecorder.hasPermission()) {
+        throw StateError(txtApp(
+          'Permiso de micrófono denegado. Actívalo en el navegador o dispositivo.',
+          'Microphone permission denied. Enable it in the browser or device.',
+        ));
+      }
+      final encoder = kIsWeb ? AudioEncoder.opus : AudioEncoder.aacLc;
+      if (!await _audioRecorder.isEncoderSupported(encoder)) {
+        throw StateError(txtApp(
+          'Este navegador no admite un formato de audio compatible.',
+          'This browser does not support a compatible audio format.',
+        ));
+      }
+      final extension = kIsWeb ? 'webm' : 'm4a';
+      final path = await crearRutaTemporal(
+        'diagnostico_${DateTime.now().microsecondsSinceEpoch}.$extension',
       );
-      return;
+      await _audioRecorder.start(
+        RecordConfig(encoder: encoder, numChannels: 1, bitRate: 64000),
+        path: path,
+      );
+      if (mounted) setState(() => _grabandoAudio = true);
+    } catch (error) {
+      _avisarAdjunto(error is StateError
+          ? error.message
+          : txtApp('No se pudo iniciar la grabación.',
+              'Recording could not start.'));
     }
-
-    final carpetaTemporal = await getTemporaryDirectory();
-    final path =
-        '${carpetaTemporal.path}/diagnostico_${DateTime.now().microsecondsSinceEpoch}.m4a';
-    await _audioRecorder.start(
-      const RecordConfig(
-        encoder: AudioEncoder.aacLc,
-        numChannels: 1,
-        bitRate: 64000,
-      ),
-      path: path,
-    );
-    if (!mounted) return;
-    setState(() => _grabandoAudio = true);
   }
 
   void _quitarAdjuntoDiagnostico() {
@@ -948,6 +984,25 @@ class _FormularioPacienteState extends State<FormularioPaciente> {
                       ),
                     ),
                   ),
+                  if (_adjunto!.esAudio)
+                    IconButton(
+                      tooltip: txtApp('Reproducir audio', 'Play audio'),
+                      onPressed: () async {
+                        try {
+                          await reproducirAudioBytes(
+                            _adjunto!.bytes,
+                            _adjunto!.mimeType,
+                          );
+                        } catch (_) {
+                          _avisarAdjunto(txtApp(
+                            'No se pudo reproducir el audio en este navegador o dispositivo.',
+                            'Audio could not be played in this browser or device.',
+                          ));
+                        }
+                      },
+                      icon: const Icon(Icons.play_arrow_rounded),
+                      color: const Color(0xFF12248B),
+                    ),
                   IconButton(
                     tooltip: txtApp("Quitar archivo", "Remove file"),
                     onPressed: _quitarAdjuntoDiagnostico,

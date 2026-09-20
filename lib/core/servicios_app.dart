@@ -16,6 +16,35 @@ class ArchivoAdjuntoIA {
   bool get esAudio => mimeType.startsWith('audio/');
 }
 
+ArchivoAdjuntoIA crearAdjuntoIaValidado({
+  required String nombre,
+  required Uint8List bytes,
+  String? mimeDeclarado,
+}) {
+  final extension = nombre.split('.').last.toLowerCase();
+  final mimePorExtension = switch (extension) {
+    'jpg' || 'jpeg' => 'image/jpeg',
+    'png' => 'image/png',
+    'webp' => 'image/webp',
+    'pdf' => 'application/pdf',
+    'm4a' || 'mp4' => 'audio/mp4',
+    'webm' => 'audio/webm',
+    _ => null,
+  };
+  final mimeLimpio = mimeDeclarado?.split(';').first.trim().toLowerCase();
+  final mime = mimePorExtension ?? mimeLimpio;
+  if (mime == null || mime.isEmpty) {
+    throw const IaProxyException('MIME_NO_ADMITIDO', estadoHttp: 415);
+  }
+  final adjunto = ArchivoAdjuntoIA(
+    nombre: nombre,
+    mimeType: mime,
+    bytes: bytes,
+  );
+  ClienteIa.validarAdjuntos([adjunto]);
+  return adjunto;
+}
+
 class PerfilAsesor {
   static const PerfilAsesor porDefecto = PerfilAsesor(
     nombre: 'Socio',

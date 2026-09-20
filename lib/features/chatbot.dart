@@ -172,6 +172,45 @@ class _PaginaChatbotState extends State<PaginaChatbot>
 
   String _txt(String es, String en) => _ingles ? en : es;
 
+  void _avisarArchivo(String mensaje) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(mensaje)),
+    );
+  }
+
+  Future<void> _iniciarGrabacion(String prefijo) async {
+    if (!await _audioRecorder.hasPermission()) {
+      throw StateError(_txt(
+        'Permiso de micrófono denegado. Actívalo en el navegador o dispositivo.',
+        'Microphone permission denied. Enable it in the browser or device.',
+      ));
+    }
+    final encoder = kIsWeb ? AudioEncoder.opus : AudioEncoder.aacLc;
+    if (!await _audioRecorder.isEncoderSupported(encoder)) {
+      throw StateError(_txt(
+        'Este navegador no admite un formato de audio compatible.',
+        'This browser does not support a compatible audio format.',
+      ));
+    }
+    final extension = kIsWeb ? 'webm' : 'm4a';
+    final ruta = await crearRutaTemporal(
+      '${prefijo}_${DateTime.now().microsecondsSinceEpoch}.$extension',
+    );
+    await _audioRecorder.start(
+      RecordConfig(encoder: encoder, numChannels: 1, bitRate: 64000),
+      path: ruta,
+    );
+  }
+
+  ArchivoAdjuntoIA _audioGrabado(Uint8List bytes, String nombreBase) {
+    return crearAdjuntoIaValidado(
+      nombre: '$nombreBase.${kIsWeb ? 'webm' : 'm4a'}',
+      mimeDeclarado: kIsWeb ? 'audio/webm' : 'audio/mp4',
+      bytes: bytes,
+    );
+  }
+
   static const List<String> _terminosComponentesBienestar = [
     'factores de transferencia',
     'factor de transferencia',
@@ -477,19 +516,24 @@ class _PaginaChatbotState extends State<PaginaChatbot>
       source: ImageSource.camera,
       imageQuality: 88,
     );
-    if (imagen == null) return;
+    if (imagen == null) {
+      _avisarArchivo(_txt('Captura cancelada.', 'Capture cancelled.'));
+      return;
+    }
 
-    final bytes = await imagen.readAsBytes();
-    if (!mounted) return;
-    setState(() {
-      _adjuntos.add(
-        ArchivoAdjuntoIA(
-          nombre: imagen.name,
-          mimeType: imagen.mimeType ?? 'image/jpeg',
-          bytes: bytes,
-        ),
+    try {
+      final bytes = await imagen.readAsBytes();
+      final adjunto = crearAdjuntoIaValidado(
+        nombre: imagen.name,
+        mimeDeclarado: imagen.mimeType ?? 'image/jpeg',
+        bytes: bytes,
       );
-    });
+      ClienteIa.validarAdjuntos([..._adjuntos, adjunto]);
+      if (!mounted) return;
+      setState(() => _adjuntos.add(adjunto));
+    } catch (error) {
+      _avisarArchivo(mensajeErrorIa(error));
+    }
   }
 
   Future<void> seleccionarArchivoChat() async {
@@ -499,90 +543,76 @@ class _PaginaChatbotState extends State<PaginaChatbot>
       allowMultiple: true,
       withData: true,
     );
-    final archivos = resultado?.files ?? const <PlatformFile>[];
+    if (resultado == null) {
+      _avisarArchivo(_txt('Selección cancelada.', 'Selection cancelled.'));
+      return;
+    }
+    final archivos = resultado.files;
     final adjuntos = <ArchivoAdjuntoIA>[];
-    for (final archivo in archivos) {
-      final bytes = archivo.bytes;
-      if (bytes == null || bytes.isEmpty) continue;
-      final extension = (archivo.extension ?? '').toLowerCase();
-      final mime = switch (extension) {
-        'pdf' => 'application/pdf',
-        'png' => 'image/png',
-        'webp' => 'image/webp',
-        _ => 'image/jpeg',
-      };
-      adjuntos.add(
-        ArchivoAdjuntoIA(
+    try {
+      for (final archivo in archivos) {
+        if (archivo.size <= 0 ||
+            archivo.size > ClienteIa.maximoBytesPorAdjunto) {
+          throw const IaProxyException(
+            'ADJUNTO_DEMASIADO_GRANDE',
+            estadoHttp: 413,
+          );
+        }
+        final bytes = archivo.bytes;
+        if (bytes == null) {
+          throw StateError(_txt(
+            'El navegador no pudo leer el archivo seleccionado.',
+            'The browser could not read the selected file.',
+          ));
+        }
+        adjuntos.add(crearAdjuntoIaValidado(
           nombre: archivo.name,
-          mimeType: mime,
           bytes: bytes,
-        ),
+        ));
+      }
+      ClienteIa.validarAdjuntos([..._adjuntos, ...adjuntos]);
+      if (!mounted) return;
+      setState(() => _adjuntos.addAll(adjuntos));
+    } catch (error) {
+      _avisarArchivo(
+        error is StateError ? error.message : mensajeErrorIa(error),
       );
     }
-    if (adjuntos.isEmpty) return;
-
-    if (!mounted) return;
-    setState(() {
-      _adjuntos.addAll(adjuntos);
-    });
   }
 
   Future<void> alternarAudioChat() async {
     if (_grabandoAudio) {
-      final path = await _audioRecorder.stop();
-      if (!mounted) return;
-      setState(() => _grabandoAudio = false);
-      if (path == null) return;
-
-      final archivo = File(path);
-      final bytes = await archivo.readAsBytes();
-      await archivo.delete().catchError((_) => archivo);
-      if (bytes.isEmpty || !mounted) return;
-
-      setState(() {
-        _adjuntos
+      try {
+        final path = await _audioRecorder.stop();
+        if (path == null) {
+          _avisarArchivo(_txt('Grabación cancelada.', 'Recording cancelled.'));
+          return;
+        }
+        final bytes = await leerYEliminarArchivoTemporal(path);
+        final adjunto = _audioGrabado(bytes, 'Nota de voz para el asesor');
+        if (!mounted) return;
+        setState(() => _adjuntos
           ..clear()
-          ..add(
-            ArchivoAdjuntoIA(
-              nombre: 'Nota de voz para el asesor.m4a',
-              mimeType: 'audio/mp4',
-              bytes: bytes,
-            ),
-          );
-      });
+          ..add(adjunto));
+      } catch (error) {
+        _avisarArchivo(
+          error is StateError ? error.message : mensajeErrorIa(error),
+        );
+      } finally {
+        if (mounted) setState(() => _grabandoAudio = false);
+      }
       return;
     }
 
-    if (!await _audioRecorder.hasPermission()) {
-      if (!mounted) return;
-      showDialog(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: Text(txtApp("Permiso de micrófono", "Microphone permission")),
-          content: Text(
-            txtApp(
-              "Activa el permiso del micrófono para grabar la nota de voz.",
-              "Enable microphone permission to record the voice note.",
-            ),
-          ),
-        ),
-      );
-      return;
+    try {
+      await _iniciarGrabacion('chat');
+      if (mounted) setState(() => _grabandoAudio = true);
+    } catch (error) {
+      _avisarArchivo(error is StateError
+          ? error.message
+          : _txt('No se pudo iniciar la grabación.',
+              'Recording could not start.'));
     }
-
-    final carpetaTemporal = await getTemporaryDirectory();
-    final path =
-        '${carpetaTemporal.path}/chat_${DateTime.now().microsecondsSinceEpoch}.m4a';
-    await _audioRecorder.start(
-      const RecordConfig(
-        encoder: AudioEncoder.aacLc,
-        numChannels: 1,
-        bitRate: 64000,
-      ),
-      path: path,
-    );
-    if (!mounted) return;
-    setState(() => _grabandoAudio = true);
   }
 
   Future<void> iniciarLlamadaVoz() async {
@@ -590,42 +620,24 @@ class _PaginaChatbotState extends State<PaginaChatbot>
     _iniciandoGrabacionVoz = true;
     await ServicioTextoVoz.detener();
     try {
-      if (!await _audioRecorder.hasPermission()) {
-        if (!mounted) return;
-        _presionandoMicrofono = false;
-        setState(() => _estadoLlamada = "Se necesita acceso al micr\u00f3fono");
-        showDialog(
-          context: context,
-          builder: (context) => AlertDialog(
-            title:
-                Text(txtApp("Permiso de micrófono", "Microphone permission")),
-            content: Text(
-              txtApp(
-                "Activa el permiso del micrófono para conversar con DoctorSuplementos.",
-                "Enable microphone permission to talk with DoctorSuplementos.",
-              ),
-            ),
-          ),
-        );
-        return;
-      }
-
-      final carpetaTemporal = await getTemporaryDirectory();
-      final path =
-          '${carpetaTemporal.path}/chat_live_${DateTime.now().microsecondsSinceEpoch}.m4a';
-      await _audioRecorder.start(
-        const RecordConfig(
-          encoder: AudioEncoder.aacLc,
-          numChannels: 1,
-          bitRate: 64000,
-        ),
-        path: path,
-      );
+      await _iniciarGrabacion('chat_live');
       if (!mounted) return;
       setState(() {
         _grabandoAudio = true;
         _estadoLlamada = "Te estoy escuchando...";
       });
+    } catch (error) {
+      _presionandoMicrofono = false;
+      if (mounted) {
+        setState(() => _estadoLlamada = _txt(
+              'No se pudo usar el micrófono',
+              'The microphone could not be used',
+            ));
+      }
+      _avisarArchivo(error is StateError
+          ? error.message
+          : _txt('No se pudo iniciar la grabación.',
+              'Recording could not start.'));
     } finally {
       _iniciandoGrabacionVoz = false;
     }
@@ -637,46 +649,38 @@ class _PaginaChatbotState extends State<PaginaChatbot>
 
   Future<void> finalizarLlamadaVoz() async {
     if (enviando || !_grabandoAudio) return;
-
-    final path = await _audioRecorder.stop();
-    if (!mounted) return;
-    setState(() {
-      _grabandoAudio = false;
-      _estadoLlamada = "Procesando tu pregunta...";
-    });
-    if (path == null) {
-      setState(
-        () => _estadoLlamada = _txt("Mantén pulsado el micrófono para hablar",
-            "Hold the microphone to talk"),
-      );
-      return;
-    }
-
-    final archivo = File(path);
-    final bytes = await archivo.readAsBytes();
-    await archivo.delete().catchError((_) => archivo);
-    if (bytes.isEmpty || !mounted) {
-      if (mounted) {
-        setState(
-          () => _estadoLlamada = _txt("Mantén pulsado el micrófono para hablar",
-              "Hold the microphone to talk"),
-        );
+    try {
+      final path = await _audioRecorder.stop();
+      if (!mounted) return;
+      setState(() => _estadoLlamada = 'Procesando tu pregunta...');
+      if (path == null) {
+        _avisarArchivo(_txt('Grabación cancelada.', 'Recording cancelled.'));
+        return;
       }
-      return;
-    }
-
-    setState(() {
-      _adjuntos
+      final bytes = await leerYEliminarArchivoTemporal(path);
+      final adjunto = _audioGrabado(bytes, 'Pregunta de voz');
+      if (!mounted) return;
+      setState(() => _adjuntos
         ..clear()
-        ..add(
-          ArchivoAdjuntoIA(
-            nombre: 'Pregunta de voz.m4a',
-            mimeType: 'audio/mp4',
-            bytes: bytes,
-          ),
-        );
-    });
-    await enviarMensaje();
+        ..add(adjunto));
+      await enviarMensaje();
+    } catch (error) {
+      _avisarArchivo(
+        error is StateError ? error.message : mensajeErrorIa(error),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _grabandoAudio = false;
+          if (!enviando) {
+            _estadoLlamada = _txt(
+              'Mantén pulsado el micrófono para hablar',
+              'Hold the microphone to talk',
+            );
+          }
+        });
+      }
+    }
   }
 
   void quitarAdjuntoChat(ArchivoAdjuntoIA adjunto) {
@@ -1873,6 +1877,23 @@ extension _PaginaChatbotUi on _PaginaChatbotState {
               ),
             ),
           ),
+          if (adjunto.esAudio)
+            IconButton(
+              tooltip: txtApp('Reproducir audio', 'Play audio'),
+              visualDensity: VisualDensity.compact,
+              onPressed: () async {
+                try {
+                  await reproducirAudioBytes(adjunto.bytes, adjunto.mimeType);
+                } catch (_) {
+                  _avisarArchivo(txtApp(
+                    'No se pudo reproducir el audio en este navegador o dispositivo.',
+                    'Audio could not be played in this browser or device.',
+                  ));
+                }
+              },
+              icon: const Icon(Icons.play_arrow_rounded),
+              color: const Color(0xFF12248B),
+            ),
           IconButton(
             tooltip: txtApp("Quitar archivo", "Remove file"),
             visualDensity: VisualDensity.compact,
