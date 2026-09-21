@@ -258,6 +258,13 @@ class _DelegadoRutasApp extends RouterDelegate<String>
   }
 
   @override
+  Future<bool> popRoute() async {
+    if (_ruta == '/') return false;
+    _cambiarRuta('/');
+    return true;
+  }
+
+  @override
   Widget build(BuildContext context) {
     final pantalla = construirPantallaRuta(_ruta);
     return Navigator(
@@ -290,6 +297,7 @@ final configuracionRutasApp = RouterConfig<String>(
   ),
   routeInformationParser: const _AnalizadorRutasApp(),
   routerDelegate: _delegadoRutasApp,
+  backButtonDispatcher: RootBackButtonDispatcher(),
 );
 
 Future<void> abrirRutaApp(BuildContext _, String ruta) {
