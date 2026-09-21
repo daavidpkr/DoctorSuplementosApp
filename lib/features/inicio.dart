@@ -11,6 +11,7 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
   late Future<PerfilAsesor> _perfilFuture;
   late final PageController _pageController;
   final Set<String> _categoriasAbiertas = <String>{};
+  int _paginaActual = 0;
 
   @override
   void initState() {
@@ -44,6 +45,19 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
     });
   }
 
+  void _irAPagina(int pagina) {
+    _pageController.animateToPage(
+      pagina,
+      duration: const Duration(milliseconds: 240),
+      curve: Curves.easeOutCubic,
+    );
+  }
+
+  Future<void> _abrirRuta(String ruta) async {
+    await abrirRutaApp(context, ruta);
+    if (mounted && ruta == RutasApp.perfil) _recargarPerfil();
+  }
+
   @override
   Widget build(BuildContext context) {
     return ValueListenableBuilder<IdiomaApp>(
@@ -58,16 +72,14 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
       descripcion: IdiomaService.texto('consult_products_desc'),
       icono: Icons.grid_view_rounded,
       colores: const [Color(0xFF2E3192), Color(0xFF151B7C)],
-      destino: const ConsultaProductoPagina(),
+      ruta: RutasApp.catalogoAfiliado,
     );
     final catalogoMiTienda = _FichaInicio(
       titulo: IdiomaService.texto('mitienda_catalog'),
       descripcion: IdiomaService.texto('mitienda_catalog_desc'),
       icono: Icons.storefront_rounded,
       colores: const [Color(0xFF118B48), Color(0xFF0B6B38)],
-      destino: const ConsultaProductoPagina(
-        tipo: TipoCatalogoProducto.miTienda,
-      ),
+      ruta: RutasApp.catalogoMiTienda,
     );
     final catalogosPdf = _FichaInicio(
       titulo: txtApp('Catálogos PDF', 'PDF Catalogs'),
@@ -77,80 +89,77 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
       ),
       icono: Icons.picture_as_pdf_rounded,
       colores: const [Color(0xFF2E3192), Color(0xFF151B7C)],
-      destino: const PaginaCatalogosPdf4Life(),
+      ruta: RutasApp.catalogosPdf,
     );
     final calculadoraPrecios = _FichaInicio(
       titulo: IdiomaService.texto('price_calculator'),
       descripcion: IdiomaService.texto('price_calculator_desc'),
       icono: Icons.calculate_rounded,
       colores: const [Color(0xFF008C7E), Color(0xFF006B61)],
-      destino: const PaginaCalculadoraPrecios(),
+      ruta: RutasApp.calculadoraPrecios,
     );
     final optimizadorConsumo = _FichaInicio(
       titulo: IdiomaService.texto('consumption_optimizer'),
       descripcion: IdiomaService.texto('consumption_optimizer_desc'),
       icono: Icons.view_module_rounded,
       colores: const [Color(0xFF172394), Color(0xFF07125E)],
-      destino: const PaginaOptimizadorConsumo(),
+      ruta: RutasApp.optimizadorConsumo,
     );
     final optimizadorAcelerado = _FichaInicio(
       titulo: IdiomaService.texto('accelerated_optimizer'),
       descripcion: IdiomaService.texto('accelerated_optimizer_desc'),
       icono: Icons.rocket_launch_rounded,
       colores: const [Color(0xFF172394), Color(0xFF0B6B88)],
-      destino: const PaginaOptimizadorAcelerado(),
+      ruta: RutasApp.optimizadorAcelerado,
     );
     final inventarioLocal = _FichaInicio(
       titulo: IdiomaService.texto('local_inventory'),
       descripcion: IdiomaService.texto('local_inventory_desc'),
       icono: Icons.inventory_2_rounded,
       colores: const [Color(0xFF3047CC), Color(0xFF172394)],
-      destino: const PaginaInventarioLocal(),
+      ruta: RutasApp.inventarioLocal,
     );
     final comparadorAB = _FichaInicio(
       titulo: IdiomaService.texto('ab_comparator'),
       descripcion: IdiomaService.texto('ab_comparator_desc'),
       icono: Icons.compare_arrows_rounded,
       colores: const [Color(0xFF1487A8), Color(0xFF172394)],
-      destino: const PaginaComparadorAB(),
+      ruta: RutasApp.comparadorAB,
     );
     final diagnostico = _FichaInicio(
       titulo: IdiomaService.texto('diagnosis'),
       descripcion: IdiomaService.texto('diagnosis_desc'),
       icono: Icons.medical_services_rounded,
       colores: const [Color(0xFF1457E8), Color(0xFF1531A6)],
-      destino: const FormularioPaciente(),
+      ruta: RutasApp.diagnostico,
     );
     final cambioFisico = _FichaInicio(
       titulo: IdiomaService.texto('body_change'),
       descripcion: IdiomaService.texto('body_change_desc'),
       icono: Icons.fitness_center_rounded,
       colores: const [Color(0xFF1457E8), Color(0xFF1531A6)],
-      destino: const FormularioCambioFisico(),
+      ruta: RutasApp.cambioFisico,
     );
     final historial = _FichaInicio(
       titulo: IdiomaService.texto('history'),
       descripcion: IdiomaService.texto('history_desc'),
       icono: Icons.history_rounded,
       colores: const [Color(0xFF8051D4), Color(0xFF6047B7)],
-      destino: const PaginaHistorial(),
+      ruta: RutasApp.historial,
     );
     final chatLive = _FichaInicio(
       titulo: "Chat Live 4Life",
       descripcion: IdiomaService.texto('chat_live_desc'),
       icono: Icons.forum_rounded,
       colores: const [Color(0xFF6A4DE8), Color(0xFF3C2AAE)],
-      destino: const PaginaChatbot(
-        titulo: "Chat Live 4Life",
-        modoLlamada: true,
-      ),
+      ruta: RutasApp.chatLive,
     );
     final asesorIa = _FichaInicio(
       titulo: IdiomaService.texto('ai_adviser'),
       descripcion: IdiomaService.texto('ai_adviser_desc'),
       icono: Icons.chat_rounded,
       colores: const [Color(0xFF1487A8), Color(0xFF087394)],
-      destino: const PaginaChatbot(),
+      ruta: RutasApp.asesorIa,
     );
     final historialChatsIa = _FichaInicio(
       titulo: txtApp('Historial de chats IA', 'AI chat history'),
@@ -160,21 +169,21 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
       ),
       icono: Icons.forum_outlined,
       colores: const [Color(0xFF6A4DE8), Color(0xFF3C2AAE)],
-      destino: const PaginaHistorialChatbot(),
+      ruta: RutasApp.historialChatsIa,
     );
     final testimonios = _FichaInicio(
       titulo: IdiomaService.texto('testimonials'),
       descripcion: IdiomaService.texto('testimonials_desc'),
       icono: Icons.ondemand_video_rounded,
       colores: const [Color(0xFF3047CC), Color(0xFF172394)],
-      destino: const PaginaTestimonios4Life(),
+      ruta: RutasApp.testimonios,
     );
     final diccionario = _FichaInicio(
       titulo: IdiomaService.texto('dictionary'),
       descripcion: IdiomaService.texto('dictionary_desc'),
       icono: Icons.menu_book_rounded,
       colores: const [Color(0xFF3047CC), Color(0xFF172394)],
-      destino: const PaginaDiccionario4Life(),
+      ruta: RutasApp.diccionario,
     );
     final mapaAnatomico = _FichaInicio(
       titulo: txtApp('Mapa Anatómico Interactivo', 'Interactive Anatomy Map'),
@@ -184,14 +193,14 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
       ),
       icono: Icons.accessibility_new_rounded,
       colores: const [Color(0xFF3047CC), Color(0xFF172394)],
-      destino: const PaginaMapaAnatomico(),
+      ruta: RutasApp.mapaAnatomico,
     );
     final perfil = _FichaInicio(
       titulo: IdiomaService.texto('profile'),
       descripcion: IdiomaService.texto('profile_desc'),
       icono: Icons.person_rounded,
       colores: const [Color(0xFF455A64), Color(0xFF263238)],
-      destino: PaginaPerfil(onPerfilGuardado: _recargarPerfil),
+      ruta: RutasApp.perfil,
     );
 
     return Scaffold(
@@ -212,6 +221,9 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
             Expanded(
               child: PageView(
                 controller: _pageController,
+                onPageChanged: (pagina) {
+                  setState(() => _paginaActual = pagina);
+                },
                 children: [
                   SingleChildScrollView(
                     padding: const EdgeInsets.fromLTRB(16, 0, 16, 18),
@@ -325,6 +337,7 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
                 ],
               ),
             ),
+            _controlesPaginas(),
             _barraInferior(context),
           ],
         ),
@@ -451,38 +464,42 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
                   ),
                 ),
                 const Spacer(),
-                GestureDetector(
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const PaginaImpacto4LifeNueva(),
-                    ),
-                  ),
-                  child: Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 13, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF101A70),
+                Semantics(
+                  key: const ValueKey('acceso-impacto'),
+                  button: true,
+                  label: IdiomaService.texto('impact'),
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
                       borderRadius: BorderRadius.circular(18),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(Icons.track_changes_rounded,
-                            color: Colors.white, size: 15),
-                        const SizedBox(width: 7),
-                        Text(
-                          IdiomaService.texto('impact'),
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 11,
-                            fontWeight: FontWeight.w800,
-                          ),
+                      onTap: () => _abrirRuta(RutasApp.impacto),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 13, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF101A70),
+                          borderRadius: BorderRadius.circular(18),
                         ),
-                        const SizedBox(width: 4),
-                        const Icon(Icons.chevron_right_rounded,
-                            color: Colors.white, size: 16),
-                      ],
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.track_changes_rounded,
+                                color: Colors.white, size: 15),
+                            const SizedBox(width: 7),
+                            Text(
+                              IdiomaService.texto('impact'),
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            const Icon(Icons.chevron_right_rounded,
+                                color: Colors.white, size: 16),
+                          ],
+                        ),
+                      ),
                     ),
                   ),
                 ),
@@ -512,64 +529,66 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
           ),
         ],
       ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(12),
-          onTap: () => Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => ficha.destino),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(15),
-            child: Row(
-              children: [
-                Container(
-                  width: 60,
-                  height: 60,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: ficha.colores,
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
+      child: Semantics(
+        key: ValueKey('acceso-${ficha.ruta}'),
+        button: true,
+        label: ficha.titulo,
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(12),
+            onTap: () => _abrirRuta(ficha.ruta),
+            child: Padding(
+              padding: const EdgeInsets.all(15),
+              child: Row(
+                children: [
+                  Container(
+                    width: 60,
+                    height: 60,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: ficha.colores,
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(8),
                     ),
-                    borderRadius: BorderRadius.circular(8),
+                    child: Icon(ficha.icono, color: Colors.white, size: 34),
                   ),
-                  child: Icon(ficha.icono, color: Colors.white, size: 34),
-                ),
-                const SizedBox(width: 18),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        ficha.titulo,
-                        style: const TextStyle(
-                          color: Color(0xFF111B59),
-                          fontSize: 18,
-                          fontWeight: FontWeight.w900,
-                          height: 1.05,
+                  const SizedBox(width: 18),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          ficha.titulo,
+                          style: const TextStyle(
+                            color: Color(0xFF111B59),
+                            fontSize: 18,
+                            fontWeight: FontWeight.w900,
+                            height: 1.05,
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 5),
-                      Text(
-                        ficha.descripcion,
-                        style: const TextStyle(
-                          color: Color(0xFF465074),
-                          fontSize: 12,
-                          height: 1.22,
+                        const SizedBox(height: 5),
+                        Text(
+                          ficha.descripcion,
+                          style: const TextStyle(
+                            color: Color(0xFF465074),
+                            fontSize: 12,
+                            height: 1.22,
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
-                const SizedBox(width: 8),
-                const Icon(
-                  Icons.chevron_right_rounded,
-                  color: Color(0xFF071451),
-                  size: 31,
-                ),
-              ],
+                  const SizedBox(width: 8),
+                  const Icon(
+                    Icons.chevron_right_rounded,
+                    color: Color(0xFF071451),
+                    size: 31,
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -602,65 +621,74 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
               ),
             ],
           ),
-          child: Material(
-            color: Colors.transparent,
-            child: InkWell(
-              borderRadius: BorderRadius.circular(12),
-              onTap: () => _alternarCategoria(id),
-              child: Padding(
-                padding: const EdgeInsets.all(15),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 60,
-                      height: 60,
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: colores,
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
+          child: Semantics(
+            key: ValueKey('categoria-$id'),
+            button: true,
+            expanded: abierta,
+            label: titulo,
+            hint: abierta
+                ? txtApp('Contraer categoria', 'Collapse category')
+                : txtApp('Expandir categoria', 'Expand category'),
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(12),
+                onTap: () => _alternarCategoria(id),
+                child: Padding(
+                  padding: const EdgeInsets.all(15),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 60,
+                        height: 60,
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: colores,
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          borderRadius: BorderRadius.circular(8),
                         ),
-                        borderRadius: BorderRadius.circular(8),
+                        child: Icon(icono, color: Colors.white, size: 34),
                       ),
-                      child: Icon(icono, color: Colors.white, size: 34),
-                    ),
-                    const SizedBox(width: 18),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            titulo,
-                            style: const TextStyle(
-                              color: Color(0xFF111B59),
-                              fontSize: 18,
-                              fontWeight: FontWeight.w900,
-                              height: 1.05,
+                      const SizedBox(width: 18),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              titulo,
+                              style: const TextStyle(
+                                color: Color(0xFF111B59),
+                                fontSize: 18,
+                                fontWeight: FontWeight.w900,
+                                height: 1.05,
+                              ),
                             ),
-                          ),
-                          const SizedBox(height: 5),
-                          Text(
-                            descripcion,
-                            style: const TextStyle(
-                              color: Color(0xFF465074),
-                              fontSize: 12,
-                              height: 1.22,
+                            const SizedBox(height: 5),
+                            Text(
+                              descripcion,
+                              style: const TextStyle(
+                                color: Color(0xFF465074),
+                                fontSize: 12,
+                                height: 1.22,
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 8),
-                    AnimatedRotation(
-                      turns: abierta ? 0.25 : 0,
-                      duration: const Duration(milliseconds: 180),
-                      child: const Icon(
-                        Icons.chevron_right_rounded,
-                        color: Color(0xFF071451),
-                        size: 31,
+                      const SizedBox(width: 8),
+                      AnimatedRotation(
+                        turns: abierta ? 0.25 : 0,
+                        duration: const Duration(milliseconds: 180),
+                        child: const Icon(
+                          Icons.chevron_right_rounded,
+                          color: Color(0xFF071451),
+                          size: 31,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -729,6 +757,47 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
     );
   }
 
+  Widget _controlesPaginas() {
+    final esPrimera = _paginaActual == 0;
+    final etiqueta = esPrimera
+        ? txtApp('Accesos rapidos', 'Quick access')
+        : txtApp('Todas las funciones', 'All features');
+    return Semantics(
+      container: true,
+      label: txtApp(
+        '$etiqueta, pagina ${_paginaActual + 1} de 2',
+        '$etiqueta, page ${_paginaActual + 1} of 2',
+      ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(12, 2, 12, 6),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            IconButton(
+              key: const ValueKey('pagina-anterior'),
+              tooltip: txtApp('Pagina anterior', 'Previous page'),
+              onPressed: esPrimera ? null : () => _irAPagina(0),
+              icon: const Icon(Icons.chevron_left_rounded),
+            ),
+            const SizedBox(width: 4),
+            TextButton(
+              key: const ValueKey('selector-pagina-inicio'),
+              onPressed: () => _irAPagina(esPrimera ? 1 : 0),
+              child: Text('$etiqueta  ${_paginaActual + 1}/2'),
+            ),
+            const SizedBox(width: 4),
+            IconButton(
+              key: const ValueKey('pagina-siguiente'),
+              tooltip: txtApp('Pagina siguiente', 'Next page'),
+              onPressed: esPrimera ? () => _irAPagina(1) : null,
+              icon: const Icon(Icons.chevron_right_rounded),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _barraInferior(BuildContext context) {
     return Container(
       height: 58,
@@ -750,19 +819,19 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
             context,
             IdiomaService.texto('consultations'),
             Icons.search_rounded,
-            const ConsultaProductoPagina(),
+            RutasApp.catalogoAfiliado,
           ),
           _itemBarra(
             context,
             IdiomaService.texto('clients'),
             Icons.groups_2_outlined,
-            const PaginaHistorial(),
+            RutasApp.historial,
           ),
           _itemBarra(
             context,
             IdiomaService.texto('profile'),
             Icons.person_outline_rounded,
-            PaginaPerfil(onPerfilGuardado: _recargarPerfil),
+            RutasApp.perfil,
           ),
         ],
       ),
@@ -773,7 +842,7 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
     BuildContext context,
     String texto,
     IconData icono,
-    Widget? destino, {
+    String? ruta, {
     bool seleccionado = false,
   }) {
     final contenido = Column(
@@ -805,12 +874,7 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
               )
             : InkWell(
                 borderRadius: BorderRadius.circular(9),
-                onTap: destino == null
-                    ? null
-                    : () => Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (context) => destino),
-                        ),
+                onTap: ruta == null ? null : () => _abrirRuta(ruta),
                 child: contenido,
               ),
       ),
@@ -823,14 +887,14 @@ class _FichaInicio {
   final String descripcion;
   final IconData icono;
   final List<Color> colores;
-  final Widget destino;
+  final String ruta;
 
   const _FichaInicio({
     required this.titulo,
     required this.descripcion,
     required this.icono,
     required this.colores,
-    required this.destino,
+    required this.ruta,
   });
 }
 

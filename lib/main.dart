@@ -102,7 +102,7 @@ class DoctorSuplementos extends StatelessWidget {
     return ValueListenableBuilder<IdiomaApp>(
       valueListenable: IdiomaService.actual,
       builder: (context, idioma, _) {
-        return MaterialApp(
+        return MaterialApp.router(
           key: const ValueKey('doctor-suplementos-app'),
           debugShowCheckedModeBanner: false,
           title: idioma == IdiomaApp.ingles
@@ -126,12 +126,173 @@ class DoctorSuplementos extends StatelessWidget {
             primaryColor: const Color(0xFF1A237E),
             colorScheme:
                 ColorScheme.fromSeed(seedColor: const Color(0xFF1A237E)),
+            focusColor: const Color(0xFF536DFE).withValues(alpha: 0.24),
           ),
-          home: const ArranqueDoctorSuplementos(),
+          routerConfig: configuracionRutasApp,
         );
       },
     );
   }
+}
+
+abstract final class RutasApp {
+  static const catalogoAfiliado = '/catalogo-afiliado';
+  static const catalogoMiTienda = '/catalogo-mitienda';
+  static const catalogosPdf = '/catalogos-pdf';
+  static const calculadoraPrecios = '/calculadora-precios';
+  static const optimizadorConsumo = '/optimizador-consumo';
+  static const optimizadorAcelerado = '/optimizador-acelerado';
+  static const inventarioLocal = '/inventario-local';
+  static const comparadorAB = '/comparador-ab';
+  static const diagnostico = '/diagnostico';
+  static const cambioFisico = '/cambio-fisico';
+  static const historial = '/historial';
+  static const chatLive = '/chat-live';
+  static const asesorIa = '/asesor-ia';
+  static const historialChatsIa = '/historial-chats-ia';
+  static const testimonios = '/testimonios';
+  static const diccionario = '/diccionario';
+  static const mapaAnatomico = '/mapa-anatomico';
+  static const impacto = '/impacto';
+  static const perfil = '/perfil';
+}
+
+Widget? construirPantallaRuta(String? ruta) => switch (ruta) {
+      RutasApp.catalogoAfiliado => const ConsultaProductoPagina(),
+      RutasApp.catalogoMiTienda => const ConsultaProductoPagina(
+          tipo: TipoCatalogoProducto.miTienda,
+        ),
+      RutasApp.catalogosPdf => const PaginaCatalogosPdf4Life(),
+      RutasApp.calculadoraPrecios => const PaginaCalculadoraPrecios(),
+      RutasApp.optimizadorConsumo => const PaginaOptimizadorConsumo(),
+      RutasApp.optimizadorAcelerado => const PaginaOptimizadorAcelerado(),
+      RutasApp.inventarioLocal => const PaginaInventarioLocal(),
+      RutasApp.comparadorAB => const PaginaComparadorAB(),
+      RutasApp.diagnostico => const FormularioPaciente(),
+      RutasApp.cambioFisico => const FormularioCambioFisico(),
+      RutasApp.historial => const PaginaHistorial(),
+      RutasApp.chatLive => const PaginaChatbot(
+          titulo: 'Chat Live 4Life',
+          modoLlamada: true,
+        ),
+      RutasApp.asesorIa => const PaginaChatbot(),
+      RutasApp.historialChatsIa => const PaginaHistorialChatbot(),
+      RutasApp.testimonios => const PaginaTestimonios4Life(),
+      RutasApp.diccionario => const PaginaDiccionario4Life(),
+      RutasApp.mapaAnatomico => const PaginaMapaAnatomico(),
+      RutasApp.impacto => const PaginaImpacto4LifeNueva(),
+      RutasApp.perfil => const PaginaPerfil(),
+      _ => null,
+    };
+
+Route<dynamic>? generarRutaApp(RouteSettings settings) {
+  final pantalla = construirPantallaRuta(settings.name);
+  if (pantalla == null) return null;
+  return MaterialPageRoute<void>(
+    settings: settings,
+    builder: (_) => pantalla,
+  );
+}
+
+class _AnalizadorRutasApp extends RouteInformationParser<String> {
+  const _AnalizadorRutasApp();
+
+  @override
+  Future<String> parseRouteInformation(
+    RouteInformation routeInformation,
+  ) async {
+    final fragmento = routeInformation.uri.fragment;
+    final ruta = fragmento.startsWith('/')
+        ? Uri.parse(fragmento).path
+        : routeInformation.uri.path;
+    return construirPantallaRuta(ruta) == null ? '/' : ruta;
+  }
+
+  @override
+  RouteInformation restoreRouteInformation(String configuration) {
+    return RouteInformation(uri: Uri(path: configuration));
+  }
+}
+
+class _DelegadoRutasApp extends RouterDelegate<String>
+    with ChangeNotifier, PopNavigatorRouterDelegateMixin<String> {
+  @override
+  final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+
+  String _ruta = '/';
+  Completer<void>? _rutaPendiente;
+
+  @override
+  String get currentConfiguration => _ruta;
+
+  Future<void> abrir(String ruta) {
+    if (construirPantallaRuta(ruta) == null || ruta == _ruta) {
+      return Future<void>.value();
+    }
+    _completarRutaPendiente();
+    _ruta = ruta;
+    _rutaPendiente = Completer<void>();
+    notifyListeners();
+    return _rutaPendiente!.future;
+  }
+
+  void _completarRutaPendiente() {
+    final pendiente = _rutaPendiente;
+    if (pendiente != null && !pendiente.isCompleted) pendiente.complete();
+    _rutaPendiente = null;
+  }
+
+  void _cambiarRuta(String ruta) {
+    if (ruta == _ruta) return;
+    _completarRutaPendiente();
+    _ruta = ruta;
+    notifyListeners();
+  }
+
+  @override
+  Future<void> setNewRoutePath(String configuration) async {
+    final ruta =
+        construirPantallaRuta(configuration) == null ? '/' : configuration;
+    _cambiarRuta(ruta);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final pantalla = construirPantallaRuta(_ruta);
+    return Navigator(
+      key: navigatorKey,
+      pages: [
+        const MaterialPage<void>(
+          key: ValueKey('arranque-app'),
+          name: '/',
+          child: ArranqueDoctorSuplementos(),
+        ),
+        if (pantalla != null)
+          MaterialPage<void>(
+            key: ValueKey(_ruta),
+            name: _ruta,
+            child: pantalla,
+          ),
+      ],
+      onDidRemovePage: (page) {
+        if (page.name == _ruta) _cambiarRuta('/');
+      },
+    );
+  }
+}
+
+final _delegadoRutasApp = _DelegadoRutasApp();
+
+final configuracionRutasApp = RouterConfig<String>(
+  routeInformationProvider: PlatformRouteInformationProvider(
+    initialRouteInformation: RouteInformation(uri: Uri.base),
+  ),
+  routeInformationParser: const _AnalizadorRutasApp(),
+  routerDelegate: _delegadoRutasApp,
+);
+
+Future<void> abrirRutaApp(BuildContext _, String ruta) {
+  return _delegadoRutasApp.abrir(ruta);
 }
 
 // --- PANTALLA PRINCIPAL ---
