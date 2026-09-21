@@ -558,11 +558,16 @@ Future<String> generarYProcesarRespuestaProductosPais({
   required PaisApp pais,
   required IdiomaApp idioma,
   bool permitirReintento = true,
+  ControlSolicitudIa? control,
+  Duration tiempoMaximo = const Duration(seconds: 90),
 }) async {
+  final limite = DateTime.now().add(tiempoMaximo);
   final primeraRespuesta = await _generarIaConReintento(
     generar,
     prompt,
     permitirReintento: permitirReintento,
+    control: control,
+    limite: limite,
   );
   try {
     return procesarRespuestaProductosPais(
@@ -582,6 +587,8 @@ $primeraRespuesta
       generar,
       promptCorreccion,
       permitirReintento: permitirReintento,
+      control: control,
+      limite: limite,
     );
     try {
       return procesarRespuestaProductosPais(
@@ -592,17 +599,50 @@ $primeraRespuesta
   }
 }
 
+Future<String> generarRespuestaIaConReintento({
+  required Future<String> Function(String prompt) generar,
+  required String prompt,
+  bool permitirReintento = true,
+  ControlSolicitudIa? control,
+  Duration tiempoMaximo = const Duration(seconds: 90),
+}) async {
+  final respuesta = await _generarIaConReintento(
+    generar,
+    prompt,
+    permitirReintento: permitirReintento,
+    control: control,
+    limite: DateTime.now().add(tiempoMaximo),
+  );
+  if (respuesta.trim().isEmpty) throw const RespuestaIaVaciaException();
+  return respuesta;
+}
+
 Future<String> _generarIaConReintento(
   Future<String> Function(String prompt) generar,
   String prompt, {
   bool permitirReintento = true,
+  ControlSolicitudIa? control,
+  required DateTime limite,
 }) async {
+  Future<String> intentar() {
+    final restante = limite.difference(DateTime.now());
+    if (restante <= Duration.zero) {
+      return Future<String>.error(
+        TimeoutException('La solicitud de IA supero el tiempo maximo.'),
+      );
+    }
+    final operacion = generar(prompt);
+    return (control?.esperar(operacion) ?? operacion).timeout(restante);
+  }
+
   try {
-    return await generar(prompt).timeout(const Duration(seconds: 75));
+    return await intentar();
   } catch (error) {
     if (!permitirReintento || !_esErrorIaTransitorio(error)) rethrow;
-    await Future<void>.delayed(const Duration(milliseconds: 700));
-    return generar(prompt).timeout(const Duration(seconds: 75));
+    final pausa = Future<void>.delayed(const Duration(milliseconds: 700));
+    final restante = limite.difference(DateTime.now());
+    await (control?.esperar(pausa) ?? pausa).timeout(restante);
+    return intentar();
   }
 }
 
@@ -620,10 +660,16 @@ bool _esErrorIaTransitorio(Object error) {
 }
 
 String mensajeErrorIa(Object error) {
+  if (error is SolicitudIaCanceladaException) {
+    return 'Solicitud cancelada.';
+  }
   if (error is IaProxyException) {
     if (error.codigo == 'AUTENTICACION_REQUERIDA' ||
         error.codigo == 'TOKEN_INVALIDO') {
       return 'No fue posible validar la sesión. Cierra y abre la aplicación e inténtalo nuevamente.';
+    }
+    if (error.estadoHttp == 401 || error.estadoHttp == 403) {
+      return 'Tu sesión no tiene autorización para usar la IA. Cierra y abre la aplicación e inténtalo nuevamente.';
     }
     if (error.codigo == 'PROXY_NO_CONFIGURADO' ||
         error.codigo == 'SERVICIO_NO_CONFIGURADO') {
@@ -649,7 +695,9 @@ String mensajeErrorIa(Object error) {
       return 'La IA no pudo responder a esa redacción. Inténtalo nuevamente con una descripción más breve.';
     }
     if (error.esTransitorio) {
-      return 'El servicio de IA está temporalmente ocupado. Inténtalo nuevamente en unos segundos.';
+      return error.estadoHttp == 429
+          ? 'Hay demasiadas solicitudes en este momento. Espera unos segundos e inténtalo nuevamente.'
+          : 'El servicio de IA está temporalmente ocupado. Inténtalo nuevamente en unos segundos.';
     }
     return 'No fue posible conectar con el servicio de IA. Inténtalo nuevamente.';
   }
@@ -664,9 +712,11 @@ String mensajeErrorIa(Object error) {
     return 'El país cambió mientras se generaba la respuesta. Genera nuevamente la consulta.';
   }
   if (esSocketException(error) ||
-      error is TimeoutException ||
       (error is DioException && _esErrorIaTransitorio(error))) {
     return 'No se pudo conectar con la IA. Verifica tu conexión e inténtalo nuevamente.';
+  }
+  if (error is TimeoutException) {
+    return 'La IA tardó demasiado en responder. Verifica tu conexión e inténtalo nuevamente.';
   }
   return 'No fue posible procesar la respuesta. Inténtalo nuevamente.';
 }

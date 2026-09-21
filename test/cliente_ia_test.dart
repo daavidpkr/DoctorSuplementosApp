@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 
@@ -318,5 +319,63 @@ void main() {
     const error = IaProxyException('GEMINI_TIMEOUT', estadoHttp: 504);
     expect(error.esTransitorio, isTrue);
     expect(mensajeErrorIa(error), contains('temporalmente ocupado'));
+  });
+
+  test('401, 403, 429 y 5xx producen mensajes utiles', () {
+    expect(
+      mensajeErrorIa(const IaProxyException('ERROR_PROXY', estadoHttp: 401)),
+      contains('sesi'),
+    );
+    expect(
+      mensajeErrorIa(const IaProxyException('ERROR_PROXY', estadoHttp: 403)),
+      contains('autorizaci'),
+    );
+    expect(
+      mensajeErrorIa(const IaProxyException('ERROR_PROXY', estadoHttp: 429)),
+      contains('demasiadas solicitudes'),
+    );
+    for (final estado in [500, 501, 502, 503, 504, 599]) {
+      final error = IaProxyException('ERROR_PROXY', estadoHttp: estado);
+      expect(error.esTransitorio, isTrue, reason: 'HTTP $estado');
+      expect(mensajeErrorIa(error), contains('temporalmente ocupado'));
+    }
+  });
+
+  test('presupuesto total evita esperas acumuladas y cargas infinitas',
+      () async {
+    final pendiente = Completer<String>();
+    final reloj = Stopwatch()..start();
+
+    await expectLater(
+      generarRespuestaIaConReintento(
+        generar: (_) => pendiente.future,
+        prompt: 'Prompt',
+        tiempoMaximo: const Duration(milliseconds: 80),
+      ),
+      throwsA(isA<TimeoutException>()),
+    );
+
+    expect(reloj.elapsed, lessThan(const Duration(seconds: 1)));
+  });
+
+  test('cancelar corta la espera y no inicia un reintento', () async {
+    final pendiente = Completer<String>();
+    final control = ControlSolicitudIa();
+    var intentos = 0;
+    final solicitud = generarRespuestaIaConReintento(
+      generar: (_) {
+        intentos++;
+        return pendiente.future;
+      },
+      prompt: 'Prompt',
+      control: control,
+    );
+
+    control.cancelar();
+
+    await expectLater(solicitud, throwsA(isA<SolicitudIaCanceladaException>()));
+    expect(intentos, 1);
+    expect(mensajeErrorIa(const SolicitudIaCanceladaException()),
+        'Solicitud cancelada.');
   });
 }

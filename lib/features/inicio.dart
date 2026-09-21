@@ -427,12 +427,7 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
                     ],
                   ),
                   child: ExcludeSemantics(
-                    child: Text(
-                      pais == PaisApp.ecuador
-                          ? '\u{1F1EA}\u{1F1E8}'
-                          : '\u{1F1FA}\u{1F1F8}',
-                      style: const TextStyle(fontSize: 22, height: 1),
-                    ),
+                    child: _InsigniaPais(codigo: pais.codigo.toUpperCase()),
                   ),
                 ),
               ),

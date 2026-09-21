@@ -8,12 +8,54 @@ class IaProxyException implements Exception {
 
   bool get esTransitorio =>
       estadoHttp == 429 ||
-      estadoHttp == 502 ||
-      estadoHttp == 503 ||
-      estadoHttp == 504;
+      (estadoHttp != null && estadoHttp! >= 500 && estadoHttp! <= 599);
 
   @override
   String toString() => 'IaProxyException($codigo, $estadoHttp)';
+}
+
+class SolicitudIaCanceladaException implements Exception {
+  const SolicitudIaCanceladaException();
+
+  @override
+  String toString() => 'La solicitud de IA fue cancelada.';
+}
+
+class ControlSolicitudIa {
+  final Completer<void> _cancelacion = Completer<void>();
+  final Set<CancelToken> _tokens = <CancelToken>{};
+
+  bool get cancelada => _cancelacion.isCompleted;
+
+  CancelToken crearToken() {
+    if (cancelada) throw const SolicitudIaCanceladaException();
+    final token = CancelToken();
+    _tokens.add(token);
+    return token;
+  }
+
+  void liberarToken(CancelToken token) => _tokens.remove(token);
+
+  void cancelar() {
+    if (cancelada) return;
+    _cancelacion.complete();
+    for (final token in _tokens.toList()) {
+      token.cancel('Solicitud cancelada por el usuario.');
+    }
+    _tokens.clear();
+  }
+
+  Future<T> esperar<T>(Future<T> operacion) {
+    if (cancelada) {
+      return Future<T>.error(const SolicitudIaCanceladaException());
+    }
+    return Future.any<T>([
+      operacion,
+      _cancelacion.future.then<T>(
+        (_) => throw const SolicitudIaCanceladaException(),
+      ),
+    ]);
+  }
 }
 
 class ClienteIa {
@@ -47,7 +89,9 @@ class ClienteIa {
     Dio? clienteHttp,
     Future<String?> Function()? obtenerToken,
     String? urlProxy,
+    ControlSolicitudIa? control,
   }) async {
+    CancelToken? cancelToken;
     try {
       final bytesPrompt = utf8.encode(prompt).length;
       if (prompt.trim().isEmpty || bytesPrompt > _maximoBytesPrompt) {
@@ -70,6 +114,7 @@ class ClienteIa {
             sendTimeout: const Duration(seconds: 10),
             receiveTimeout: const Duration(seconds: 60),
           ));
+      cancelToken = control?.crearToken();
       final response = await dio.postUri<Map<String, dynamic>>(
         uri,
         data: {
@@ -89,6 +134,7 @@ class ClienteIa {
           headers: {'Authorization': 'Bearer $token'},
           validateStatus: (status) => status != null && status < 600,
         ),
+        cancelToken: cancelToken,
       );
 
       final data = response.data;
@@ -107,12 +153,19 @@ class ClienteIa {
       rethrow;
     } on RespuestaIaVaciaException {
       rethrow;
-    } on DioException {
+    } on SolicitudIaCanceladaException {
+      rethrow;
+    } on DioException catch (error) {
+      if (CancelToken.isCancel(error)) {
+        throw const SolicitudIaCanceladaException();
+      }
       rethrow;
     } on TimeoutException {
       rethrow;
     } catch (_) {
       throw const IaProxyException('ERROR_CLIENTE');
+    } finally {
+      if (cancelToken != null) control?.liberarToken(cancelToken);
     }
   }
 

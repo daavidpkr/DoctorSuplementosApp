@@ -38,6 +38,7 @@ class _PaginaCatalogosPdf4LifeState extends State<PaginaCatalogosPdf4Life> {
   List<CatalogoPdf4Life> _catalogos = [];
   bool _cargando = true;
   String? _compartiendoId;
+  String? _abriendoId;
 
   @override
   void initState() {
@@ -67,12 +68,31 @@ class _PaginaCatalogosPdf4LifeState extends State<PaginaCatalogosPdf4Life> {
   }
 
   Future<void> _abrirCatalogo(CatalogoPdf4Life catalogo) async {
-    await Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => _VisorCatalogoPdf4Life(catalogo: catalogo),
-      ),
-    );
+    if (_abriendoId != null) return;
+    setState(() => _abriendoId = catalogo.id);
+    try {
+      await prepararPdfJs();
+      if (!mounted) return;
+      await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => _VisorCatalogoPdf4Life(catalogo: catalogo),
+        ),
+      );
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(txtApp(
+              'No se pudo preparar el visor PDF. Verifica tu conexión.',
+              'The PDF viewer could not be prepared. Check your connection.',
+            )),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _abriendoId = null);
+    }
   }
 
   Future<void> _compartirCatalogo(CatalogoPdf4Life catalogo) async {
@@ -181,6 +201,7 @@ class _PaginaCatalogosPdf4LifeState extends State<PaginaCatalogosPdf4Life> {
 
   Widget _tarjetaCatalogo(CatalogoPdf4Life catalogo) {
     final compartiendo = _compartiendoId == catalogo.id;
+    final abriendo = _abriendoId == catalogo.id;
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
@@ -259,7 +280,9 @@ class _PaginaCatalogosPdf4LifeState extends State<PaginaCatalogosPdf4Life> {
             children: [
               Expanded(
                 child: OutlinedButton.icon(
-                  onPressed: () => _abrirCatalogo(catalogo),
+                  onPressed: _abriendoId == null
+                      ? () => _abrirCatalogo(catalogo)
+                      : null,
                   style: OutlinedButton.styleFrom(
                     foregroundColor: Colors.white,
                     side: BorderSide(
@@ -269,8 +292,16 @@ class _PaginaCatalogosPdf4LifeState extends State<PaginaCatalogosPdf4Life> {
                       borderRadius: BorderRadius.circular(8),
                     ),
                   ),
-                  icon: const Icon(Icons.visibility_rounded),
-                  label: Text(txtApp('Ver PDF', 'View PDF')),
+                  icon: abriendo
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.visibility_rounded),
+                  label: Text(abriendo
+                      ? txtApp('Abriendo...', 'Opening...')
+                      : txtApp('Ver PDF', 'View PDF')),
                 ),
               ),
               const SizedBox(width: 10),

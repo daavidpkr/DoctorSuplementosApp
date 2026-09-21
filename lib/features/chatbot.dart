@@ -153,6 +153,7 @@ class _PaginaChatbotState extends State<PaginaChatbot>
   final List<Map<String, String>> mensajes = [];
   final List<ArchivoAdjuntoIA> _adjuntos = [];
   bool enviando = false;
+  ControlSolicitudIa? _controlSolicitud;
   bool _modoCientifico = false;
   bool _grabandoAudio = false;
   bool _iniciandoGrabacionVoz = false;
@@ -328,6 +329,8 @@ class _PaginaChatbotState extends State<PaginaChatbot>
   Future<void> enviarMensaje() async {
     final textoUsuario = _controller.text.trim();
     if ((textoUsuario.isEmpty && !_tieneAdjuntos) || enviando) return;
+    final control = ControlSolicitudIa();
+    _controlSolicitud = control;
     final textoVisible = textoUsuario.isEmpty
         ? (_adjuntosSoloAudio
             ? "Analiza esta nota de voz."
@@ -423,11 +426,17 @@ class _PaginaChatbotState extends State<PaginaChatbot>
         return ClienteIa.generarTexto(
           textoAdjuntos,
           adjuntos: List<ArchivoAdjuntoIA>.unmodifiable(_adjuntos),
+          control: control,
         );
       }
 
       final respuestaIA = _modoCientifico
-          ? await generar(promptPais)
+          ? await generarRespuestaIaConReintento(
+              generar: generar,
+              prompt: promptPais,
+              permitirReintento: !_tieneAdjuntos,
+              control: control,
+            )
           : await generarYProcesarRespuestaProductosPais(
               generar: generar,
               prompt: promptPais,
@@ -435,6 +444,7 @@ class _PaginaChatbotState extends State<PaginaChatbot>
               pais: paisConsulta,
               idioma: idiomaConsulta,
               permitirReintento: !_tieneAdjuntos,
+              control: control,
             );
 
       if (!mounted) return;
@@ -491,14 +501,18 @@ class _PaginaChatbotState extends State<PaginaChatbot>
         modoAsesor: _modoCientifico ? 'modo_cientifico' : 'asesor_ia',
       );
     } finally {
+      if (identical(_controlSolicitud, control)) _controlSolicitud = null;
       if (mounted) {
         setState(() => enviando = false);
       }
     }
   }
 
+  void cancelarSolicitud() => _controlSolicitud?.cancelar();
+
   @override
   void dispose() {
+    _controlSolicitud?.cancelar();
     if (_grabandoAudio) {
       unawaited(_audioRecorder.cancel());
     }
@@ -788,9 +802,16 @@ class _PaginaChatbotState extends State<PaginaChatbot>
                   ),
                 ),
                 IconButton(
+                  tooltip: _txt('Enviar', 'Send'),
                   icon: const Icon(Icons.send),
                   onPressed: enviando ? null : enviarMensaje,
                 ),
+                if (enviando)
+                  IconButton(
+                    tooltip: _txt('Cancelar solicitud', 'Cancel request'),
+                    icon: const Icon(Icons.stop_circle),
+                    onPressed: cancelarSolicitud,
+                  ),
               ],
             ),
           ),
@@ -1697,13 +1718,33 @@ extension _PaginaChatbotUi on _PaginaChatbotState {
                       ),
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(
-                      Icons.send_rounded,
-                      color: Colors.white,
-                      size: 32,
-                    ),
+                    child: enviando
+                        ? const Padding(
+                            padding: EdgeInsets.all(17),
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 3,
+                            ),
+                          )
+                        : const Icon(
+                            Icons.send_rounded,
+                            color: Colors.white,
+                            size: 32,
+                          ),
                   ),
                 ),
+                if (enviando) ...[
+                  const SizedBox(width: 6),
+                  IconButton(
+                    tooltip: _txt('Cancelar solicitud', 'Cancel request'),
+                    onPressed: cancelarSolicitud,
+                    icon: const Icon(
+                      Icons.stop_circle_outlined,
+                      color: Color(0xFF172394),
+                      size: 34,
+                    ),
+                  ),
+                ],
               ],
             ),
           ),

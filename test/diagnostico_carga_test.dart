@@ -100,4 +100,45 @@ void main() {
     expect(find.byType(CircularProgressIndicator), findsNothing);
     expect(find.textContaining('temporalmente ocupado'), findsOneWidget);
   });
+
+  testWidgets('doble clic no duplica la solicitud', (tester) async {
+    _prepararVista(tester);
+    final respuesta = Completer<String>();
+    var intentos = 0;
+    await tester.pumpWidget(MaterialApp(
+      home: FormularioPaciente(
+        generarTexto: (_) {
+          intentos++;
+          return respuesta.future;
+        },
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    await _completarFormulario(tester);
+    await tester.tap(find.text('PROCESANDO...'));
+    await tester.pump();
+
+    expect(intentos, 1);
+    respuesta.completeError(
+      const IaProxyException('GEMINI_RECHAZO', estadoHttp: 422),
+    );
+    await tester.pumpAndSettle();
+  });
+
+  testWidgets('cancelar corta la carga y muestra confirmacion', (tester) async {
+    _prepararVista(tester);
+    final respuesta = Completer<String>();
+    await tester.pumpWidget(MaterialApp(
+      home: FormularioPaciente(generarTexto: (_) => respuesta.future),
+    ));
+    await tester.pumpAndSettle();
+
+    await _completarFormulario(tester);
+    await tester.tap(find.byTooltip('Cancelar solicitud'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(CircularProgressIndicator), findsNothing);
+    expect(find.text('Solicitud cancelada.'), findsOneWidget);
+  });
 }

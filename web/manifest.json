@@ -1,11 +1,11 @@
 {
-    "name": "doctor_suplementos",
-    "short_name": "doctor_suplementos",
+    "name": "DoctorSuplementos",
+    "short_name": "DoctorSuplementos",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#FFFFFF",
     "theme_color": "#1A237E",
-    "description": "A new Flutter project.",
+    "description": "Asesoría técnica de suplementos 4Life, catálogos, herramientas y consultas personalizadas.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

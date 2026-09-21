@@ -106,6 +106,7 @@ class _FormularioPacienteState extends State<FormularioPaciente> {
   ArchivoAdjuntoIA? _adjunto;
   bool cargando = false;
   bool _grabandoAudio = false;
+  ControlSolicitudIa? _controlSolicitud;
 
   @override
   void initState() {
@@ -142,11 +143,14 @@ class _FormularioPacienteState extends State<FormularioPaciente> {
   double get _progresoFormulario => _camposCompletosFormulario / 4;
 
   Future<void> generarDiagnostico() async {
+    if (cargando) return;
     if (historialController.text.isEmpty && _adjunto == null) return;
     if (_generoSeleccionado == null || _generoSeleccionado!.isEmpty) {
       _mostrarDialogoSimple("Falta género", "Por favor, selecciona el género.");
       return;
     }
+    final control = ControlSolicitudIa();
+    _controlSolicitud = control;
     setState(() => cargando = true);
 
     final paisConsulta = PaisService.actual.value;
@@ -190,9 +194,11 @@ class _FormularioPacienteState extends State<FormularioPaciente> {
           return ClienteIa.generarTexto(
             promptConAdjunto,
             adjuntos: _adjunto == null ? const [] : [_adjunto!],
+            control: control,
           );
         },
         permitirReintento: _adjunto == null,
+        control: control,
       );
 
       await HistorialService.guardar(
@@ -213,9 +219,12 @@ class _FormularioPacienteState extends State<FormularioPaciente> {
           modulo: 'diagnostico', pais: paisConsulta);
       _mostrarDialogoSimple("Error", mensajeErrorIa(e));
     } finally {
+      if (identical(_controlSolicitud, control)) _controlSolicitud = null;
       if (mounted) setState(() => cargando = false);
     }
   }
+
+  void _cancelarDiagnostico() => _controlSolicitud?.cancelar();
 
   void _mostrarResultado(String mensaje, PerfilAsesor perfilAsesor) {
     Navigator.push(
@@ -376,6 +385,7 @@ class _FormularioPacienteState extends State<FormularioPaciente> {
 
   @override
   void dispose() {
+    _controlSolicitud?.cancelar();
     if (_grabandoAudio) {
       unawaited(_audioRecorder.cancel());
     }
@@ -1183,13 +1193,49 @@ class _FormularioPacienteState extends State<FormularioPaciente> {
         ),
         child: Center(
           child: cargando
-              ? const SizedBox(
-                  width: 28,
-                  height: 28,
-                  child: CircularProgressIndicator(
-                    color: Colors.white,
-                    strokeWidth: 3,
-                  ),
+              ? Stack(
+                  children: [
+                    Center(
+                      child: Padding(
+                        padding: const EdgeInsets.only(right: 44),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const SizedBox(
+                              width: 24,
+                              height: 24,
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 3,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Text(
+                              txtApp('PROCESANDO...', 'PROCESSING...'),
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 16,
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: Padding(
+                        padding: const EdgeInsets.only(right: 12),
+                        child: IconButton(
+                          tooltip:
+                              txtApp('Cancelar solicitud', 'Cancel request'),
+                          onPressed: _cancelarDiagnostico,
+                          icon: const Icon(Icons.stop_circle_outlined,
+                              color: Colors.white, size: 32),
+                        ),
+                      ),
+                    ),
+                  ],
                 )
               : Row(
                   mainAxisSize: MainAxisSize.min,

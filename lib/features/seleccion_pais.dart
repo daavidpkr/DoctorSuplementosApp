@@ -143,8 +143,8 @@ class _PaginaSeleccionPaisState extends State<PaginaSeleccionPais> {
                               const SizedBox(height: 28),
                               LayoutBuilder(builder: (context, constraints) {
                                 final tarjetas = [
-                                  _tarjeta(PaisApp.ecuador, '🇪🇨'),
-                                  _tarjeta(PaisApp.estadosUnidos, '🇺🇸'),
+                                  _tarjeta(PaisApp.ecuador, 'EC'),
+                                  _tarjeta(PaisApp.estadosUnidos, 'US'),
                                 ];
                                 final escala =
                                     MediaQuery.textScalerOf(context).scale(16) /
@@ -249,7 +249,7 @@ class _PaginaSeleccionPaisState extends State<PaginaSeleccionPais> {
     );
   }
 
-  Widget _tarjeta(PaisApp pais, String bandera) {
+  Widget _tarjeta(PaisApp pais, String codigoPais) {
     final seleccionada = _pais == pais;
     return Semantics(
       selected: seleccionada,
@@ -279,7 +279,8 @@ class _PaginaSeleccionPaisState extends State<PaginaSeleccionPais> {
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 28),
               child: Column(children: [
                 ExcludeSemantics(
-                    child: Text(bandera, style: const TextStyle(fontSize: 52))),
+                  child: _InsigniaPais(codigo: codigoPais, grande: true),
+                ),
                 const SizedBox(height: 12),
                 Text(_texto(pais.etiqueta, pais.etiquetaIngles),
                     textAlign: TextAlign.center,
@@ -296,6 +297,51 @@ class _PaginaSeleccionPaisState extends State<PaginaSeleccionPais> {
               ]),
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _InsigniaPais extends StatelessWidget {
+  final String codigo;
+  final bool grande;
+
+  const _InsigniaPais({required this.codigo, this.grande = false});
+
+  @override
+  Widget build(BuildContext context) {
+    final ecuador = codigo == 'EC';
+    return Container(
+      width: grande ? 76 : 42,
+      height: grande ? 52 : 30,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          stops: ecuador ? const [0, 0.5, 0.75] : const [0, 0.5, 1],
+          colors: ecuador
+              ? const [Color(0xFFFFD100), Color(0xFF0057B8), Color(0xFFEF3340)]
+              : const [Color(0xFF3C3B6E), Colors.white, Color(0xFFB22234)],
+        ),
+        borderRadius: BorderRadius.circular(grande ? 12 : 8),
+        border: Border.all(color: Colors.white, width: 2),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF07125E).withValues(alpha: 0.14),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Text(
+        codigo,
+        style: TextStyle(
+          color: ecuador ? const Color(0xFF07125E) : Colors.white,
+          fontSize: grande ? 20 : 12,
+          fontWeight: FontWeight.w900,
+          shadows: const [Shadow(color: Colors.white, blurRadius: 2)],
         ),
       ),
     );
