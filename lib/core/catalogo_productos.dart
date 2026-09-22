@@ -734,6 +734,49 @@ InformacionProductoCatalogo informacionProductoCatalogo(String nombre) {
       );
 }
 
+/// Construye la ficha Ecuador solo con los datos locales ya disponibles.
+///
+/// Esta ruta no consulta servicios externos y permite abrir la galeria aun sin
+/// conexion. Los campos vacios se declaran como no documentados en lugar de
+/// inferir contenido.
+String textoFichaProductoEcuador(String nombre, IdiomaApp idioma) {
+  final info = informacionProductosEcuador[nombre];
+  if (info == null) {
+    throw StateError('Producto no disponible en Ecuador');
+  }
+  final en = idioma == IdiomaApp.ingles;
+  final noDato = en
+      ? 'Not documented in the available local information. Check the current label.'
+      : 'No documentado en la informacion local disponible. Revisa la etiqueta vigente.';
+  String dato(String valor) => valor.trim().isEmpty ? noDato : valor.trim();
+  final uso = dato(info.uso);
+  final dosis = dato(info.dosis);
+
+  return '''${en ? 'EXECUTIVE TECHNICAL SHEET' : 'FICHA TECNICA EJECUTIVA'}
+$nombre · Ecuador
+${dato(info.descripcion)}
+
+${en ? 'MAIN COMPONENTS AND ORIGIN' : 'COMPONENTES PRINCIPALES Y ORIGEN'}
+${dato(info.componentes)}
+
+${en ? 'MECHANISM OF ACTION' : 'MECANISMO DE ACCION'}
+${dato(info.descripcion)}
+
+${en ? 'IDEAL USER PROFILE' : 'PERFIL DEL USUARIO IDEAL'}
+${en ? 'Use only according to the documented purpose and current label; individual suitability is not documented in the available local information.' : 'Usar unicamente de acuerdo con el proposito documentado y la etiqueta vigente; la idoneidad individual no esta documentada en la informacion local disponible.'}
+
+${en ? 'USE PROTOCOL' : 'PROTOCOLO DE USO'}
+$uso
+${en ? 'Label dosage' : 'Dosis de etiqueta'}: $dosis
+
+${en ? 'SAFETY PROTOCOL' : 'PROTOCOLO DE SEGURIDAD'}
+${dato(info.precauciones)}
+
+${en ? 'RESPONSIBILITY NOTE' : 'NOTA DE RESPONSABILIDAD'}
+${en ? 'This product is not medicine and does not replace treatment prescribed by a healthcare professional.' : 'Este producto no es un medicamento y no sustituye tratamientos prescritos por un profesional de salud.'}
+''';
+}
+
 Map<String, PrecioProductoResultadoFicha> get preciosResultadoPaisActual {
   if (PaisService.actual.value == PaisApp.ecuador) {
     return {

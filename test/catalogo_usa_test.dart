@@ -29,6 +29,115 @@ void main() {
     expect(precioPromocionalMiTienda('Transfer factor MAX'), 116.24);
   });
 
+  test('Ecuador covers every visible product and reports its missing price',
+      () {
+    expect(informacionProductosEcuador.keys.toSet(),
+        productosPermitidosEcuador.toSet());
+    expect(imagenesProductoEcuador.keys.toSet(),
+        productosPermitidosEcuador.toSet());
+    expect(productosConPrecioEcuador, hasLength(31));
+    expect(
+      productosPermitidosEcuador.toSet().difference(
+            productosConPrecioEcuador.map((p) => p.nombre).toSet(),
+          ),
+      {'Limpiador'},
+    );
+
+    for (final producto in productosPermitidosEcuador) {
+      final info = informacionProductosEcuador[producto]!;
+      expect(info.descripcion.trim(), isNotEmpty, reason: producto);
+      expect(info.componentes.trim(), isNotEmpty, reason: producto);
+      expect(info.uso.trim(), isNotEmpty, reason: producto);
+      expect(info.precauciones.trim(), isNotEmpty, reason: producto);
+      expect(info.dosis.trim(), isNotEmpty, reason: producto);
+      final ficha = textoFichaProductoEcuador(producto, IdiomaApp.espanol);
+      expect(ficha, contains('FICHA TECNICA EJECUTIVA'), reason: producto);
+      expect(ficha, contains('COMPONENTES PRINCIPALES Y ORIGEN'),
+          reason: producto);
+      expect(ficha, contains('PROTOCOLO DE USO'), reason: producto);
+      expect(ficha, contains('PROTOCOLO DE SEGURIDAD'), reason: producto);
+      expect(ficha, contains('NOTA DE RESPONSABILIDAD'), reason: producto);
+    }
+  });
+
+  testWidgets(
+      'Ecuador opens an individual local sheet immediately without AI loader',
+      (tester) async {
+    await tester.pumpWidget(const MaterialApp(home: ConsultaProductoPagina()));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField).first, 'Agpro');
+    await tester.pump();
+    await tester.tap(find.byWidgetPredicate(
+      (widget) => widget is Text && widget.data == 'Agpro',
+    ));
+    await tester.pump();
+
+    expect(find.byType(Dialog), findsOneWidget);
+    expect(find.byType(CircularProgressIndicator), findsNothing);
+    expect(find.text('Ficha tecnica ejecutiva'), findsOneWidget);
+    expect(find.text('Componentes principales y origen'), findsOneWidget);
+    expect(find.textContaining('Formula especializada AG-Pro'), findsOneWidget);
+    expect(find.text('\$73.00'), findsOneWidget);
+    expect(find.text('\$97.00'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Ecuador local search covers name, benefit and component',
+      (tester) async {
+    await tester.pumpWidget(const MaterialApp(home: ConsultaProductoPagina()));
+    await tester.pumpAndSettle();
+    final search = find.byType(TextField).first;
+
+    for (final caso in const {
+      'Agpro': 'Agpro',
+      'tf max': 'Transfer factor MAX',
+      'microbiota': 'Preo biotics',
+      'gel de aloe vera': 'Aloe Vera Stix Tropical',
+    }.entries) {
+      await tester.enterText(search, caso.key);
+      await tester.pump();
+      expect(
+        find.byWidgetPredicate(
+          (widget) => widget is Text && widget.data == caso.value,
+        ),
+        findsOneWidget,
+        reason: caso.key,
+      );
+    }
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Ecuador multiple selection opens a fully local summary',
+      (tester) async {
+    await tester.pumpWidget(const MaterialApp(home: ConsultaProductoPagina()));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Multiple'));
+    await tester.pump();
+
+    final search = find.byType(TextField).first;
+    await tester.enterText(search, 'Agpro');
+    await tester.pump();
+    final agpro = find.byWidgetPredicate(
+      (widget) => widget is Text && widget.data == 'Agpro',
+    );
+    await tester.tap(find.ancestor(of: agpro, matching: find.byType(InkWell)));
+    await tester.enterText(search, 'Bioefa');
+    await tester.pump();
+    final bioefa = find.byWidgetPredicate(
+      (widget) => widget is Text && widget.data == 'Bioefa',
+    );
+    await tester.tap(find.ancestor(of: bioefa, matching: find.byType(InkWell)));
+    await tester.tap(find.text('Consultar'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(Dialog), findsOneWidget);
+    expect(find.byType(CircularProgressIndicator), findsNothing);
+    expect(find.text('Agpro'), findsWidgets);
+    expect(find.text('Bioefa'), findsWidgets);
+    expect(find.textContaining('2 producto(s) seleccionados'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   test('USA has exactly 76 individual IDs and verified source pages', () {
     PaisService.actual.value = PaisApp.estadosUnidos;
     expect(productosPermitidosPaisActual.length, 76);
