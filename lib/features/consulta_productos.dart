@@ -976,32 +976,13 @@ Este producto no es medicina, no diagnostica, no trata, no cura ni previene enfe
                       LayoutBuilder(
                         builder: (context, constraints) {
                           final compacta = constraints.maxWidth < 430;
-                          final imagen = Container(
+                          final imagen = SizedBox(
                             height: 220,
-                            padding: const EdgeInsets.all(10),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFF8F9FF),
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(
-                                color: const Color(0xFFE1E4F0),
-                              ),
+                            child: ImagenProductoAmpliable(
+                              imagenAsset: imagenProducto,
+                              nombreProducto: titulo,
+                              ingles: ingles,
                             ),
-                            child: imagenProducto == null
-                                ? const Icon(
-                                    Icons.inventory_2_outlined,
-                                    color: Color(0xFF12248B),
-                                    size: 54,
-                                  )
-                                : Image.asset(
-                                    imagenProducto,
-                                    fit: BoxFit.contain,
-                                    filterQuality: FilterQuality.high,
-                                    errorBuilder: (_, __, ___) => const Icon(
-                                      Icons.inventory_2_outlined,
-                                      color: Color(0xFF12248B),
-                                      size: 54,
-                                    ),
-                                  ),
                           );
                           if (compacta) {
                             return Column(

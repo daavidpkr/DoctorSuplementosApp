@@ -20,6 +20,7 @@ import 'platform/archivo_plataforma.dart';
 import 'platform/error_red.dart';
 import 'platform/pdfjs_loader.dart';
 import 'ui/pantalla_resultado_ficha.dart';
+import 'ui/visor_imagen_producto.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'dart:math' as math;
