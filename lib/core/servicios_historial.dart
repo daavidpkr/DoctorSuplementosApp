@@ -55,6 +55,42 @@ class HistorialService {
       },
     );
   }
+
+  static Future<int> eliminarRegistro(Map<String, dynamic> registro) async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getStringList(prefsKey) ?? <String>[];
+    final codificado = jsonEncode(registro);
+    var indice = raw.indexOf(codificado);
+    if (indice < 0) {
+      indice = raw.indexWhere((item) {
+        try {
+          return jsonEncode(jsonDecode(item)) == codificado;
+        } catch (_) {
+          return false;
+        }
+      });
+    }
+    if (indice < 0) {
+      throw StateError('El registro seleccionado ya no existe.');
+    }
+    raw.removeAt(indice);
+    final guardado = await prefs.setStringList(prefsKey, raw);
+    if (!guardado) throw StateError('No se pudo actualizar el historial.');
+    registros.removeWhere((item) => jsonEncode(item) == codificado);
+    return indice;
+  }
+
+  static Future<void> restaurarRegistro(
+    Map<String, dynamic> registro,
+    int indice,
+  ) async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getStringList(prefsKey) ?? <String>[];
+    final posicion = indice.clamp(0, raw.length);
+    raw.insert(posicion, jsonEncode(registro));
+    final guardado = await prefs.setStringList(prefsKey, raw);
+    if (!guardado) throw StateError('No se pudo restaurar el historial.');
+  }
 }
 
 class ChatHistoryService {

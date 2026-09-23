@@ -254,7 +254,7 @@ class _PaginaInventarioLocalState extends State<PaginaInventarioLocal>
           keyboardType: TextInputType.number,
           autofocus: true,
           decoration: InputDecoration(
-            labelText: producto.nombre,
+            labelText: producto.nombreVisible,
             suffixText: _t('unidades', 'units'),
           ),
         ),

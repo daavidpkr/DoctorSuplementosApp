@@ -26,28 +26,19 @@ void main() {
 
     expect(find.textContaining('Hola, Socio'), findsOneWidget);
     expect(find.text(IdiomaService.texto('consult_products')), findsWidgets);
-    expect(find.text(IdiomaService.texto('mitienda_catalog')), findsOneWidget);
-    expect(find.text('Catálogos PDF'), findsOneWidget);
-    expect(find.text(IdiomaService.texto('price_calculator')), findsOneWidget);
-    expect(find.text(IdiomaService.texto('diagnosis')), findsOneWidget);
-    expect(find.text('Chat Live 4Life'), findsOneWidget);
-    expect(find.text(IdiomaService.texto('ai_adviser')), findsOneWidget);
-    expect(find.byKey(const ValueKey('pagina-siguiente')), findsOneWidget);
+    expect(find.text(IdiomaService.texto('mitienda_catalog')), findsWidgets);
+    expect(find.text('Catálogos PDF'), findsWidgets);
+    expect(find.text(IdiomaService.texto('price_calculator')), findsWidgets);
+    expect(find.text(IdiomaService.texto('diagnosis')), findsWidgets);
+    expect(find.text('Chat Live 4Life'), findsWidgets);
+    expect(find.text(IdiomaService.texto('ai_adviser')), findsWidgets);
+    expect(find.byType(PageView), findsNothing);
+    expect(find.byKey(const ValueKey('pagina-siguiente')), findsNothing);
 
-    await tester.tap(find.byKey(const ValueKey('pagina-siguiente')));
+    await tester.ensureVisible(find.text('Panel de Rendimiento'));
     await tester.pumpAndSettle();
-
-    expect(find.text(IdiomaService.texto('history')), findsOneWidget);
     expect(find.text('Panel de Rendimiento'), findsOneWidget);
     expect(find.textContaining('Hola, Socio'), findsOneWidget);
-
-    await tester.tap(find.byKey(const ValueKey('pagina-anterior')));
-    await tester.pumpAndSettle();
-    expect(find.text(IdiomaService.texto('consult_products')), findsWidgets);
-
-    await tester.drag(find.byType(PageView), const Offset(-500, 0));
-    await tester.pumpAndSettle();
-    expect(find.text('Panel de Rendimiento'), findsOneWidget);
   });
 
   testWidgets('home controls expose button semantics and named routes',
@@ -69,33 +60,31 @@ void main() {
     expect(card.flagsCollection.isButton, isTrue);
     expect(card.getSemanticsData().hasAction(SemanticsAction.tap), isTrue);
 
-    bool selectorTieneFoco() {
+    bool banderaTieneFoco() {
       final context = FocusManager.instance.primaryFocus?.context;
       if (context == null) return false;
-      var encontrado = context.widget.key ==
-          const ValueKey<String>('selector-pagina-inicio');
+      var encontrado =
+          context.widget.key == const ValueKey<String>('bandera-pais-ec');
       context.visitAncestorElements((element) {
         encontrado = encontrado ||
-            element.widget.key ==
-                const ValueKey<String>('selector-pagina-inicio');
+            element.widget.key == const ValueKey<String>('bandera-pais-ec');
         return !encontrado;
       });
       return encontrado;
     }
 
-    for (var i = 0; i < 40 && !selectorTieneFoco(); i++) {
+    for (var i = 0; i < 40 && !banderaTieneFoco(); i++) {
       await tester.sendKeyEvent(LogicalKeyboardKey.tab);
       await tester.pump();
     }
-    expect(selectorTieneFoco(), isTrue);
+    expect(banderaTieneFoco(), isTrue);
 
     await tester.sendKeyEvent(LogicalKeyboardKey.enter);
     await tester.pumpAndSettle();
-    expect(find.text('Panel de Rendimiento'), findsOneWidget);
-
-    await tester.sendKeyEvent(LogicalKeyboardKey.space);
+    expect(find.byKey(const ValueKey('selector-pais-idioma-inicio')),
+        findsOneWidget);
+    await tester.tap(find.text('Cancelar'));
     await tester.pumpAndSettle();
-    expect(find.text(IdiomaService.texto('consult_products')), findsWidgets);
 
     semantics.dispose();
 
@@ -111,6 +100,7 @@ void main() {
         ),
       ),
     ));
+    await tester.ensureVisible(find.text('Abrir catalogo'));
     await tester.tap(find.text('Abrir catalogo'));
     await tester.pumpAndSettle();
 

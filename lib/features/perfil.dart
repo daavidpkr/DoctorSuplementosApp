@@ -14,7 +14,6 @@ class _PaginaPerfilState extends State<PaginaPerfil> {
   final TextEditingController _codigoSocioController = TextEditingController();
   final TextEditingController _telefonoSocioController =
       TextEditingController();
-  String _fotoBase64 = '';
   IdiomaApp _idioma = IdiomaApp.espanol;
   PaisApp _pais = PaisApp.ecuador;
   bool _cargando = true;
@@ -36,7 +35,6 @@ class _PaginaPerfilState extends State<PaginaPerfil> {
       _codigoSocioController.text = perfil.codigoSocio;
       _telefonoSocioController.text =
           _normalizarTelefonoSocio(perfil.telefonoSocio);
-      _fotoBase64 = perfil.fotoBase64;
       _idioma = idioma;
       _pais = pais;
       _cargando = false;
@@ -74,26 +72,10 @@ class _PaginaPerfilState extends State<PaginaPerfil> {
     );
   }
 
-  Future<void> _seleccionarFoto() async {
-    final picker = ImagePicker();
-    final imagen = await picker.pickImage(
-      source: ImageSource.gallery,
-      maxWidth: 700,
-      imageQuality: 70,
-    );
-    if (imagen == null) return;
-
-    final bytes = await imagen.readAsBytes();
-    setState(() {
-      _fotoBase64 = base64Encode(bytes);
-    });
-  }
-
   Future<void> _guardar() async {
     setState(() => _guardando = true);
     final perfil = PerfilAsesor(
       nombre: _nombreController.text,
-      fotoBase64: _fotoBase64,
       codigoSocio: _codigoSocioController.text,
       telefonoSocio: _normalizarTelefonoSocio(_telefonoSocioController.text),
     );
@@ -127,7 +109,6 @@ class _PaginaPerfilState extends State<PaginaPerfil> {
 
   @override
   Widget build(BuildContext context) {
-    final fotoBytes = _fotoBase64.isEmpty ? null : base64Decode(_fotoBase64);
     final ingles = IdiomaService.actual.value == IdiomaApp.ingles;
 
     return Scaffold(
@@ -157,8 +138,6 @@ class _PaginaPerfilState extends State<PaginaPerfil> {
                       children: [
                         _encabezadoPerfil(),
                         const SizedBox(height: 44),
-                        _tarjetaFotoPerfil(fotoBytes, ingles),
-                        const SizedBox(height: 22),
                         _tarjetaInformacionAsesor(ingles),
                         const SizedBox(height: 22),
                         _tarjetaCodigoSocio(),
@@ -225,123 +204,6 @@ class _PaginaPerfilState extends State<PaginaPerfil> {
           ),
         ),
       ],
-    );
-  }
-
-  Widget _tarjetaFotoPerfil(Uint8List? fotoBytes, bool ingles) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(28, 30, 28, 30),
-      decoration: _decoracionTarjetaPerfil(),
-      child: Row(
-        children: [
-          Stack(
-            alignment: Alignment.bottomRight,
-            children: [
-              CircleAvatar(
-                radius: 72,
-                backgroundColor: const Color(0xFFE7EAFF),
-                backgroundImage:
-                    fotoBytes == null ? null : MemoryImage(fotoBytes),
-                child: fotoBytes == null
-                    ? ClipOval(
-                        child: Image.asset(
-                          'assets/icon.webp',
-                          width: 144,
-                          height: 144,
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => const Icon(
-                            Icons.person_rounded,
-                            color: Color(0xFF172394),
-                            size: 86,
-                          ),
-                        ),
-                      )
-                    : null,
-              ),
-              InkWell(
-                borderRadius: BorderRadius.circular(36),
-                onTap: _seleccionarFoto,
-                child: Container(
-                  width: 64,
-                  height: 64,
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFF4059EA), Color(0xFF172394)],
-                    ),
-                    shape: BoxShape.circle,
-                    border: Border.all(color: Colors.white, width: 4),
-                  ),
-                  child: const Icon(
-                    Icons.photo_camera_rounded,
-                    color: Colors.white,
-                    size: 30,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(width: 34),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  ingles ? "Profile photo" : "Foto de perfil",
-                  style: const TextStyle(
-                    color: Color(0xFF12248B),
-                    fontSize: 24,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-                const SizedBox(height: 18),
-                Text(
-                  ingles
-                      ? "Add a photo to personalize your profile and help others recognize you easily."
-                      : "Agrega una foto para personalizar tu perfil y que otros te reconozcan facilmente.",
-                  style: const TextStyle(
-                    color: Color(0xFF3F4A82),
-                    fontSize: 18,
-                    height: 1.35,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                const SizedBox(height: 26),
-                InkWell(
-                  borderRadius: BorderRadius.circular(16),
-                  onTap: _seleccionarFoto,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 28,
-                      vertical: 18,
-                    ),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFEFF1FF),
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(Icons.photo_camera_rounded,
-                            color: Color(0xFF4059EA), size: 28),
-                        const SizedBox(width: 14),
-                        Text(
-                          ingles ? "Change photo" : "Cambiar foto",
-                          style: const TextStyle(
-                            color: Color(0xFF3150D9),
-                            fontSize: 18,
-                            fontWeight: FontWeight.w900,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
     );
   }
 
@@ -456,13 +318,16 @@ class _PaginaPerfilState extends State<PaginaPerfil> {
                   children: [
                     const Icon(Icons.save_rounded,
                         color: Colors.white, size: 30),
-                    const SizedBox(width: 18),
-                    Text(
-                      ingles ? "Save profile" : "Guardar perfil",
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 21,
-                        fontWeight: FontWeight.w900,
+                    const SizedBox(width: 10),
+                    Flexible(
+                      child: Text(
+                        ingles ? "Save profile" : "Guardar perfil",
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 19,
+                          fontWeight: FontWeight.w900,
+                        ),
                       ),
                     ),
                   ],
@@ -686,14 +551,14 @@ class _PaginaPerfilState extends State<PaginaPerfil> {
                 texto: ingles
                     ? PaisApp.ecuador.etiquetaIngles
                     : PaisApp.ecuador.etiqueta,
-                icono: Icons.public_rounded,
+                pais: PaisApp.ecuador,
               ),
               OpcionSelectorEstilizado(
                 valor: PaisApp.estadosUnidos,
                 texto: ingles
                     ? PaisApp.estadosUnidos.etiquetaIngles
                     : PaisApp.estadosUnidos.etiqueta,
-                icono: Icons.public_rounded,
+                pais: PaisApp.estadosUnidos,
               ),
             ],
             onChanged: _cambiarPais,

@@ -185,7 +185,7 @@ ProductoCatalogoUsa? fichaProductoUsa(String id) {
 String nombreProductoVisible(String id) =>
     PaisService.actual.value == PaisApp.estadosUnidos
         ? fichaProductoUsa(id)?.nombre(IdiomaService.actual.value) ?? id
-        : id;
+        : nombresOficialesEcuador[id] ?? id;
 
 List<ProductoPrecio> get productosPrecioEstadosUnidos =>
     catalogoProductosEstadosUnidos.map((p) {

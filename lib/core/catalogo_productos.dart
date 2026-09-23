@@ -37,6 +37,76 @@ const List<String> productosPermitidosEcuador = [
 
 const double escalaTextoInterfaces = 0.90;
 
+/// Nombres comerciales visibles de Ecuador. Las claves permanecen como IDs
+/// históricos para no afectar precios, imágenes, inventarios ni historiales.
+const Map<String, String> nombresOficialesEcuador = {
+  'Agpro': '4Life Transfer Factor AG-Pro',
+  'Bcv': '4Life Transfer Factor BCV Tri-Factor Formula',
+  'Belle vie': '4Life Transfer Factor Belle Vie',
+  'Bioefa': 'BioEFA',
+  'Colageno tipo i': '4Life Transfer Factor Collagen',
+  'Crema cuerpo': 'enummi Intensive Body Lotion',
+  'Crema humectante': 'äKwä Moisture Cream',
+  'Crema para los ojos': 'äKwä Refining Eye Cream',
+  'Energy go stix': 'Energy Go Stix Berry',
+  'Fibre': 'Fibre System Plus',
+  'Glucoach': '4Life Transfer Factor GluCoach',
+  'Glutamine prime': '4Life NanoFactor Glutamine Prime',
+  'Kbu': '4Life Transfer Factor KBU',
+  'Limpiador': 'äKwä Oil-to-Foam Cleanser',
+  'Malepro': '4Life Transfer Factor MalePro+',
+  'Nutrastart': 'NutraStart NF Vanilla',
+  'Pasta de dientes': 'enummi Toothpaste',
+  'Preo biotics': 'Pre/o Biotics',
+  'Protf': '4Life Transfer Factor PRO-TF',
+  'Recall': '4Life Transfer Factor ReCall',
+  'Renuvo': '4Life Transfer Factor Renuvo',
+  'Riovida burst': 'RioVida Burst',
+  'Riovida Jugo': '4Life Transfer Factor RioVida Tri-Factor Formula',
+  'Riovida stix': '4Life Transfer Factor RioVida Stix',
+  'Suero': 'äKwä Vitamin Serum',
+  'TF Boost': '4Life TF-Boost Orange',
+  'Transfer factor MAX': '4Life Transfer Factor Max',
+  'Transfer factor plus': '4Life Transfer Factor Plus Tri-Factor Formula',
+  'Transfer factor tri factor': '4Life Transfer Factor Tri-Factor Formula',
+  'Vistari': '4Life Transfer Factor Vistari',
+};
+
+const Map<String, String> presentacionesProductoEcuador = {
+  'Aloe Vera Stix Tropical': '15 sobres de 3.4 g',
+  'Agpro': '60 cápsulas',
+  'Bcv': '60 cápsulas',
+  'Belle vie': '60 cápsulas vegetales',
+  'Bioefa': '60 cápsulas',
+  'Colageno tipo i': '15 paquetes de 6.6 g',
+  'Crema cuerpo': '250 ml',
+  'Crema humectante': '71 g',
+  'Crema para los ojos': '15 ml',
+  'Energy go stix': '30 sobres de 6 g',
+  'Glucoach': '120 cápsulas',
+  'Glutamine prime': '120 cápsulas',
+  'Kbu': '120 cápsulas',
+  'Limpiador': '160 ml',
+  'Malepro': '120 cápsulas',
+  'Nutrastart': '825 g (15 porciones)',
+  'Recall': '90 cápsulas vegetales',
+  'Renuvo': '120 cápsulas',
+  'Riovida burst': '15 paquetes de 30 ml',
+  'Riovida Jugo': '532 ml',
+  'Riovida stix': '15 sobres de 8 g',
+  'Suero': '50 ml',
+  'TF Boost': '5 sobres de 7.1 g',
+  'Transfer factor MAX': '120 cápsulas',
+  'Transfer factor plus': '90 cápsulas',
+  'Vistari': '60 cápsulas',
+};
+
+List<String> aliasProductoEcuador(String id) => <String>{
+      id,
+      nombresOficialesEcuador[id] ?? id,
+      ...?_diferenciadoresProducto4Life[id],
+    }.toList(growable: false);
+
 List<String> get productosPermitidosPaisActual =>
     PaisService.actual.value == PaisApp.estadosUnidos
         ? productosPermitidosEstadosUnidos
@@ -751,9 +821,11 @@ String textoFichaProductoEcuador(String nombre, IdiomaApp idioma) {
   String dato(String valor) => valor.trim().isEmpty ? noDato : valor.trim();
   final uso = dato(info.uso);
   final dosis = dato(info.dosis);
+  final nombreVisible = nombresOficialesEcuador[nombre] ?? nombre;
+  final presentacion = presentacionesProductoEcuador[nombre];
 
   return '''${en ? 'EXECUTIVE TECHNICAL SHEET' : 'FICHA TECNICA EJECUTIVA'}
-$nombre · Ecuador
+$nombreVisible · Ecuador
 ${dato(info.descripcion)}
 
 ${en ? 'MAIN COMPONENTS AND ORIGIN' : 'COMPONENTES PRINCIPALES Y ORIGEN'}
@@ -768,6 +840,9 @@ ${en ? 'Use only according to the documented purpose and current label; individu
 ${en ? 'USE PROTOCOL' : 'PROTOCOLO DE USO'}
 $uso
 ${en ? 'Label dosage' : 'Dosis de etiqueta'}: $dosis
+
+${en ? 'PRESENTATION' : 'PRESENTACION'}
+${presentacion ?? noDato}
 
 ${en ? 'SAFETY PROTOCOL' : 'PROTOCOLO DE SEGURIDAD'}
 ${dato(info.precauciones)}
@@ -786,6 +861,7 @@ Map<String, PrecioProductoResultadoFicha> get preciosResultadoPaisActual {
           publico: producto.publico,
           promocional: precioPromocionalMiTienda(producto.nombre),
           lp: producto.lp,
+          presentacion: presentacionesProductoEcuador[producto.nombre],
         ),
     };
   }
@@ -936,7 +1012,9 @@ ProductoPrecio? buscarProductoConPrecio(String consulta) {
   ProductoPrecio? mejor;
   var mejorPuntaje = 0;
   for (final producto in productosConPrecioPaisActual) {
-    final puntaje = puntajeCoincidencia(consulta, producto.nombre);
+    final puntaje = aliasProductoEcuador(producto.nombre)
+        .map((alias) => puntajeCoincidencia(consulta, alias))
+        .fold<int>(0, math.max);
     if (puntaje > mejorPuntaje) {
       mejorPuntaje = puntaje;
       mejor = producto;
@@ -984,7 +1062,9 @@ String? buscarProductoPermitido(String consulta) {
   String? mejor;
   var mejorPuntaje = 0;
   for (final producto in productosPermitidosPaisActual) {
-    final puntaje = puntajeCoincidencia(consulta, producto);
+    final puntaje = aliasProductoEcuador(producto)
+        .map((alias) => puntajeCoincidencia(consulta, alias))
+        .fold<int>(0, math.max);
     if (puntaje > mejorPuntaje) {
       mejorPuntaje = puntaje;
       mejor = producto;
@@ -1011,8 +1091,9 @@ String? productoDesdeTexto(String texto) {
   final normalizado = normalizarTexto(texto);
   final normalizadoClave = normalizarClaveProducto(texto);
   for (final producto in productosPermitidosPaisActual) {
-    if (normalizado.contains(normalizarTexto(producto)) ||
-        normalizadoClave.contains(normalizarClaveProducto(producto))) {
+    if (aliasProductoEcuador(producto).any((alias) =>
+        normalizado.contains(normalizarTexto(alias)) ||
+        normalizadoClave.contains(normalizarClaveProducto(alias)))) {
       return producto;
     }
   }

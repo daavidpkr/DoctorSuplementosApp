@@ -65,7 +65,7 @@ class _ConsultaProductoPaginaState extends State<ConsultaProductoPagina>
     for (final producto in productos) {
       final info = informacionProductoCatalogo(producto.nombre);
       final alias = PaisService.actual.value == PaisApp.ecuador
-          ? (_diferenciadoresProducto4Life[producto.nombre]?.join(' ') ?? '')
+          ? aliasProductoEcuador(producto.nombre).join(' ')
           : (fichaProductoUsa(producto.nombre)?.alias.join(' ') ?? '');
       final texto = normalizarTexto(
         '${producto.nombreVisible} $alias ${info.descripcion} ${info.componentes} '
@@ -121,8 +121,6 @@ class _ConsultaProductoPaginaState extends State<ConsultaProductoPagina>
     if (PaisService.actual.value == PaisApp.ecuador) {
       resultado = textoFichaProductoEcuador(producto.nombre, idioma);
     } else {
-      _mostrarCargandoIa();
-      final navigator = Navigator.of(context, rootNavigator: true);
       try {
         resultado = await _generarFichaProducto(producto, idioma);
       } catch (e, stackTrace) {
@@ -134,8 +132,6 @@ class _ConsultaProductoPaginaState extends State<ConsultaProductoPagina>
           ));
         }
         return;
-      } finally {
-        if (navigator.mounted) navigator.pop();
       }
     }
     final resultadoFinal = resultado;
@@ -143,9 +139,10 @@ class _ConsultaProductoPaginaState extends State<ConsultaProductoPagina>
     if (!mounted) return;
     unawaited(ImpactoService.registrar(
       tipo: _esMiTienda ? 'catalogo_mitienda' : 'catalogo_afiliado',
-      titulo: producto.nombre,
+      titulo: producto.nombreVisible,
       datos: {
-        'producto': producto.nombre,
+        'producto': producto.nombreVisible,
+        'productoId': producto.nombre,
         'afiliado': producto.afiliado,
         'publico': producto.publico,
         'lp': producto.lp,
@@ -162,62 +159,6 @@ class _ConsultaProductoPaginaState extends State<ConsultaProductoPagina>
         productoIdentificado: producto.nombre,
         precioProducto: producto,
         precioPromocional: precioPromocional,
-      ),
-    );
-  }
-
-  void _mostrarCargandoIa() {
-    showDialog<void>(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) => Dialog(
-        backgroundColor: Colors.transparent,
-        child: Container(
-          constraints: const BoxConstraints(maxWidth: 390),
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(22),
-            border: Border.all(color: const Color(0xFFE1E4F0)),
-            boxShadow: const [
-              BoxShadow(
-                color: Color(0x220B176B),
-                blurRadius: 24,
-                offset: Offset(0, 10),
-              ),
-            ],
-          ),
-          child: Row(children: [
-            Container(
-              width: 52,
-              height: 52,
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: const Color(0xFFF0EFFF),
-                borderRadius: BorderRadius.circular(15),
-              ),
-              child: const CircularProgressIndicator(
-                color: Color(0xFF3F46D7),
-                strokeWidth: 3,
-              ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Text(
-                txtApp(
-                  'Generando ficha clinica en linea...',
-                  'Generating online clinical sheet...',
-                ),
-                style: const TextStyle(
-                  color: Color(0xFF20294F),
-                  fontSize: 16,
-                  height: 1.3,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ),
-          ]),
-        ),
       ),
     );
   }
@@ -466,13 +407,18 @@ Este producto no es medicina, no diagnostica, no trata, no cura ni previene enfe
               size: 19,
             ),
             const SizedBox(width: 7),
-            Text(
-              texto,
-              style: TextStyle(
-                color:
-                    activo ? const Color(0xFF12248B) : const Color(0xFF5C6592),
-                fontSize: 13,
-                fontWeight: FontWeight.w900,
+            Flexible(
+              child: Text(
+                texto,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: activo
+                      ? const Color(0xFF12248B)
+                      : const Color(0xFF5C6592),
+                  fontSize: 13,
+                  fontWeight: FontWeight.w900,
+                ),
               ),
             ),
           ],
@@ -1152,7 +1098,7 @@ Este producto no es medicina, no diagnostica, no trata, no cura ni previene enfe
             'size',
             IdiomaService.actual.value,
           )
-        : null;
+        : presentacionesProductoEcuador[producto.nombre];
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
       decoration: BoxDecoration(
@@ -1354,26 +1300,46 @@ Este producto no es medicina, no diagnostica, no trata, no cura ni previene enfe
           ),
           const SizedBox(width: 10),
           Expanded(
-            child: Text(
-              etiqueta,
-              style: const TextStyle(
-                color: Color(0xFF27315F),
-                fontSize: 14,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-          ),
-          Flexible(
-            child: Text(
-              valor,
-              maxLines: 3,
-              overflow: TextOverflow.ellipsis,
-              textAlign: TextAlign.right,
-              style: const TextStyle(
-                color: Color(0xFF1227A7),
-                fontSize: 17,
-                fontWeight: FontWeight.w900,
-              ),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final estrecho = constraints.maxWidth < 210;
+                final etiquetaWidget = Text(
+                  etiqueta,
+                  style: const TextStyle(
+                    color: Color(0xFF27315F),
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
+                  ),
+                );
+                final valorWidget = Text(
+                  valor,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: estrecho ? TextAlign.left : TextAlign.right,
+                  style: const TextStyle(
+                    color: Color(0xFF1227A7),
+                    fontSize: 16,
+                    fontWeight: FontWeight.w900,
+                  ),
+                );
+                if (estrecho) {
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      etiquetaWidget,
+                      const SizedBox(height: 4),
+                      valorWidget,
+                    ],
+                  );
+                }
+                return Row(
+                  children: [
+                    Expanded(child: etiquetaWidget),
+                    const SizedBox(width: 12),
+                    Flexible(child: valorWidget),
+                  ],
+                );
+              },
             ),
           ),
         ],

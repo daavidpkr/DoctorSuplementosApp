@@ -48,19 +48,16 @@ ArchivoAdjuntoIA crearAdjuntoIaValidado({
 class PerfilAsesor {
   static const PerfilAsesor porDefecto = PerfilAsesor(
     nombre: 'Socio',
-    fotoBase64: '',
     codigoSocio: '',
     telefonoSocio: '',
   );
 
   final String nombre;
-  final String fotoBase64;
   final String codigoSocio;
   final String telefonoSocio;
 
   const PerfilAsesor({
     required this.nombre,
-    required this.fotoBase64,
     this.codigoSocio = '',
     this.telefonoSocio = '',
   });
@@ -69,7 +66,6 @@ class PerfilAsesor {
 
   Map<String, dynamic> toJson() => {
         'nombre': nombre.trim(),
-        'fotoBase64': fotoBase64,
         'codigoSocio': codigoSocio.trim(),
         'telefonoSocio': telefonoSocio.trim(),
       };
@@ -77,7 +73,6 @@ class PerfilAsesor {
   factory PerfilAsesor.fromJson(Map<String, dynamic> json) {
     return PerfilAsesor(
       nombre: json['nombre']?.toString() ?? '',
-      fotoBase64: json['fotoBase64']?.toString() ?? '',
       codigoSocio: json['codigoSocio']?.toString() ?? '',
       telefonoSocio: json['telefonoSocio']?.toString() ?? '',
     );
@@ -279,8 +274,8 @@ class IdiomaService {
     },
     'profile': {'es': 'Perfil', 'en': 'Profile'},
     'profile_desc': {
-      'es': 'Guarda tu nombre y foto para personalizar la app.',
-      'en': 'Save your name and photo to personalize the app.',
+      'es': 'Guarda tus datos de asesor para personalizar la app.',
+      'en': 'Save your adviser details to personalize the app.',
     },
     'dictionary': {'es': 'Diccionario', 'en': 'Dictionary'},
     'dictionary_desc': {

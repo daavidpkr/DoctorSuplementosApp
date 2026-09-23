@@ -68,7 +68,8 @@ void main() {
     await tester.enterText(find.byType(TextField).first, 'Agpro');
     await tester.pump();
     await tester.tap(find.byWidgetPredicate(
-      (widget) => widget is Text && widget.data == 'Agpro',
+      (widget) =>
+          widget is Text && widget.data == '4Life Transfer Factor AG-Pro',
     ));
     await tester.pump();
 
@@ -89,9 +90,9 @@ void main() {
     final search = find.byType(TextField).first;
 
     for (final caso in const {
-      'Agpro': 'Agpro',
-      'tf max': 'Transfer factor MAX',
-      'microbiota': 'Preo biotics',
+      'Agpro': '4Life Transfer Factor AG-Pro',
+      'tf max': '4Life Transfer Factor Max',
+      'microbiota': 'Pre/o Biotics',
       'gel de aloe vera': 'Aloe Vera Stix Tropical',
     }.entries) {
       await tester.enterText(search, caso.key);
@@ -118,13 +119,14 @@ void main() {
     await tester.enterText(search, 'Agpro');
     await tester.pump();
     final agpro = find.byWidgetPredicate(
-      (widget) => widget is Text && widget.data == 'Agpro',
+      (widget) =>
+          widget is Text && widget.data == '4Life Transfer Factor AG-Pro',
     );
     await tester.tap(find.ancestor(of: agpro, matching: find.byType(InkWell)));
     await tester.enterText(search, 'Bioefa');
     await tester.pump();
     final bioefa = find.byWidgetPredicate(
-      (widget) => widget is Text && widget.data == 'Bioefa',
+      (widget) => widget is Text && widget.data == 'BioEFA',
     );
     await tester.tap(find.ancestor(of: bioefa, matching: find.byType(InkWell)));
     await tester.tap(find.text('Consultar'));
@@ -132,8 +134,8 @@ void main() {
 
     expect(find.byType(Dialog), findsOneWidget);
     expect(find.byType(CircularProgressIndicator), findsNothing);
-    expect(find.text('Agpro'), findsWidgets);
-    expect(find.text('Bioefa'), findsWidgets);
+    expect(find.text('4Life Transfer Factor AG-Pro'), findsWidgets);
+    expect(find.text('BioEFA'), findsWidgets);
     expect(find.textContaining('2 producto(s) seleccionados'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
@@ -413,15 +415,20 @@ void main() {
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField).first, 'Agpro');
     await tester.pumpAndSettle();
-    final name = find.byWidgetPredicate((w) => w is Text && w.data == 'Agpro');
+    final name = find.byWidgetPredicate(
+        (w) => w is Text && w.data == '4Life Transfer Factor AG-Pro');
     await tester.ensureVisible(name.first);
     await tester.tap(name.first);
     await tester.pumpAndSettle();
-    expect(find.byWidgetPredicate((w) => w is Text && w.data == 'Agpro'),
+    expect(
+        find.byWidgetPredicate(
+            (w) => w is Text && w.data == '4Life Transfer Factor AG-Pro'),
         findsWidgets);
     await PaisService.guardar(PaisApp.estadosUnidos);
     await tester.pumpAndSettle();
-    expect(find.byWidgetPredicate((w) => w is Text && w.data == 'Agpro'),
+    expect(
+        find.byWidgetPredicate(
+            (w) => w is Text && w.data == '4Life Transfer Factor AG-Pro'),
         findsNothing);
     expect(tester.takeException(), isNull);
   });
@@ -429,10 +436,14 @@ void main() {
   testWidgets('comparator discards previous market products', (tester) async {
     await tester.pumpWidget(const MaterialApp(home: PaginaComparadorAB()));
     await tester.pumpAndSettle();
-    expect(find.text('Transfer factor plus'), findsWidgets);
+    expect(find.text('4Life Transfer Factor Plus Tri-Factor Formula'),
+        findsWidgets);
     await PaisService.guardar(PaisApp.estadosUnidos);
     await tester.pumpAndSettle();
-    expect(find.text('Transfer factor plus'), findsNothing);
+    // El producto existe en ambos mercados; tras el cambio solo queda la
+    // instancia reconstruida desde el catálogo USA, no la selección Ecuador.
+    expect(find.text('4Life Transfer Factor Plus Tri-Factor Formula'),
+        findsWidgets);
     expect(find.text('4Life Transfer Factor Max'), findsWidgets);
     expect(tester.takeException(), isNull);
   });

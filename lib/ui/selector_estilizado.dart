@@ -5,12 +5,14 @@ class OpcionSelectorEstilizado<T> {
   final String texto;
   final IconData? icono;
   final String? emoji;
+  final PaisApp? pais;
 
   const OpcionSelectorEstilizado({
     required this.valor,
     required this.texto,
     this.icono,
     this.emoji,
+    this.pais,
   });
 }
 
@@ -70,6 +72,7 @@ class SelectorEstilizado<T> extends StatelessWidget {
             _IconoSelectorEstilizado(
               icono: seleccion?.icono ?? icono,
               emoji: seleccion?.emoji,
+              pais: seleccion?.pais,
             ),
             if (!soloIcono) ...[
               const SizedBox(width: 16),
@@ -206,6 +209,7 @@ class _OpcionSelectorEstilizado<T> extends StatelessWidget {
               _IconoSelectorEstilizado(
                 icono: opcion.icono ?? Icons.check_rounded,
                 emoji: opcion.emoji,
+                pais: opcion.pais,
                 activo: seleccionada,
               ),
               const SizedBox(width: 14),
@@ -236,16 +240,21 @@ class _OpcionSelectorEstilizado<T> extends StatelessWidget {
 class _IconoSelectorEstilizado extends StatelessWidget {
   final IconData icono;
   final String? emoji;
+  final PaisApp? pais;
   final bool activo;
 
   const _IconoSelectorEstilizado({
     required this.icono,
     this.emoji,
+    this.pais,
     this.activo = true,
   });
 
   @override
   Widget build(BuildContext context) {
+    if (pais != null) {
+      return ExcludeSemantics(child: _InsigniaPais(pais: pais!));
+    }
     return Container(
       width: 38,
       height: 38,
@@ -256,8 +265,7 @@ class _IconoSelectorEstilizado extends StatelessWidget {
       child: emoji == null
           ? Icon(
               icono,
-              color:
-                  activo ? const Color(0xFF172394) : const Color(0xFF8F96B4),
+              color: activo ? const Color(0xFF172394) : const Color(0xFF8F96B4),
               size: 22,
             )
           : Center(

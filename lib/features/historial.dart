@@ -153,6 +153,91 @@ class _PaginaHistorialState extends State<PaginaHistorial> {
     });
   }
 
+  Future<void> _eliminarRegistro(Map<String, dynamic> registro) async {
+    final nombre = _nombrePaciente(registro);
+    final fecha = _fechaPaciente(registro['fecha']);
+    final esCambio = _esCambioFisico(registro);
+    final confirmar = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        key: const ValueKey('confirmar-eliminar-historial'),
+        title: Text(txtApp('Eliminar registro', 'Delete record')),
+        content: Text(txtApp(
+          'Paciente: $nombre\nFecha: $fecha\nTipo: ${esCambio ? 'Cambio físico' : 'Diagnóstico'}',
+          'Patient: $nombre\nDate: $fecha\nType: ${esCambio ? 'Body change' : 'Diagnosis'}',
+        )),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: Text(txtApp('Cancelar', 'Cancel')),
+          ),
+          FilledButton(
+            key: const ValueKey('eliminar-historial-confirmado'),
+            style: FilledButton.styleFrom(backgroundColor: Colors.red.shade700),
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: Text(txtApp('Eliminar', 'Delete')),
+          ),
+        ],
+      ),
+    );
+    if (confirmar != true || !mounted) return;
+
+    final indiceVisual = _todoElHistorial.indexOf(registro);
+    setState(() {
+      _todoElHistorial.remove(registro);
+      _aplicarFiltros();
+    });
+    try {
+      final indicePersistido =
+          await HistorialService.eliminarRegistro(registro);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(txtApp('Registro eliminado', 'Record deleted')),
+          action: SnackBarAction(
+            label: txtApp('Deshacer', 'Undo'),
+            onPressed: () async {
+              try {
+                await HistorialService.restaurarRegistro(
+                  registro,
+                  indicePersistido,
+                );
+                await _cargarDatos();
+              } catch (_) {
+                if (!mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(txtApp(
+                      'No se pudo restaurar el registro.',
+                      'The record could not be restored.',
+                    )),
+                  ),
+                );
+              }
+            },
+          ),
+        ),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _todoElHistorial.insert(
+          indiceVisual.clamp(0, _todoElHistorial.length),
+          registro,
+        );
+        _aplicarFiltros();
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(txtApp(
+            'No se pudo eliminar el registro. Inténtalo nuevamente.',
+            'The record could not be deleted. Please try again.',
+          )),
+        ),
+      );
+    }
+  }
+
   void _reDiagnosticar(Map<String, dynamic> pacienteViejo) {
     final nombre = _nombrePaciente(pacienteViejo);
     final resultadoGuardado = pacienteViejo['resultado']?.toString() ??
@@ -725,6 +810,7 @@ class _PaginaHistorialState extends State<PaginaHistorial> {
                             onVer: () => _verReporteAnterior(item),
                             onRepetir: () => _reDiagnosticar(item),
                             onAbrir: () => _verReporteAnterior(item),
+                            onEliminar: () => _eliminarRegistro(item),
                           );
                         }),
                     ],
@@ -848,6 +934,7 @@ class _TarjetaPacienteHistorial extends StatelessWidget {
   final VoidCallback onVer;
   final VoidCallback onRepetir;
   final VoidCallback onAbrir;
+  final VoidCallback onEliminar;
 
   const _TarjetaPacienteHistorial({
     required this.nombre,
@@ -860,11 +947,13 @@ class _TarjetaPacienteHistorial extends StatelessWidget {
     required this.onVer,
     required this.onRepetir,
     required this.onAbrir,
+    required this.onEliminar,
   });
 
   @override
   Widget build(BuildContext context) {
     const azul = Color(0xFF2839C7);
+    final compacta = MediaQuery.sizeOf(context).width < 360;
 
     return Container(
       constraints: const BoxConstraints(minHeight: 150),
@@ -882,8 +971,8 @@ class _TarjetaPacienteHistorial extends StatelessWidget {
             child: Row(
               children: [
                 Container(
-                  width: 64,
-                  height: 64,
+                  width: compacta ? 46 : 64,
+                  height: compacta ? 46 : 64,
                   decoration: BoxDecoration(
                     color: colorAvatar,
                     shape: BoxShape.circle,
@@ -893,12 +982,12 @@ class _TarjetaPacienteHistorial extends StatelessWidget {
                     inicial,
                     style: TextStyle(
                       color: colorInicial,
-                      fontSize: 30,
+                      fontSize: compacta ? 22 : 30,
                       fontWeight: FontWeight.w800,
                     ),
                   ),
                 ),
-                const SizedBox(width: 16),
+                SizedBox(width: compacta ? 9 : 16),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -965,47 +1054,67 @@ class _TarjetaPacienteHistorial extends StatelessWidget {
                         ],
                       ),
                       const SizedBox(height: 10),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Row(
-                              children: [
-                                Icon(
-                                  estado.icono,
-                                  color: estado.color,
-                                  size: 20,
-                                ),
-                                const SizedBox(width: 7),
-                                Flexible(
-                                  child: Text(
-                                    estado.texto,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: TextStyle(
-                                      color: estado.color,
-                                      fontSize: 14.5,
-                                      fontWeight: FontWeight.w600,
+                      if (compacta) ...[
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Row(
+                                children: [
+                                  Icon(estado.icono,
+                                      color: estado.color, size: 20),
+                                  const SizedBox(width: 7),
+                                  Flexible(
+                                    child: Text(
+                                      estado.texto,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(
+                                        color: estado.color,
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w600,
+                                      ),
                                     ),
                                   ),
-                                ),
-                              ],
+                                ],
+                              ),
                             ),
-                          ),
-                          _BotonAccionPaciente(
-                            icono: Icons.visibility_outlined,
-                            tooltip: txtApp('Ver reporte', 'View report'),
-                            onTap: onVer,
-                            relleno: false,
-                          ),
-                          const SizedBox(width: 8),
-                          _BotonAccionPaciente(
-                            icono: Icons.refresh,
-                            tooltip: txtApp('Repetir', 'Repeat'),
-                            onTap: onRepetir,
-                            relleno: true,
-                          ),
-                        ],
-                      ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: _acciones(),
+                        ),
+                      ] else
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    estado.icono,
+                                    color: estado.color,
+                                    size: 20,
+                                  ),
+                                  const SizedBox(width: 7),
+                                  Flexible(
+                                    child: Text(
+                                      estado.texto,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(
+                                        color: estado.color,
+                                        fontSize: 14.5,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            ..._acciones(),
+                          ],
+                        ),
                     ],
                   ),
                 ),
@@ -1016,6 +1125,30 @@ class _TarjetaPacienteHistorial extends StatelessWidget {
       ),
     );
   }
+
+  List<Widget> _acciones() => [
+        _BotonAccionPaciente(
+          icono: Icons.delete_outline_rounded,
+          tooltip: txtApp('Eliminar registro', 'Delete record'),
+          onTap: onEliminar,
+          relleno: false,
+          destructivo: true,
+        ),
+        const SizedBox(width: 6),
+        _BotonAccionPaciente(
+          icono: Icons.visibility_outlined,
+          tooltip: txtApp('Ver reporte', 'View report'),
+          onTap: onVer,
+          relleno: false,
+        ),
+        const SizedBox(width: 6),
+        _BotonAccionPaciente(
+          icono: Icons.refresh,
+          tooltip: txtApp('Repetir', 'Repeat'),
+          onTap: onRepetir,
+          relleno: true,
+        ),
+      ];
 }
 
 class _BotonAccionPaciente extends StatelessWidget {
@@ -1023,12 +1156,14 @@ class _BotonAccionPaciente extends StatelessWidget {
   final String tooltip;
   final VoidCallback onTap;
   final bool relleno;
+  final bool destructivo;
 
   const _BotonAccionPaciente({
     required this.icono,
     required this.tooltip,
     required this.onTap,
     required this.relleno,
+    this.destructivo = false,
   });
 
   @override
@@ -1044,7 +1179,7 @@ class _BotonAccionPaciente extends StatelessWidget {
           onPressed: onTap,
           style: OutlinedButton.styleFrom(
             backgroundColor: relleno ? const Color(0xFFEDEEFF) : Colors.white,
-            foregroundColor: azul,
+            foregroundColor: destructivo ? Colors.red.shade700 : azul,
             side: BorderSide(
               color:
                   relleno ? const Color(0xFFEDEEFF) : const Color(0xFFD6D9F1),

@@ -9,24 +9,15 @@ class PantallaPrincipal extends StatefulWidget {
 
 class _PantallaPrincipalState extends State<PantallaPrincipal> {
   late Future<PerfilAsesor> _perfilFuture;
-  late final PageController _pageController;
   final Set<String> _categoriasAbiertas = <String>{};
-  int _paginaActual = 0;
 
   @override
   void initState() {
     super.initState();
-    _pageController = PageController();
     _perfilFuture = PerfilService.cargar();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ServicioVersion.validarVersion(context);
     });
-  }
-
-  @override
-  void dispose() {
-    _pageController.dispose();
-    super.dispose();
   }
 
   void _recargarPerfil() {
@@ -45,14 +36,6 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
     });
   }
 
-  void _irAPagina(int pagina) {
-    _pageController.animateToPage(
-      pagina,
-      duration: const Duration(milliseconds: 240),
-      curve: Curves.easeOutCubic,
-    );
-  }
-
   Future<void> _abrirRuta(String ruta) async {
     await abrirRutaApp(context, ruta);
     if (mounted && ruta == RutasApp.perfil) _recargarPerfil();
@@ -62,7 +45,10 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
   Widget build(BuildContext context) {
     return ValueListenableBuilder<IdiomaApp>(
       valueListenable: IdiomaService.actual,
-      builder: (context, idioma, _) => _construirInicio(context),
+      builder: (context, idioma, _) => ValueListenableBuilder<PaisApp>(
+        valueListenable: PaisService.actual,
+        builder: (context, pais, _) => _construirInicio(context),
+      ),
     );
   }
 
@@ -219,129 +205,272 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
             ),
             const SizedBox(height: 18),
             Expanded(
-              child: PageView(
-                controller: _pageController,
-                onPageChanged: (pagina) {
-                  setState(() => _paginaActual = pagina);
-                },
-                children: [
-                  SingleChildScrollView(
-                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 18),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _tarjetaMenu(context, ficha: catalogoAfiliado),
-                        _tarjetaMenu(context, ficha: catalogoMiTienda),
-                        _tarjetaMenu(context, ficha: catalogosPdf),
-                        _tarjetaMenu(context, ficha: calculadoraPrecios),
-                        _tarjetaMenu(context, ficha: diagnostico),
-                        _tarjetaMenu(context, ficha: chatLive),
-                        _tarjetaMenu(context, ficha: asesorIa),
+              child: SingleChildScrollView(
+                key: const ValueKey('lista-vertical-inicio'),
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 18),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      IdiomaService.texto('quick_access'),
+                      style: const TextStyle(
+                        color: Color(0xFF111B59),
+                        fontSize: 20,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    _tarjetaMenu(context, ficha: catalogoAfiliado),
+                    _tarjetaMenu(context, ficha: catalogoMiTienda),
+                    _tarjetaMenu(context, ficha: catalogosPdf),
+                    _tarjetaMenu(context, ficha: calculadoraPrecios),
+                    _tarjetaMenu(context, ficha: diagnostico),
+                    _tarjetaMenu(context, ficha: chatLive),
+                    _tarjetaMenu(context, ficha: asesorIa),
+                    const SizedBox(height: 12),
+                    Text(
+                      txtApp('Todas las funciones', 'All features'),
+                      style: const TextStyle(
+                        color: Color(0xFF111B59),
+                        fontSize: 20,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    _tarjetaCategoria(
+                      context,
+                      id: 'catalogos',
+                      titulo: txtApp('Catálogos', 'Catalogs'),
+                      descripcion: txtApp(
+                        'Galerías de productos y catálogos PDF.',
+                        'Product galleries and PDF catalogs.',
+                      ),
+                      icono: Icons.view_list_rounded,
+                      colores: const [Color(0xFF2E3192), Color(0xFF151B7C)],
+                      fichas: [
+                        catalogoAfiliado,
+                        catalogoMiTienda,
+                        catalogosPdf,
                       ],
                     ),
-                  ),
-                  SingleChildScrollView(
-                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 18),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _tarjetaCategoria(
-                          context,
-                          id: 'catalogos',
-                          titulo: txtApp('Catálogos', 'Catalogs'),
-                          descripcion: txtApp(
-                            'Galerías de productos y catálogos PDF.',
-                            'Product galleries and PDF catalogs.',
-                          ),
-                          icono: Icons.view_list_rounded,
-                          colores: const [Color(0xFF2E3192), Color(0xFF151B7C)],
-                          fichas: [
-                            catalogoAfiliado,
-                            catalogoMiTienda,
-                            catalogosPdf,
-                          ],
-                        ),
-                        _tarjetaCategoria(
-                          context,
-                          id: 'panel_rendimiento',
-                          titulo: txtApp(
-                              'Panel de Rendimiento', 'Performance Panel'),
-                          descripcion: txtApp(
-                            'Calculadoras y optimizadores para planificar compras.',
-                            'Calculators and optimizers for purchase planning.',
-                          ),
-                          icono: Icons.speed_rounded,
-                          colores: const [Color(0xFF008C7E), Color(0xFF006B61)],
-                          fichas: [
-                            calculadoraPrecios,
-                            optimizadorConsumo,
-                            optimizadorAcelerado,
-                          ],
-                        ),
-                        _tarjetaCategoria(
-                          context,
-                          id: 'diagnosticos',
-                          titulo: txtApp('Diagnósticos', 'Diagnoses'),
-                          descripcion: txtApp(
-                            'Diagnóstico, cambio físico e historial.',
-                            'Diagnosis, body transformation, and history.',
-                          ),
-                          icono: Icons.assignment_turned_in_rounded,
-                          colores: const [Color(0xFF1457E8), Color(0xFF1531A6)],
-                          fichas: [diagnostico, cambioFisico, historial],
-                        ),
-                        _tarjetaCategoria(
-                          context,
-                          id: 'analisis_control',
-                          titulo: txtApp(
-                              'Análisis y Control', 'Analysis and Control'),
-                          descripcion: txtApp(
-                            'Inventario local y comparador A/B.',
-                            'Local inventory and A/B comparator.',
-                          ),
-                          icono: Icons.analytics_rounded,
-                          colores: const [Color(0xFF1487A8), Color(0xFF172394)],
-                          fichas: [inventarioLocal, comparadorAB],
-                        ),
-                        _tarjetaCategoria(
-                          context,
-                          id: 'asistentes_ia',
-                          titulo: txtApp('Asistentes IA', 'AI Assistants'),
-                          descripcion: txtApp(
-                            'Chat Live y Asesor IA 4Life.',
-                            'Chat Live and 4Life AI Adviser.',
-                          ),
-                          icono: Icons.auto_awesome_rounded,
-                          colores: const [Color(0xFF6A4DE8), Color(0xFF3C2AAE)],
-                          fichas: [chatLive, asesorIa, historialChatsIa],
-                        ),
-                        _tarjetaCategoria(
-                          context,
-                          id: 'recursos_aprendizaje',
-                          titulo: txtApp(
-                            'Recursos y Centro de Aprendizaje',
-                            'Resources and Learning Center',
-                          ),
-                          descripcion: txtApp(
-                            'Testimonios, diccionario y mapa anatómico.',
-                            'Testimonials, dictionary, and anatomy map.',
-                          ),
-                          icono: Icons.school_rounded,
-                          colores: const [Color(0xFF3047CC), Color(0xFF172394)],
-                          fichas: [testimonios, diccionario, mapaAnatomico],
-                        ),
-                        _tarjetaMenu(context, ficha: perfil),
+                    _tarjetaCategoria(
+                      context,
+                      id: 'panel_rendimiento',
+                      titulo:
+                          txtApp('Panel de Rendimiento', 'Performance Panel'),
+                      descripcion: txtApp(
+                        'Calculadoras y optimizadores para planificar compras.',
+                        'Calculators and optimizers for purchase planning.',
+                      ),
+                      icono: Icons.speed_rounded,
+                      colores: const [Color(0xFF008C7E), Color(0xFF006B61)],
+                      fichas: [
+                        calculadoraPrecios,
+                        optimizadorConsumo,
+                        optimizadorAcelerado,
                       ],
                     ),
-                  ),
-                ],
+                    _tarjetaCategoria(
+                      context,
+                      id: 'diagnosticos',
+                      titulo: txtApp('Diagnósticos', 'Diagnoses'),
+                      descripcion: txtApp(
+                        'Diagnóstico, cambio físico e historial.',
+                        'Diagnosis, body transformation, and history.',
+                      ),
+                      icono: Icons.assignment_turned_in_rounded,
+                      colores: const [Color(0xFF1457E8), Color(0xFF1531A6)],
+                      fichas: [diagnostico, cambioFisico, historial],
+                    ),
+                    _tarjetaCategoria(
+                      context,
+                      id: 'analisis_control',
+                      titulo:
+                          txtApp('Análisis y Control', 'Analysis and Control'),
+                      descripcion: txtApp(
+                        'Inventario local y comparador A/B.',
+                        'Local inventory and A/B comparator.',
+                      ),
+                      icono: Icons.analytics_rounded,
+                      colores: const [Color(0xFF1487A8), Color(0xFF172394)],
+                      fichas: [inventarioLocal, comparadorAB],
+                    ),
+                    _tarjetaCategoria(
+                      context,
+                      id: 'asistentes_ia',
+                      titulo: txtApp('Asistentes IA', 'AI Assistants'),
+                      descripcion: txtApp(
+                        'Chat Live y Asesor IA 4Life.',
+                        'Chat Live and 4Life AI Adviser.',
+                      ),
+                      icono: Icons.auto_awesome_rounded,
+                      colores: const [Color(0xFF6A4DE8), Color(0xFF3C2AAE)],
+                      fichas: [chatLive, asesorIa, historialChatsIa],
+                    ),
+                    _tarjetaCategoria(
+                      context,
+                      id: 'recursos_aprendizaje',
+                      titulo: txtApp(
+                        'Recursos y Centro de Aprendizaje',
+                        'Resources and Learning Center',
+                      ),
+                      descripcion: txtApp(
+                        'Testimonios, diccionario y mapa anatómico.',
+                        'Testimonials, dictionary, and anatomy map.',
+                      ),
+                      icono: Icons.school_rounded,
+                      colores: const [Color(0xFF3047CC), Color(0xFF172394)],
+                      fichas: [testimonios, diccionario, mapaAnatomico],
+                    ),
+                    _tarjetaMenu(context, ficha: perfil),
+                  ],
+                ),
               ),
             ),
-            _controlesPaginas(),
             _barraInferior(context),
           ],
         ),
       ),
+    );
+  }
+
+  Future<void> _seleccionarMercadoEIdioma() async {
+    var paisTemporal = PaisService.actual.value;
+    var idiomaTemporal = IdiomaService.actual.value;
+    final aplicar = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, actualizarDialogo) => AlertDialog(
+          key: const ValueKey('selector-pais-idioma-inicio'),
+          title: Text(txtApp('País e idioma', 'Country and language')),
+          content: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 460),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    txtApp('Selecciona el mercado', 'Select the market'),
+                    style: const TextStyle(fontWeight: FontWeight.w800),
+                  ),
+                  const SizedBox(height: 10),
+                  for (final pais in PaisApp.values)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: ListTile(
+                        key: ValueKey('opcion-pais-${pais.codigo}'),
+                        onTap: () =>
+                            actualizarDialogo(() => paisTemporal = pais),
+                        leading: ExcludeSemantics(
+                          child: _InsigniaPais(pais: pais),
+                        ),
+                        title: Text(txtApp(pais.etiqueta, pais.etiquetaIngles)),
+                        trailing: Icon(
+                          paisTemporal == pais
+                              ? Icons.radio_button_checked_rounded
+                              : Icons.radio_button_unchecked_rounded,
+                          color: paisTemporal == pais
+                              ? const Color(0xFF2839C7)
+                              : const Color(0xFF8D94AD),
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          side: BorderSide(
+                            color: paisTemporal == pais
+                                ? const Color(0xFF2839C7)
+                                : const Color(0xFFDDE1F1),
+                          ),
+                        ),
+                      ),
+                    ),
+                  const SizedBox(height: 12),
+                  Text(
+                    txtApp('Selecciona el idioma', 'Select the language'),
+                    style: const TextStyle(fontWeight: FontWeight.w800),
+                  ),
+                  const SizedBox(height: 10),
+                  for (final idioma in IdiomaApp.values)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: ListTile(
+                        key: ValueKey('opcion-idioma-${idioma.codigo}'),
+                        onTap: () =>
+                            actualizarDialogo(() => idiomaTemporal = idioma),
+                        leading: const Icon(Icons.language_rounded),
+                        title: Text(
+                          idioma == IdiomaApp.espanol ? 'Español' : 'English',
+                        ),
+                        trailing: Icon(
+                          idiomaTemporal == idioma
+                              ? Icons.radio_button_checked_rounded
+                              : Icons.radio_button_unchecked_rounded,
+                          color: idiomaTemporal == idioma
+                              ? const Color(0xFF2839C7)
+                              : const Color(0xFF8D94AD),
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          side: BorderSide(
+                            color: idiomaTemporal == idioma
+                                ? const Color(0xFF2839C7)
+                                : const Color(0xFFDDE1F1),
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: Text(txtApp('Cancelar', 'Cancel')),
+            ),
+            FilledButton(
+              key: const ValueKey('solicitar-confirmacion-mercado'),
+              onPressed: () async {
+                final confirmado = await showDialog<bool>(
+                  context: dialogContext,
+                  builder: (confirmationContext) => AlertDialog(
+                    title: Text(txtApp('Confirmar cambio', 'Confirm change')),
+                    content: Text(txtApp(
+                      'Se aplicarán ${paisTemporal.etiqueta} y ${idiomaTemporal == IdiomaApp.espanol ? 'Español' : 'English'} en todos los módulos.',
+                      '${paisTemporal.etiquetaIngles} and ${idiomaTemporal == IdiomaApp.espanol ? 'Spanish' : 'English'} will be applied to every module.',
+                    )),
+                    actions: [
+                      TextButton(
+                        onPressed: () =>
+                            Navigator.pop(confirmationContext, false),
+                        child: Text(txtApp('Cancelar', 'Cancel')),
+                      ),
+                      FilledButton(
+                        key: const ValueKey('confirmar-cambio-mercado'),
+                        onPressed: () =>
+                            Navigator.pop(confirmationContext, true),
+                        child: Text(txtApp('Confirmar', 'Confirm')),
+                      ),
+                    ],
+                  ),
+                );
+                if (confirmado == true && dialogContext.mounted) {
+                  Navigator.pop(dialogContext, true);
+                }
+              },
+              child: Text(txtApp('Aplicar', 'Apply')),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (aplicar != true) return;
+    await PaisService.guardar(paisTemporal);
+    await IdiomaService.guardar(idiomaTemporal);
+    if (!mounted) return;
+    setState(() {});
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(txtApp('Cambios aplicados', 'Changes applied'))),
     );
   }
 
@@ -350,166 +479,179 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
     final saludo = nombre.isEmpty
         ? IdiomaService.texto('hello_adviser')
         : txtApp("¡Hola, $nombre!", "Hello, $nombre!");
-    return Container(
-      height: 158,
-      width: double.infinity,
-      decoration: BoxDecoration(
-        color: const Color(0xFFEFF3FF),
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF071451).withValues(alpha: 0.13),
-            blurRadius: 15,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: Stack(
-        children: [
-          Positioned(
-            right: -18,
-            top: -42,
-            child: Container(
-              width: 156,
-              height: 156,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: const Color(0xFFBFCBFF).withValues(alpha: 0.28),
+    return LayoutBuilder(builder: (context, constraints) {
+      final estrecho = constraints.maxWidth < 360;
+      return Container(
+        height: estrecho ? 222 : 158,
+        width: double.infinity,
+        decoration: BoxDecoration(
+          color: const Color(0xFFEFF3FF),
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF071451).withValues(alpha: 0.13),
+              blurRadius: 15,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Stack(
+          children: [
+            Positioned(
+              right: -18,
+              top: -42,
+              child: Container(
+                width: 156,
+                height: 156,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: const Color(0xFFBFCBFF).withValues(alpha: 0.28),
+                ),
               ),
             ),
-          ),
-          Positioned(
-            right: 36,
-            top: 22,
-            child: Icon(
-              Icons.science_rounded,
-              size: 92,
-              color: const Color(0xFF1B2A99).withValues(alpha: 0.88),
-            ),
-          ),
-          Positioned(
-            right: 18,
-            top: 22,
-            child: CustomPaint(
-              size: const Size(116, 88),
-              painter: _MoleculaPainter(),
-            ),
-          ),
-          Positioned(
-            right: 24,
-            bottom: 20,
-            child: ValueListenableBuilder<PaisApp>(
-              valueListenable: PaisService.actual,
-              builder: (context, pais, _) => Semantics(
-                label: txtApp(
-                  'País seleccionado: ${pais.etiqueta}',
-                  'Selected country: ${pais.etiquetaIngles}',
-                ),
-                child: Container(
-                  key: ValueKey('bandera-pais-${pais.codigo}'),
-                  width: 50,
-                  height: 34,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.94),
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(
-                      color: const Color(0xFFC9D2F5),
-                      width: 1.2,
+            Positioned(
+              right: 48,
+              top: 16,
+              child: estrecho
+                  ? const SizedBox.shrink()
+                  : Icon(
+                      Icons.science_rounded,
+                      size: 58,
+                      color: const Color(0xFF1B2A99).withValues(alpha: 0.32),
                     ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: const Color(0xFF071451).withValues(alpha: 0.12),
-                        blurRadius: 8,
-                        offset: const Offset(0, 3),
+            ),
+            Positioned(
+              right: 34,
+              top: 15,
+              child: estrecho
+                  ? const SizedBox.shrink()
+                  : CustomPaint(
+                      size: const Size(76, 56),
+                      painter: _MoleculaPainter(),
+                    ),
+            ),
+            Positioned(
+              right: 14,
+              bottom: 14,
+              child: ValueListenableBuilder<PaisApp>(
+                valueListenable: PaisService.actual,
+                builder: (context, pais, _) => Tooltip(
+                  message: txtApp(
+                      'Cambiar país e idioma', 'Change country and language'),
+                  child: Semantics(
+                    label: txtApp(
+                      'País seleccionado: ${pais.etiqueta}. Cambiar país e idioma',
+                      'Selected country: ${pais.etiquetaIngles}. Change country and language',
+                    ),
+                    button: true,
+                    child: Material(
+                      color: Colors.white.withValues(alpha: 0.96),
+                      borderRadius: BorderRadius.circular(12),
+                      child: InkWell(
+                        key: ValueKey('bandera-pais-${pais.codigo}'),
+                        borderRadius: BorderRadius.circular(12),
+                        onTap: _seleccionarMercadoEIdioma,
+                        child: Padding(
+                          padding: const EdgeInsets.all(7),
+                          child: ExcludeSemantics(
+                            child: _InsigniaPais(pais: pais),
+                          ),
+                        ),
                       ),
-                    ],
-                  ),
-                  child: ExcludeSemantics(
-                    child: _InsigniaPais(codigo: pais.codigo.toUpperCase()),
+                    ),
                   ),
                 ),
               ),
             ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(24, 24, 120, 20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  saludo,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: Color(0xFF101A5B),
-                    fontSize: 24,
-                    fontWeight: FontWeight.w900,
-                    height: 1,
+            Padding(
+              padding: EdgeInsets.fromLTRB(
+                estrecho ? 18 : 24,
+                estrecho ? 18 : 24,
+                estrecho ? 18 : 120,
+                estrecho ? 66 : 20,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    saludo,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Color(0xFF101A5B),
+                      fontSize: 24,
+                      fontWeight: FontWeight.w900,
+                      height: 1,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  IdiomaService.texto('hero_subtitle'),
-                  style: const TextStyle(
-                    color: Color(0xFF25315F),
-                    fontSize: 12,
-                    height: 1.25,
+                  const SizedBox(height: 8),
+                  Text(
+                    IdiomaService.texto('hero_subtitle'),
+                    style: const TextStyle(
+                      color: Color(0xFF25315F),
+                      fontSize: 12,
+                      height: 1.25,
+                    ),
                   ),
-                ),
-                const Spacer(),
-                Semantics(
-                  key: const ValueKey('acceso-impacto'),
-                  button: true,
-                  label: IdiomaService.texto('impact'),
-                  child: Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      borderRadius: BorderRadius.circular(18),
-                      onTap: () => _abrirRuta(RutasApp.impacto),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 13, vertical: 8),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF101A70),
-                          borderRadius: BorderRadius.circular(18),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(Icons.track_changes_rounded,
-                                color: Colors.white, size: 15),
-                            const SizedBox(width: 7),
-                            Text(
-                              IdiomaService.texto('impact'),
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 11,
-                                fontWeight: FontWeight.w800,
-                              ),
+                  const Spacer(),
+                  Semantics(
+                    key: const ValueKey('acceso-impacto'),
+                    button: true,
+                    label: IdiomaService.texto('impact'),
+                    child: Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(18),
+                        onTap: () => _abrirRuta(RutasApp.impacto),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 13, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF101A70),
+                            borderRadius: BorderRadius.circular(18),
+                          ),
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            alignment: Alignment.centerLeft,
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.track_changes_rounded,
+                                    color: Colors.white, size: 15),
+                                const SizedBox(width: 7),
+                                Text(
+                                  IdiomaService.texto('impact'),
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                                const SizedBox(width: 4),
+                                const Icon(Icons.chevron_right_rounded,
+                                    color: Colors.white, size: 16),
+                              ],
                             ),
-                            const SizedBox(width: 4),
-                            const Icon(Icons.chevron_right_rounded,
-                                color: Colors.white, size: 16),
-                          ],
+                          ),
                         ),
                       ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        ],
-      ),
-    );
+          ],
+        ),
+      );
+    });
   }
 
   Widget _tarjetaMenu(
     BuildContext context, {
     required _FichaInicio ficha,
     EdgeInsets margin = const EdgeInsets.only(bottom: 10),
+    String? claveSemantica,
   }) {
     return Container(
       margin: margin,
@@ -525,7 +667,7 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
         ],
       ),
       child: Semantics(
-        key: ValueKey('acceso-${ficha.ruta}'),
+        key: ValueKey(claveSemantica ?? 'acceso-${ficha.ruta}'),
         button: true,
         label: ficha.titulo,
         child: Material(
@@ -734,6 +876,7 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
                                 context,
                                 ficha: ficha,
                                 margin: const EdgeInsets.only(top: 8),
+                                claveSemantica: 'subacceso-$id-${ficha.ruta}',
                               ),
                             )
                             .toList(),
@@ -752,50 +895,9 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
     );
   }
 
-  Widget _controlesPaginas() {
-    final esPrimera = _paginaActual == 0;
-    final etiqueta = esPrimera
-        ? txtApp('Accesos rapidos', 'Quick access')
-        : txtApp('Todas las funciones', 'All features');
-    return Semantics(
-      container: true,
-      label: txtApp(
-        '$etiqueta, pagina ${_paginaActual + 1} de 2',
-        '$etiqueta, page ${_paginaActual + 1} of 2',
-      ),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(12, 2, 12, 6),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            IconButton(
-              key: const ValueKey('pagina-anterior'),
-              tooltip: txtApp('Pagina anterior', 'Previous page'),
-              onPressed: esPrimera ? null : () => _irAPagina(0),
-              icon: const Icon(Icons.chevron_left_rounded),
-            ),
-            const SizedBox(width: 4),
-            TextButton(
-              key: const ValueKey('selector-pagina-inicio'),
-              onPressed: () => _irAPagina(esPrimera ? 1 : 0),
-              child: Text('$etiqueta  ${_paginaActual + 1}/2'),
-            ),
-            const SizedBox(width: 4),
-            IconButton(
-              key: const ValueKey('pagina-siguiente'),
-              tooltip: txtApp('Pagina siguiente', 'Next page'),
-              onPressed: esPrimera ? () => _irAPagina(1) : null,
-              icon: const Icon(Icons.chevron_right_rounded),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   Widget _barraInferior(BuildContext context) {
     return Container(
-      height: 58,
+      height: 66,
       margin: const EdgeInsets.fromLTRB(8, 0, 8, 6),
       decoration: BoxDecoration(
         color: const Color(0xFF071363),
@@ -858,7 +960,7 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
 
     return Expanded(
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 7, horizontal: 4),
+        padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 3),
         child: seleccionado
             ? Container(
                 decoration: BoxDecoration(
