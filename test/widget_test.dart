@@ -32,11 +32,31 @@ void main() {
     expect(find.text(IdiomaService.texto('diagnosis')), findsWidgets);
     expect(find.text('Chat Live 4Life'), findsWidgets);
     expect(find.text(IdiomaService.texto('ai_adviser')), findsWidgets);
-    expect(find.byType(PageView), findsNothing);
-    expect(find.byKey(const ValueKey('pagina-siguiente')), findsNothing);
+    expect(find.byType(PageView), findsOneWidget);
+    expect(find.text('Accesos rápidos 1/2'), findsOneWidget);
+    expect(
+      tester
+          .widget<IconButton>(
+            find.byKey(const ValueKey('pagina-anterior')),
+          )
+          .onPressed,
+      isNull,
+    );
 
-    await tester.ensureVisible(find.text('Panel de Rendimiento'));
+    await tester.tap(
+      find.byKey(const ValueKey('principal-/catalogo-afiliado')),
+    );
     await tester.pumpAndSettle();
+    expect(find.byType(ConsultaProductoPagina), findsOneWidget);
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(find.byType(PantallaPrincipal), findsOneWidget);
+
+    await tester.ensureVisible(find.byKey(const ValueKey('pagina-siguiente')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('pagina-siguiente')));
+    await tester.pumpAndSettle();
+    expect(find.text('Todas las funciones 2/2'), findsOneWidget);
     expect(find.text('Panel de Rendimiento'), findsOneWidget);
     expect(find.textContaining('Hola, Socio'), findsOneWidget);
   });
@@ -55,7 +75,7 @@ void main() {
     await tester.pump();
 
     final card = tester.getSemantics(
-      find.byKey(const ValueKey('acceso-/catalogo-afiliado')),
+      find.byKey(const ValueKey('principal-/catalogo-afiliado')),
     );
     expect(card.flagsCollection.isButton, isTrue);
     expect(card.getSemanticsData().hasAction(SemanticsAction.tap), isTrue);

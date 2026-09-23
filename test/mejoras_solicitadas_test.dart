@@ -45,23 +45,153 @@ void main() {
     expect(buscarProductoConPrecio('Agpro'), isNull);
   });
 
-  testWidgets('Inicio usa una lista vertical y no desborda', (tester) async {
+  testWidgets('Inicio pagina dos grupos exactos sin scroll interno ni overflow',
+      (tester) async {
+    const principales = [
+      '/catalogo-afiliado',
+      '/catalogo-mitienda',
+      '/catalogos-pdf',
+      '/calculadora-precios',
+      '/diagnostico',
+      '/chat-live',
+      '/asesor-ia',
+    ];
+    const categorias = [
+      'catalogos',
+      'panel_rendimiento',
+      'diagnosticos',
+      'analisis_control',
+      'asistentes_ia',
+      'recursos_aprendizaje',
+    ];
     for (final size in const [
       Size(280, 700),
       Size(390, 844),
+      Size(390, 600),
+      Size(800, 1024),
       Size(1440, 900),
     ]) {
       await tester.binding.setSurfaceSize(size);
-      await tester.pumpWidget(const MaterialApp(home: PantallaPrincipal()));
+      await tester.pumpWidget(MaterialApp(
+        key: ValueKey(size),
+        home: const PantallaPrincipal(),
+      ));
       await tester.pump();
+      expect(find.byType(PageView), findsOneWidget);
+      expect(find.text('Accesos rápidos 1/2'), findsOneWidget);
       expect(
-          find.byKey(const ValueKey('lista-vertical-inicio')), findsOneWidget);
-      expect(find.byType(PageView), findsNothing);
-      expect(find.byKey(const ValueKey('pagina-siguiente')), findsNothing);
-      expect(find.text('Accesos rápidos'), findsOneWidget);
-      expect(find.text('Todas las funciones'), findsOneWidget);
-      expect(tester.takeException(), isNull, reason: '$size');
+        find.descendant(
+          of: find.byKey(const ValueKey('pagina-accesos-rapidos')),
+          matching: find.byType(Scrollable),
+        ),
+        findsNothing,
+      );
+      for (final ruta in principales) {
+        expect(find.byKey(ValueKey('principal-$ruta')), findsOneWidget);
+      }
+      final ordenPrincipales = tester
+          .widgetList<Semantics>(find.descendant(
+            of: find.byKey(const ValueKey('pagina-accesos-rapidos')),
+            matching: find.byType(Semantics),
+          ))
+          .map((widget) => widget.key)
+          .whereType<ValueKey<String>>()
+          .map((key) => key.value)
+          .where((key) => key.startsWith('principal-'))
+          .toList();
+      expect(
+        ordenPrincipales,
+        principales.map((ruta) => 'principal-$ruta').toList(),
+      );
+      expect(
+        tester
+            .widget<IconButton>(
+              find.byKey(const ValueKey('pagina-anterior')),
+            )
+            .onPressed,
+        isNull,
+      );
+      expect(tester.takeException(), isNull, reason: '$size página 1');
+
+      final pais = PaisService.actual.value;
+      final idioma = IdiomaService.actual.value;
+      await tester.fling(
+        find.byKey(const ValueKey('paginas-inicio')),
+        const Offset(-1200, 0),
+        1600,
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Todas las funciones 2/2'), findsOneWidget);
+      for (final id in categorias) {
+        expect(find.byKey(ValueKey('categoria-$id')), findsOneWidget);
+      }
+      expect(find.byKey(const ValueKey('general-/perfil')), findsOneWidget);
+      final ordenGeneral = tester
+          .widgetList<Semantics>(find.descendant(
+            of: find.byKey(const ValueKey('pagina-todas-funciones')),
+            matching: find.byType(Semantics),
+          ))
+          .map((widget) => widget.key)
+          .whereType<ValueKey<String>>()
+          .map((key) => key.value)
+          .where(
+            (key) => key.startsWith('categoria-') || key == 'general-/perfil',
+          )
+          .toList();
+      expect(
+        ordenGeneral,
+        [...categorias.map((id) => 'categoria-$id'), 'general-/perfil'],
+      );
+      expect(
+        find.descendant(
+          of: find.byKey(const ValueKey('pagina-todas-funciones')),
+          matching: find.byType(Scrollable),
+        ),
+        findsNothing,
+      );
+      expect(
+        tester
+            .widget<IconButton>(
+              find.byKey(const ValueKey('pagina-siguiente')),
+            )
+            .onPressed,
+        isNull,
+      );
+      expect(PaisService.actual.value, pais);
+      expect(IdiomaService.actual.value, idioma);
+      expect(tester.takeException(), isNull, reason: '$size página 2');
     }
+    await tester.binding.setSurfaceSize(null);
+  });
+
+  testWidgets('flechas sincronizan páginas e ignoran pulsaciones rápidas',
+      (tester) async {
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    await tester.pumpWidget(const MaterialApp(home: PantallaPrincipal()));
+    await tester.pump();
+
+    final siguiente = find.byKey(const ValueKey('pagina-siguiente'));
+    await tester.tap(siguiente);
+    await tester.tap(siguiente);
+    await tester.pumpAndSettle();
+    expect(find.text('Todas las funciones 2/2'), findsOneWidget);
+    expect(
+      tester.widget<IconButton>(siguiente).onPressed,
+      isNull,
+    );
+    expect(
+      tester
+          .widget<IconButton>(
+            find.byKey(const ValueKey('pagina-anterior')),
+          )
+          .onPressed,
+      isNotNull,
+    );
+
+    await tester.tap(find.byKey(const ValueKey('pagina-anterior')));
+    await tester.pumpAndSettle();
+    expect(find.text('Accesos rápidos 1/2'), findsOneWidget);
+    expect(tester.takeException(), isNull);
     await tester.binding.setSurfaceSize(null);
   });
 

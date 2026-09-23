@@ -9,15 +9,25 @@ class PantallaPrincipal extends StatefulWidget {
 
 class _PantallaPrincipalState extends State<PantallaPrincipal> {
   late Future<PerfilAsesor> _perfilFuture;
+  late final PageController _pageController;
   final Set<String> _categoriasAbiertas = <String>{};
+  int _paginaActual = 0;
+  bool _animandoPagina = false;
 
   @override
   void initState() {
     super.initState();
+    _pageController = PageController();
     _perfilFuture = PerfilService.cargar();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ServicioVersion.validarVersion(context);
     });
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
   }
 
   void _recargarPerfil() {
@@ -34,6 +44,25 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
         _categoriasAbiertas.add(id);
       }
     });
+  }
+
+  Future<void> _irAPagina(int pagina) async {
+    if (_animandoPagina ||
+        pagina == _paginaActual ||
+        pagina < 0 ||
+        pagina > 1) {
+      return;
+    }
+    setState(() => _animandoPagina = true);
+    try {
+      await _pageController.animateToPage(
+        pagina,
+        duration: const Duration(milliseconds: 260),
+        curve: Curves.easeOutCubic,
+      );
+    } finally {
+      if (mounted) setState(() => _animandoPagina = false);
+    }
   }
 
   Future<void> _abrirRuta(String ruta) async {
@@ -189,142 +218,226 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
       ruta: RutasApp.perfil,
     );
 
+    final accesosRapidos = <_FichaInicio>[
+      catalogoAfiliado,
+      catalogoMiTienda,
+      catalogosPdf,
+      calculadoraPrecios,
+      diagnostico,
+      chatLive,
+      asesorIa,
+    ];
+    final categorias = <_CategoriaInicio>[
+      _CategoriaInicio(
+        id: 'catalogos',
+        titulo: txtApp('Catálogos', 'Catalogs'),
+        descripcion: txtApp(
+          'Galerías de productos y catálogos PDF.',
+          'Product galleries and PDF catalogs.',
+        ),
+        icono: Icons.view_list_rounded,
+        colores: const [Color(0xFF2E3192), Color(0xFF151B7C)],
+        fichas: [catalogoAfiliado, catalogoMiTienda, catalogosPdf],
+      ),
+      _CategoriaInicio(
+        id: 'panel_rendimiento',
+        titulo: txtApp('Panel de Rendimiento', 'Performance Panel'),
+        descripcion: txtApp(
+          'Calculadoras y optimizadores para planificar compras.',
+          'Calculators and optimizers for purchase planning.',
+        ),
+        icono: Icons.speed_rounded,
+        colores: const [Color(0xFF008C7E), Color(0xFF006B61)],
+        fichas: [
+          calculadoraPrecios,
+          optimizadorConsumo,
+          optimizadorAcelerado,
+        ],
+      ),
+      _CategoriaInicio(
+        id: 'diagnosticos',
+        titulo: txtApp('Diagnósticos', 'Diagnoses'),
+        descripcion: txtApp(
+          'Diagnóstico, cambio físico e historial.',
+          'Diagnosis, body transformation, and history.',
+        ),
+        icono: Icons.assignment_turned_in_rounded,
+        colores: const [Color(0xFF1457E8), Color(0xFF1531A6)],
+        fichas: [diagnostico, cambioFisico, historial],
+      ),
+      _CategoriaInicio(
+        id: 'analisis_control',
+        titulo: txtApp('Análisis y Control', 'Analysis and Control'),
+        descripcion: txtApp(
+          'Inventario local y comparador A/B.',
+          'Local inventory and A/B comparator.',
+        ),
+        icono: Icons.analytics_rounded,
+        colores: const [Color(0xFF1487A8), Color(0xFF172394)],
+        fichas: [inventarioLocal, comparadorAB],
+      ),
+      _CategoriaInicio(
+        id: 'asistentes_ia',
+        titulo: txtApp('Asistentes IA', 'AI Assistants'),
+        descripcion: txtApp(
+          'Chat Live y Asesor IA 4Life.',
+          'Chat Live and 4Life AI Adviser.',
+        ),
+        icono: Icons.auto_awesome_rounded,
+        colores: const [Color(0xFF6A4DE8), Color(0xFF3C2AAE)],
+        fichas: [chatLive, asesorIa, historialChatsIa],
+      ),
+      _CategoriaInicio(
+        id: 'recursos_aprendizaje',
+        titulo: txtApp(
+          'Recursos y Centro de Aprendizaje',
+          'Resources and Learning Center',
+        ),
+        descripcion: txtApp(
+          'Testimonios, diccionario y mapa anatómico.',
+          'Testimonials, dictionary, and anatomy map.',
+        ),
+        icono: Icons.school_rounded,
+        colores: const [Color(0xFF3047CC), Color(0xFF172394)],
+        fichas: [testimonios, diccionario, mapaAnatomico],
+      ),
+    ];
+    return _inicioPaginado(
+      context,
+      accesosRapidos: accesosRapidos,
+      categorias: categorias,
+      perfil: perfil,
+    );
+  }
+
+  Widget _inicioPaginado(
+    BuildContext context, {
+    required List<_FichaInicio> accesosRapidos,
+    required List<_CategoriaInicio> categorias,
+    required _FichaInicio perfil,
+  }) {
     return Scaffold(
       backgroundColor: const Color(0xFFF7F7FB),
       body: SafeArea(
         child: Column(
           children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-              child: FutureBuilder<PerfilAsesor>(
-                future: _perfilFuture,
-                builder: (context, snapshot) {
-                  return _heroAsesor(context, snapshot.data);
-                },
-              ),
-            ),
-            const SizedBox(height: 18),
             Expanded(
-              child: SingleChildScrollView(
-                key: const ValueKey('lista-vertical-inicio'),
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 18),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      IdiomaService.texto('quick_access'),
-                      style: const TextStyle(
-                        color: Color(0xFF111B59),
-                        fontSize: 20,
-                        fontWeight: FontWeight.w900,
+              child: LayoutBuilder(
+                builder: (context, viewport) {
+                  final heroHeight =
+                      viewport.maxWidth - 32 < 360 ? 222.0 : 158.0;
+                  const altoControles = 56.0;
+                  const espacioVerticalFijo = 8.0 + 18.0;
+                  final altoDisponible = viewport.maxHeight -
+                      heroHeight -
+                      altoControles -
+                      espacioVerticalFijo;
+                  final altoEspacioTarjeta =
+                      (altoDisponible / 7).clamp(66.0, 82.0).toDouble();
+                  final altoPaginas = altoEspacioTarjeta * 7 +
+                      _altoCategoriasAbiertas(
+                        categorias,
+                        altoEspacioTarjeta,
+                      );
+
+                  return SingleChildScrollView(
+                    key: const ValueKey('desplazamiento-general-inicio'),
+                    physics: const ClampingScrollPhysics(),
+                    child: ConstrainedBox(
+                      constraints:
+                          BoxConstraints(minHeight: viewport.maxHeight),
+                      child: Column(
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                            child: FutureBuilder<PerfilAsesor>(
+                              future: _perfilFuture,
+                              builder: (context, snapshot) {
+                                return _heroAsesor(context, snapshot.data);
+                              },
+                            ),
+                          ),
+                          const SizedBox(height: 18),
+                          SizedBox(
+                            height: altoPaginas,
+                            child: ScrollConfiguration(
+                              behavior:
+                                  ScrollConfiguration.of(context).copyWith(
+                                dragDevices: const {
+                                  PointerDeviceKind.touch,
+                                  PointerDeviceKind.mouse,
+                                  PointerDeviceKind.trackpad,
+                                  PointerDeviceKind.stylus,
+                                },
+                              ),
+                              child: PageView(
+                                key: const ValueKey('paginas-inicio'),
+                                controller: _pageController,
+                                onPageChanged: (pagina) {
+                                  if (_paginaActual != pagina) {
+                                    setState(() => _paginaActual = pagina);
+                                  }
+                                },
+                                children: [
+                                  Padding(
+                                    key: const ValueKey(
+                                        'pagina-accesos-rapidos'),
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 16),
+                                    child: Column(
+                                      children: [
+                                        for (final ficha in accesosRapidos)
+                                          _tarjetaMenu(
+                                            context,
+                                            ficha: ficha,
+                                            alturaEspacio: altoEspacioTarjeta,
+                                            compacta: true,
+                                            claveSemantica:
+                                                'principal-${ficha.ruta}',
+                                          ),
+                                      ],
+                                    ),
+                                  ),
+                                  Padding(
+                                    key: const ValueKey(
+                                        'pagina-todas-funciones'),
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 16),
+                                    child: Column(
+                                      children: [
+                                        for (final categoria in categorias)
+                                          _tarjetaCategoria(
+                                            context,
+                                            id: categoria.id,
+                                            titulo: categoria.titulo,
+                                            descripcion: categoria.descripcion,
+                                            icono: categoria.icono,
+                                            colores: categoria.colores,
+                                            fichas: categoria.fichas,
+                                            alturaEspacio: altoEspacioTarjeta,
+                                            compacta: true,
+                                          ),
+                                        _tarjetaMenu(
+                                          context,
+                                          ficha: perfil,
+                                          alturaEspacio: altoEspacioTarjeta,
+                                          compacta: true,
+                                          claveSemantica:
+                                              'general-${perfil.ruta}',
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          _controlesPaginas(),
+                        ],
                       ),
                     ),
-                    const SizedBox(height: 10),
-                    _tarjetaMenu(context, ficha: catalogoAfiliado),
-                    _tarjetaMenu(context, ficha: catalogoMiTienda),
-                    _tarjetaMenu(context, ficha: catalogosPdf),
-                    _tarjetaMenu(context, ficha: calculadoraPrecios),
-                    _tarjetaMenu(context, ficha: diagnostico),
-                    _tarjetaMenu(context, ficha: chatLive),
-                    _tarjetaMenu(context, ficha: asesorIa),
-                    const SizedBox(height: 12),
-                    Text(
-                      txtApp('Todas las funciones', 'All features'),
-                      style: const TextStyle(
-                        color: Color(0xFF111B59),
-                        fontSize: 20,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    _tarjetaCategoria(
-                      context,
-                      id: 'catalogos',
-                      titulo: txtApp('Catálogos', 'Catalogs'),
-                      descripcion: txtApp(
-                        'Galerías de productos y catálogos PDF.',
-                        'Product galleries and PDF catalogs.',
-                      ),
-                      icono: Icons.view_list_rounded,
-                      colores: const [Color(0xFF2E3192), Color(0xFF151B7C)],
-                      fichas: [
-                        catalogoAfiliado,
-                        catalogoMiTienda,
-                        catalogosPdf,
-                      ],
-                    ),
-                    _tarjetaCategoria(
-                      context,
-                      id: 'panel_rendimiento',
-                      titulo:
-                          txtApp('Panel de Rendimiento', 'Performance Panel'),
-                      descripcion: txtApp(
-                        'Calculadoras y optimizadores para planificar compras.',
-                        'Calculators and optimizers for purchase planning.',
-                      ),
-                      icono: Icons.speed_rounded,
-                      colores: const [Color(0xFF008C7E), Color(0xFF006B61)],
-                      fichas: [
-                        calculadoraPrecios,
-                        optimizadorConsumo,
-                        optimizadorAcelerado,
-                      ],
-                    ),
-                    _tarjetaCategoria(
-                      context,
-                      id: 'diagnosticos',
-                      titulo: txtApp('Diagnósticos', 'Diagnoses'),
-                      descripcion: txtApp(
-                        'Diagnóstico, cambio físico e historial.',
-                        'Diagnosis, body transformation, and history.',
-                      ),
-                      icono: Icons.assignment_turned_in_rounded,
-                      colores: const [Color(0xFF1457E8), Color(0xFF1531A6)],
-                      fichas: [diagnostico, cambioFisico, historial],
-                    ),
-                    _tarjetaCategoria(
-                      context,
-                      id: 'analisis_control',
-                      titulo:
-                          txtApp('Análisis y Control', 'Analysis and Control'),
-                      descripcion: txtApp(
-                        'Inventario local y comparador A/B.',
-                        'Local inventory and A/B comparator.',
-                      ),
-                      icono: Icons.analytics_rounded,
-                      colores: const [Color(0xFF1487A8), Color(0xFF172394)],
-                      fichas: [inventarioLocal, comparadorAB],
-                    ),
-                    _tarjetaCategoria(
-                      context,
-                      id: 'asistentes_ia',
-                      titulo: txtApp('Asistentes IA', 'AI Assistants'),
-                      descripcion: txtApp(
-                        'Chat Live y Asesor IA 4Life.',
-                        'Chat Live and 4Life AI Adviser.',
-                      ),
-                      icono: Icons.auto_awesome_rounded,
-                      colores: const [Color(0xFF6A4DE8), Color(0xFF3C2AAE)],
-                      fichas: [chatLive, asesorIa, historialChatsIa],
-                    ),
-                    _tarjetaCategoria(
-                      context,
-                      id: 'recursos_aprendizaje',
-                      titulo: txtApp(
-                        'Recursos y Centro de Aprendizaje',
-                        'Resources and Learning Center',
-                      ),
-                      descripcion: txtApp(
-                        'Testimonios, diccionario y mapa anatómico.',
-                        'Testimonials, dictionary, and anatomy map.',
-                      ),
-                      icono: Icons.school_rounded,
-                      colores: const [Color(0xFF3047CC), Color(0xFF172394)],
-                      fichas: [testimonios, diccionario, mapaAnatomico],
-                    ),
-                    _tarjetaMenu(context, ficha: perfil),
-                  ],
-                ),
+                  );
+                },
               ),
             ),
             _barraInferior(context),
@@ -332,6 +445,16 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
         ),
       ),
     );
+  }
+
+  double _altoCategoriasAbiertas(
+    List<_CategoriaInicio> categorias,
+    double altoEspacioTarjeta,
+  ) {
+    return categorias.fold<double>(0, (total, categoria) {
+      if (!_categoriasAbiertas.contains(categoria.id)) return total;
+      return total + 16 + categoria.fichas.length * altoEspacioTarjeta;
+    });
   }
 
   Future<void> _seleccionarMercadoEIdioma() async {
@@ -652,9 +775,12 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
     required _FichaInicio ficha,
     EdgeInsets margin = const EdgeInsets.only(bottom: 10),
     String? claveSemantica,
+    double? alturaEspacio,
+    bool compacta = false,
   }) {
-    return Container(
-      margin: margin,
+    final tamanoIcono = compacta ? 42.0 : 60.0;
+    final tarjeta = Container(
+      margin: compacta ? const EdgeInsets.only(bottom: 4) : margin,
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
@@ -676,12 +802,14 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
             borderRadius: BorderRadius.circular(12),
             onTap: () => _abrirRuta(ficha.ruta),
             child: Padding(
-              padding: const EdgeInsets.all(15),
+              padding: compacta
+                  ? const EdgeInsets.symmetric(horizontal: 10, vertical: 4)
+                  : const EdgeInsets.all(15),
               child: Row(
                 children: [
                   Container(
-                    width: 60,
-                    height: 60,
+                    width: tamanoIcono,
+                    height: tamanoIcono,
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         colors: ficha.colores,
@@ -690,39 +818,48 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
                       ),
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: Icon(ficha.icono, color: Colors.white, size: 34),
+                    child: Icon(
+                      ficha.icono,
+                      color: Colors.white,
+                      size: compacta ? 24 : 34,
+                    ),
                   ),
-                  const SizedBox(width: 18),
+                  SizedBox(width: compacta ? 10 : 18),
                   Expanded(
                     child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
                           ficha.titulo,
-                          style: const TextStyle(
-                            color: Color(0xFF111B59),
-                            fontSize: 18,
+                          maxLines: compacta ? 2 : null,
+                          overflow: compacta ? TextOverflow.ellipsis : null,
+                          style: TextStyle(
+                            color: const Color(0xFF111B59),
+                            fontSize: compacta ? 12.5 : 18,
                             fontWeight: FontWeight.w900,
-                            height: 1.05,
+                            height: compacta ? 1 : 1.05,
                           ),
                         ),
-                        const SizedBox(height: 5),
+                        SizedBox(height: compacta ? 1 : 5),
                         Text(
                           ficha.descripcion,
-                          style: const TextStyle(
-                            color: Color(0xFF465074),
-                            fontSize: 12,
-                            height: 1.22,
+                          maxLines: compacta ? 2 : null,
+                          overflow: compacta ? TextOverflow.ellipsis : null,
+                          style: TextStyle(
+                            color: const Color(0xFF465074),
+                            fontSize: compacta ? 10 : 12,
+                            height: compacta ? 1.05 : 1.22,
                           ),
                         ),
                       ],
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  const Icon(
+                  SizedBox(width: compacta ? 4 : 8),
+                  Icon(
                     Icons.chevron_right_rounded,
-                    color: Color(0xFF071451),
-                    size: 31,
+                    color: const Color(0xFF071451),
+                    size: compacta ? 24 : 31,
                   ),
                 ],
               ),
@@ -731,6 +868,8 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
         ),
       ),
     );
+    if (alturaEspacio == null) return tarjeta;
+    return SizedBox(height: alturaEspacio, child: tarjeta);
   }
 
   Widget _tarjetaCategoria(
@@ -741,90 +880,111 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
     required IconData icono,
     required List<Color> colores,
     required List<_FichaInicio> fichas,
+    required double alturaEspacio,
+    required bool compacta,
   }) {
     final abierta = _categoriasAbiertas.contains(id);
     return Column(
       children: [
-        Container(
-          margin: EdgeInsets.only(bottom: abierta ? 2 : 10),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            boxShadow: [
-              BoxShadow(
-                color: const Color(0xFF0E1A5F).withValues(alpha: 0.08),
-                blurRadius: 14,
-                offset: const Offset(0, 7),
-              ),
-            ],
-          ),
-          child: Semantics(
-            key: ValueKey('categoria-$id'),
-            button: true,
-            expanded: abierta,
-            label: titulo,
-            hint: abierta
-                ? txtApp('Contraer categoria', 'Collapse category')
-                : txtApp('Expandir categoria', 'Expand category'),
-            child: Material(
-              color: Colors.transparent,
-              child: InkWell(
-                borderRadius: BorderRadius.circular(12),
-                onTap: () => _alternarCategoria(id),
-                child: Padding(
-                  padding: const EdgeInsets.all(15),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 60,
-                        height: 60,
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: colores,
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
+        SizedBox(
+          height: alturaEspacio,
+          child: Container(
+            margin: EdgeInsets.only(bottom: abierta ? 2 : 6),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF0E1A5F).withValues(alpha: 0.08),
+                  blurRadius: 14,
+                  offset: const Offset(0, 7),
+                ),
+              ],
+            ),
+            child: Semantics(
+              key: ValueKey('categoria-$id'),
+              button: true,
+              expanded: abierta,
+              label: titulo,
+              hint: abierta
+                  ? txtApp('Contraer categoria', 'Collapse category')
+                  : txtApp('Expandir categoria', 'Expand category'),
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(12),
+                  onTap: () => _alternarCategoria(id),
+                  child: Padding(
+                    padding: compacta
+                        ? const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 4,
+                          )
+                        : const EdgeInsets.all(15),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: compacta ? 42 : 60,
+                          height: compacta ? 42 : 60,
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: colores,
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
+                            borderRadius: BorderRadius.circular(8),
                           ),
-                          borderRadius: BorderRadius.circular(8),
+                          child: Icon(
+                            icono,
+                            color: Colors.white,
+                            size: compacta ? 24 : 34,
+                          ),
                         ),
-                        child: Icon(icono, color: Colors.white, size: 34),
-                      ),
-                      const SizedBox(width: 18),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              titulo,
-                              style: const TextStyle(
-                                color: Color(0xFF111B59),
-                                fontSize: 18,
-                                fontWeight: FontWeight.w900,
-                                height: 1.05,
+                        SizedBox(width: compacta ? 10 : 18),
+                        Expanded(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                titulo,
+                                maxLines: compacta ? 2 : null,
+                                overflow:
+                                    compacta ? TextOverflow.ellipsis : null,
+                                style: TextStyle(
+                                  color: const Color(0xFF111B59),
+                                  fontSize: compacta ? 12.5 : 18,
+                                  fontWeight: FontWeight.w900,
+                                  height: compacta ? 1 : 1.05,
+                                ),
                               ),
-                            ),
-                            const SizedBox(height: 5),
-                            Text(
-                              descripcion,
-                              style: const TextStyle(
-                                color: Color(0xFF465074),
-                                fontSize: 12,
-                                height: 1.22,
+                              SizedBox(height: compacta ? 1 : 5),
+                              Text(
+                                descripcion,
+                                maxLines: compacta ? 2 : null,
+                                overflow:
+                                    compacta ? TextOverflow.ellipsis : null,
+                                style: TextStyle(
+                                  color: const Color(0xFF465074),
+                                  fontSize: compacta ? 10 : 12,
+                                  height: compacta ? 1.05 : 1.22,
+                                ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: 8),
-                      AnimatedRotation(
-                        turns: abierta ? 0.25 : 0,
-                        duration: const Duration(milliseconds: 180),
-                        child: const Icon(
-                          Icons.chevron_right_rounded,
-                          color: Color(0xFF071451),
-                          size: 31,
+                        SizedBox(width: compacta ? 4 : 8),
+                        AnimatedRotation(
+                          turns: abierta ? 0.25 : 0,
+                          duration: const Duration(milliseconds: 180),
+                          child: Icon(
+                            Icons.chevron_right_rounded,
+                            color: const Color(0xFF071451),
+                            size: compacta ? 24 : 31,
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -875,8 +1035,10 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
                               (ficha) => _tarjetaMenu(
                                 context,
                                 ficha: ficha,
-                                margin: const EdgeInsets.only(top: 8),
+                                margin: const EdgeInsets.only(bottom: 6),
                                 claveSemantica: 'subacceso-$id-${ficha.ruta}',
+                                alturaEspacio: alturaEspacio,
+                                compacta: compacta,
                               ),
                             )
                             .toList(),
@@ -892,6 +1054,61 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
           duration: const Duration(milliseconds: 180),
         ),
       ],
+    );
+  }
+
+  Widget _controlesPaginas() {
+    final esPrimera = _paginaActual == 0;
+    final etiqueta = esPrimera
+        ? IdiomaService.texto('quick_access')
+        : txtApp('Todas las funciones', 'All features');
+    return SizedBox(
+      height: 56,
+      child: Semantics(
+        container: true,
+        label: txtApp(
+          '$etiqueta, página ${_paginaActual + 1} de 2',
+          '$etiqueta, page ${_paginaActual + 1} of 2',
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            IconButton(
+              key: const ValueKey('pagina-anterior'),
+              tooltip: txtApp('Página anterior', 'Previous page'),
+              onPressed:
+                  esPrimera || _animandoPagina ? null : () => _irAPagina(0),
+              icon: const Icon(Icons.chevron_left_rounded),
+            ),
+            const SizedBox(width: 4),
+            Expanded(
+              child: Center(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    '$etiqueta ${_paginaActual + 1}/2',
+                    key: const ValueKey('selector-pagina-inicio'),
+                    maxLines: 1,
+                    style: const TextStyle(
+                      color: Color(0xFF111B59),
+                      fontSize: 13,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 4),
+            IconButton(
+              key: const ValueKey('pagina-siguiente'),
+              tooltip: txtApp('Página siguiente', 'Next page'),
+              onPressed:
+                  esPrimera && !_animandoPagina ? () => _irAPagina(1) : null,
+              icon: const Icon(Icons.chevron_right_rounded),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -992,6 +1209,24 @@ class _FichaInicio {
     required this.icono,
     required this.colores,
     required this.ruta,
+  });
+}
+
+class _CategoriaInicio {
+  final String id;
+  final String titulo;
+  final String descripcion;
+  final IconData icono;
+  final List<Color> colores;
+  final List<_FichaInicio> fichas;
+
+  const _CategoriaInicio({
+    required this.id,
+    required this.titulo,
+    required this.descripcion,
+    required this.icono,
+    required this.colores,
+    required this.fichas,
   });
 }
 
