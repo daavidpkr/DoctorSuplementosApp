@@ -101,11 +101,66 @@ const Map<String, String> presentacionesProductoEcuador = {
   'Vistari': '60 cápsulas',
 };
 
-List<String> aliasProductoEcuador(String id) => <String>{
-      id,
-      nombresOficialesEcuador[id] ?? id,
-      ...?_diferenciadoresProducto4Life[id],
-    }.toList(growable: false);
+/// Stable, explicit links between equivalent Ecuador and USA formulas.
+/// These IDs are only used to reuse technical copy; commercial fields remain
+/// resolved by the Ecuador catalog.
+const Map<String, String> correspondenciasProductoEcuadorUsa = {
+  'Aloe Vera Stix Tropical': 'Aloe Vera Stix',
+  'Bcv': '4Life Transfer Factor Cardio',
+  'Belle vie': '4Life Transfer Factor Belle Vie',
+  'Bioefa': 'Essential Fatty Acid Complex',
+  'Colageno tipo i': '4Life Transfer Factor Collagen Type I',
+  'Crema cuerpo': 'enummi Intensive Body Lotion',
+  'Crema humectante': 'äKwä Moisture Cream',
+  'Crema para los ojos': 'äKwä Refining Eye Cream',
+  'Energy go stix': 'Energy Go Stix Berry',
+  'Fibre': 'Fibre System Plus',
+  'Glucoach': '4Life Transfer Factor GluCoach',
+  'Glutamine prime': '4Life NanoFactor Glutamine Prime',
+  'Kbu': '4Life Transfer Factor KBU',
+  'Limpiador': 'äKwä Oil-to-Foam Cleanser',
+  'Malepro': '4Life Transfer Factor MalePro',
+  'Pasta de dientes': 'enummi Toothpaste',
+  'Preo biotics': 'Pre/o Biotics',
+  'Protf': 'Pro-TF',
+  'Recall': '4Life Transfer Factor ReCall',
+  'Renuvo': '4Life Transfer Factor Renuvo',
+  'Riovida burst': '4Life Transfer Factor RioVida Burst',
+  'Riovida stix': '4Life Transfer Factor RioVida Stix',
+  'Suero': 'äKwä Vitamin Serum',
+  'TF Boost': '4Life Transfer Factor Immune Boost',
+  'Transfer factor MAX': '4Life Transfer Factor Max',
+  'Transfer factor plus': '4Life Transfer Factor Plus Tri-Factor Formula',
+  'Transfer factor tri factor': '4Life Transfer Factor Tri-Factor Formula',
+  'Vistari': '4Life Transfer Factor Vista',
+};
+
+/// Verified market differences whose Ecuador value must win.
+const Map<String, String> diferenciasCorrespondenciaEcuadorUsa = {
+  'Aloe Vera Stix Tropical': 'Sabor tropical y presentacion Ecuador.',
+  'Bcv': 'Nombre BCV y 60 capsulas; USA Cardio declara 90.',
+  'Bioefa': 'Nombre BioEFA y 60 capsulas del envase Ecuador.',
+  'Colageno tipo i': '15 paquetes de 6.6 g en Ecuador.',
+  'Energy go stix': '30 sobres de 6 g en Ecuador.',
+  'Malepro': 'Nombre MalePro+ y 120 capsulas; USA declara 90 blandas.',
+  'Protf': 'Presentacion y sabor del envase Ecuador.',
+  'Suero': 'Presentacion Ecuador de 50 ml.',
+  'Transfer factor MAX': '120 capsulas en Ecuador; USA declara 60.',
+  'Transfer factor plus': '90 capsulas en Ecuador; USA declara 60.',
+  'Vistari': 'Nombre comercial Vistari y 60 capsulas en Ecuador.',
+};
+
+List<String> aliasProductoEcuador(String id) {
+  final idUsa = correspondenciasProductoEcuadorUsa[id];
+  final fichaUsa = idUsa == null ? null : fichaProductoUsa(idUsa);
+  return <String>{
+    id,
+    nombresOficialesEcuador[id] ?? id,
+    ...?_diferenciadoresProducto4Life[id],
+    if (idUsa != null) idUsa,
+    ...?fichaUsa?.alias,
+  }.toList(growable: false);
+}
 
 List<String> get productosPermitidosPaisActual =>
     PaisService.actual.value == PaisApp.estadosUnidos
@@ -789,7 +844,24 @@ InformacionProductoCatalogo informacionProductoCatalogo(String nombre) {
       dosis: '',
     );
   }
-  return informacionProductosEcuador[nombre] ??
+  final local = informacionProductosEcuador[nombre];
+  final idUsa = correspondenciasProductoEcuadorUsa[nombre];
+  final compartida = idUsa == null ? null : fichaProductoUsa(idUsa);
+  if (local != null && compartida != null) {
+    final idioma = IdiomaService.actual.value;
+    final usoUsa = compartida.campo('directions', idioma).trim();
+    final precaucionesUsa = compartida.campo('precautions', idioma).trim();
+    return InformacionProductoCatalogo(
+      descripcion: compartida.campo('description', idioma),
+      componentes: compartida.campo('ingredients', idioma),
+      uso: usoUsa.isEmpty ? local.uso : usoUsa,
+      precauciones: precaucionesUsa.isEmpty
+          ? local.precauciones
+          : '$precaucionesUsa\n${local.precauciones}',
+      dosis: local.dosis,
+    );
+  }
+  return local ??
       InformacionProductoCatalogo(
         descripcion:
             'Producto 4Life de bienestar disenado para complementar una rutina saludable segun la necesidad del cliente y la linea a la que pertenece.',
@@ -810,6 +882,86 @@ InformacionProductoCatalogo informacionProductoCatalogo(String nombre) {
 /// conexion. Los campos vacios se declaran como no documentados en lugar de
 /// inferir contenido.
 String textoFichaProductoEcuador(String nombre, IdiomaApp idioma) {
+  final idUsa = correspondenciasProductoEcuadorUsa[nombre];
+  final compartida = idUsa == null ? null : fichaProductoUsa(idUsa);
+  final local = informacionProductosEcuador[nombre];
+  if (compartida == null || local == null) {
+    return _textoFichaProductoEcuadorBase(nombre, idioma);
+  }
+
+  final en = idioma == IdiomaApp.ingles;
+  final noDato = en
+      ? 'Not documented in the available local information. Check the current label.'
+      : 'No documentado en la informacion local disponible. Revisa la etiqueta vigente.';
+  String dato(String valor) => valor.trim().isEmpty ? noDato : valor.trim();
+  final descripcion = dato(compartida.campo('description', idioma));
+  final componentes = dato(compartida.campo('ingredients', idioma));
+  final indicaciones = compartida.campo('directions', idioma).trim();
+  final advertencias = compartida.campo('precautions', idioma).trim();
+  final lineas = descripcion
+      .split('\n')
+      .map((linea) => linea.trim())
+      .where((linea) => linea.isNotEmpty)
+      .toList(growable: false);
+  final respaldo = lineas
+      .where((linea) =>
+          linea.startsWith('RESPALDO') || linea.startsWith('PRIMARY SUPPORT'))
+      .join('\n');
+  final funciones =
+      lineas.where((linea) => RegExp(r'^[\u2022-]').hasMatch(linea)).join('\n');
+  final descripcionCompleta = lineas
+      .where((linea) =>
+          !linea.startsWith('RESPALDO') &&
+          !linea.startsWith('PRIMARY SUPPORT') &&
+          !RegExp(r'^[\u2022-]').hasMatch(linea))
+      .join('\n');
+  final uso = indicaciones.isEmpty ? local.uso : indicaciones;
+  final precauciones = advertencias.isEmpty
+      ? local.precauciones
+      : '$advertencias\n${local.precauciones}';
+  final presentacion =
+      presentacionesProductoEcuador[nombre] ?? compartida.campo('size', idioma);
+  final nombreVisible = nombresOficialesEcuador[nombre] ?? nombre;
+
+  return '''${en ? 'EXECUTIVE TECHNICAL SHEET' : 'FICHA TECNICA EJECUTIVA'}
+$nombreVisible - Ecuador
+
+${en ? 'MAIN SUPPORT AND WELLNESS CATEGORIES' : 'RESPALDO PRINCIPAL Y CATEGORIAS DE BIENESTAR'}
+${respaldo.isEmpty ? descripcion : respaldo}
+
+${en ? 'FULL DESCRIPTION' : 'DESCRIPCION COMPLETA'}
+${descripcionCompleta.isEmpty ? descripcion : descripcionCompleta}
+
+${en ? 'MAIN COMPONENTS AND ORIGIN' : 'COMPONENTES PRINCIPALES Y ORIGEN'}
+$componentes
+
+${en ? 'DOCUMENTED FUNCTIONS OR BENEFITS' : 'FUNCIONES O BENEFICIOS DOCUMENTADOS'}
+${funciones.isEmpty ? descripcion : funciones}
+
+${en ? 'IDEAL USER PROFILE' : 'PERFIL DEL USUARIO IDEAL'}
+${en ? 'Use according to the documented purpose and current Ecuador label.' : 'Usar de acuerdo con el proposito documentado y la etiqueta vigente de Ecuador.'}
+
+${en ? 'USE PROTOCOL' : 'PROTOCOLO DE USO'}
+${dato(uso)}
+
+${en ? 'DOCUMENTED DOSAGE' : 'DOSIS DOCUMENTADA'}
+${dato(local.dosis)}
+
+${en ? 'PRESENTATION' : 'PRESENTACION'}
+${dato(presentacion)}
+
+${en ? 'SAFETY PROTOCOL' : 'PROTOCOLO DE SEGURIDAD'}
+${dato(precauciones)}
+
+${en ? 'ADDITIONAL INFORMATION' : 'INFORMACION COMPLEMENTARIA'}
+${en ? 'Compatible technical sections from the local USA catalog (${compartida.categoria}). Ecuador prices, LP, image, package, and availability remain unchanged.' : 'Secciones tecnicas compatibles del catalogo local USA (${compartida.categoria}). Los precios, LP, imagen, envase y disponibilidad de Ecuador permanecen sin cambios.'}
+
+${en ? 'RESPONSIBILITY NOTE' : 'NOTA DE RESPONSABILIDAD'}
+${en ? 'This product is not medicine and does not replace treatment prescribed by a healthcare professional.' : 'Este producto no es un medicamento y no sustituye tratamientos prescritos por un profesional de salud.'}
+''';
+}
+
+String _textoFichaProductoEcuadorBase(String nombre, IdiomaApp idioma) {
   final info = informacionProductosEcuador[nombre];
   if (info == null) {
     throw StateError('Producto no disponible en Ecuador');

@@ -311,9 +311,11 @@ class _InsigniaPais extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final altura = grande ? 52.0 : 30.0;
+    final proporcion = pais == PaisApp.ecuador ? 1.5 : 1.9;
     return Container(
-      width: grande ? 76 : 42,
-      height: grande ? 52 : 30,
+      width: altura * proporcion,
+      height: altura,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(grande ? 12 : 8),
         border: Border.all(color: Colors.white, width: 2),
@@ -326,81 +328,15 @@ class _InsigniaPais extends StatelessWidget {
         ],
       ),
       clipBehavior: Clip.antiAlias,
-      child: CustomPaint(
-        painter: pais == PaisApp.ecuador
-            ? const _BanderaEcuadorPainter()
-            : const _BanderaEstadosUnidosPainter(),
-        child: const SizedBox.expand(),
+      child: SvgPicture.asset(
+        pais == PaisApp.ecuador
+            ? 'assets/banderas/ecuador.svg'
+            : 'assets/banderas/estados_unidos.svg',
+        fit: BoxFit.cover,
+        excludeFromSemantics: true,
       ),
     );
   }
-}
-
-class _BanderaEcuadorPainter extends CustomPainter {
-  const _BanderaEcuadorPainter();
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    canvas.drawRect(
-      Rect.fromLTWH(0, 0, size.width, size.height / 2),
-      Paint()..color = const Color(0xFFFFD100),
-    );
-    canvas.drawRect(
-      Rect.fromLTWH(0, size.height / 2, size.width, size.height / 4),
-      Paint()..color = const Color(0xFF0057B8),
-    );
-    canvas.drawRect(
-      Rect.fromLTWH(0, size.height * .75, size.width, size.height / 4),
-      Paint()..color = const Color(0xFFEF3340),
-    );
-    final centro = Offset(size.width / 2, size.height * .56);
-    canvas.drawCircle(
-      centro,
-      size.height * .105,
-      Paint()..color = const Color(0xFFFFD100),
-    );
-    canvas.drawCircle(
-      centro,
-      size.height * .075,
-      Paint()..color = const Color(0xFF0057B8),
-    );
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
-}
-
-class _BanderaEstadosUnidosPainter extends CustomPainter {
-  const _BanderaEstadosUnidosPainter();
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final altoFranja = size.height / 13;
-    for (var i = 0; i < 13; i++) {
-      canvas.drawRect(
-        Rect.fromLTWH(0, i * altoFranja, size.width, altoFranja + .5),
-        Paint()..color = i.isEven ? const Color(0xFFB22234) : Colors.white,
-      );
-    }
-    final canton = Rect.fromLTWH(0, 0, size.width * .42, altoFranja * 7);
-    canvas.drawRect(canton, Paint()..color = const Color(0xFF3C3B6E));
-    final estrella = Paint()..color = Colors.white;
-    for (var fila = 0; fila < 5; fila++) {
-      for (var columna = 0; columna < 6; columna++) {
-        canvas.drawCircle(
-          Offset(
-            canton.width * (.09 + columna * .165),
-            canton.height * (.10 + fila * .20),
-          ),
-          math.max(0.55, size.height * .012),
-          estrella,
-        );
-      }
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
 class _CurvaEncabezadoPais extends CustomClipper<Path> {

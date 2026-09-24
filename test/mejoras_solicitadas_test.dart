@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:doctor_suplementos/main.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -66,8 +67,11 @@ void main() {
     ];
     for (final size in const [
       Size(280, 700),
+      Size(360, 640),
       Size(390, 844),
       Size(390, 600),
+      Size(393, 873),
+      Size(412, 915),
       Size(800, 1024),
       Size(1440, 900),
     ]) {
@@ -162,6 +166,32 @@ void main() {
       expect(tester.takeException(), isNull, reason: '$size página 2');
     }
     await tester.binding.setSurfaceSize(null);
+  });
+
+  testWidgets('Redmi usa fichas ampliadas y selector pegado al contenido',
+      (tester) async {
+    await tester.binding.setSurfaceSize(const Size(393, 873));
+    await tester.pumpWidget(const MaterialApp(home: PantallaPrincipal()));
+    await tester.pump();
+
+    final ficha = find.byKey(const ValueKey('principal-/catalogo-afiliado'));
+    expect(tester.getSize(ficha).height, inInclusiveRange(78, 96));
+    final ultima = find.byKey(const ValueKey('principal-/asesor-ia'));
+    final selector = find.byKey(const ValueKey('selector-pagina-inicio'));
+    expect(tester.getTopLeft(selector).dy - tester.getBottomLeft(ultima).dy,
+        lessThan(42));
+    expect(tester.takeException(), isNull);
+    await tester.binding.setSurfaceSize(null);
+  });
+
+  test('banderas son SVG locales sin dependencias de red', () async {
+    final ecuador = await rootBundle.loadString('assets/banderas/ecuador.svg');
+    final usa =
+        await rootBundle.loadString('assets/banderas/estados_unidos.svg');
+    expect(ecuador, contains('Escudo nacional'));
+    expect(ecuador, contains('<ellipse'));
+    expect(usa, contains('50 estrellas'));
+    expect('$ecuador$usa', isNot(contains('href="http')));
   });
 
   testWidgets('flechas sincronizan páginas e ignoran pulsaciones rápidas',

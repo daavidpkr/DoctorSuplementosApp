@@ -60,6 +60,40 @@ void main() {
     }
   });
 
+  test('Ecuador-USA mapping is explicit, stable and preserves local commerce',
+      () {
+    expect(correspondenciasProductoEcuadorUsa, hasLength(28));
+    expect(
+      correspondenciasProductoEcuadorUsa.keys
+          .toSet()
+          .difference(productosPermitidosEcuador.toSet()),
+      isEmpty,
+    );
+    for (final entry in correspondenciasProductoEcuadorUsa.entries) {
+      final usa = fichaProductoUsa(entry.value);
+      expect(usa, isNotNull, reason: entry.toString());
+      final ficha = textoFichaProductoEcuador(entry.key, IdiomaApp.espanol);
+      expect(ficha, contains('RESPALDO PRINCIPAL'), reason: entry.key);
+      expect(ficha, contains('DESCRIPCION COMPLETA'), reason: entry.key);
+      expect(ficha, contains('FUNCIONES O BENEFICIOS DOCUMENTADOS'),
+          reason: entry.key);
+      expect(ficha, contains('DOSIS DOCUMENTADA'), reason: entry.key);
+      expect(ficha, contains('INFORMACION COMPLEMENTARIA'), reason: entry.key);
+      expect(ficha, contains('Ecuador permanecen sin cambios'),
+          reason: entry.key);
+      expect(imagenesProductoEcuador[entry.key],
+          startsWith('assets/productos/productos-ec/'));
+    }
+    expect(correspondenciasProductoEcuadorUsa, isNot(contains('Riovida Jugo')));
+    expect(correspondenciasProductoEcuadorUsa, isNot(contains('Nutrastart')));
+    expect(correspondenciasProductoEcuadorUsa, isNot(contains('Agpro')));
+    expect(presentacionesProductoEcuador['Bcv'], startsWith('60 '));
+    expect(presentacionesProductoEcuador['Transfer factor MAX'],
+        startsWith('120 '));
+    expect(productosConPrecioEcuador.map((p) => p.nombre).toSet(),
+        hasLength(productosConPrecioEcuador.length));
+  });
+
   testWidgets(
       'Ecuador opens an individual local sheet immediately without AI loader',
       (tester) async {

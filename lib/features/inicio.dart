@@ -324,16 +324,28 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
             Expanded(
               child: LayoutBuilder(
                 builder: (context, viewport) {
-                  final heroHeight =
-                      viewport.maxWidth - 32 < 360 ? 222.0 : 158.0;
-                  const altoControles = 56.0;
-                  const espacioVerticalFijo = 8.0 + 18.0;
+                  final anchoContenido = viewport.maxWidth - 32;
+                  final pantallaBaja = viewport.maxHeight < 720;
+                  final heroHeight = anchoContenido < 360
+                      ? (pantallaBaja ? 214.0 : 204.0)
+                      : (pantallaBaja ? 132.0 : 144.0);
+                  const altoControles = 50.0;
+                  const espacioVerticalFijo = 8.0;
+                  final escalaTexto = MediaQuery.textScalerOf(context).scale(1);
+                  final altoMinimoTarjeta = math.max(
+                    anchoContenido < 320 ? 88.0 : 76.0,
+                    76.0 + math.max(0.0, escalaTexto - 1) * 60,
+                  );
                   final altoDisponible = viewport.maxHeight -
                       heroHeight -
                       altoControles -
                       espacioVerticalFijo;
-                  final altoEspacioTarjeta =
-                      (altoDisponible / 7).clamp(66.0, 82.0).toDouble();
+                  final altoEspacioTarjeta = (altoDisponible / 7)
+                      .clamp(
+                        altoMinimoTarjeta,
+                        math.max(96.0, altoMinimoTarjeta),
+                      )
+                      .toDouble();
                   final altoPaginas = altoEspacioTarjeta * 7 +
                       _altoCategoriasAbiertas(
                         categorias,
@@ -353,11 +365,14 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
                             child: FutureBuilder<PerfilAsesor>(
                               future: _perfilFuture,
                               builder: (context, snapshot) {
-                                return _heroAsesor(context, snapshot.data);
+                                return _heroAsesor(
+                                  context,
+                                  snapshot.data,
+                                  altura: heroHeight,
+                                );
                               },
                             ),
                           ),
-                          const SizedBox(height: 18),
                           SizedBox(
                             height: altoPaginas,
                             child: ScrollConfiguration(
@@ -597,15 +612,20 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
     );
   }
 
-  Widget _heroAsesor(BuildContext context, PerfilAsesor? perfil) {
+  Widget _heroAsesor(
+    BuildContext context,
+    PerfilAsesor? perfil, {
+    required double altura,
+  }) {
     final nombre = perfil?.nombre.trim() ?? '';
     final saludo = nombre.isEmpty
         ? IdiomaService.texto('hello_adviser')
         : txtApp("¡Hola, $nombre!", "Hello, $nombre!");
     return LayoutBuilder(builder: (context, constraints) {
       final estrecho = constraints.maxWidth < 360;
+      final compactoVertical = altura < 150;
       return Container(
-        height: estrecho ? 222 : 158,
+        height: altura,
         width: double.infinity,
         decoration: BoxDecoration(
           color: const Color(0xFFEFF3FF),
@@ -689,10 +709,10 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
             ),
             Padding(
               padding: EdgeInsets.fromLTRB(
-                estrecho ? 18 : 24,
-                estrecho ? 18 : 24,
+                estrecho || compactoVertical ? 18 : 24,
+                compactoVertical ? 14 : (estrecho ? 18 : 24),
                 estrecho ? 18 : 120,
-                estrecho ? 66 : 20,
+                estrecho ? 66 : (compactoVertical ? 12 : 20),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -711,6 +731,8 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
                   const SizedBox(height: 8),
                   Text(
                     IdiomaService.texto('hero_subtitle'),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
                       color: Color(0xFF25315F),
                       fontSize: 12,
@@ -778,9 +800,9 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
     double? alturaEspacio,
     bool compacta = false,
   }) {
-    final tamanoIcono = compacta ? 42.0 : 60.0;
+    final tamanoIcono = compacta ? 46.0 : 60.0;
     final tarjeta = Container(
-      margin: compacta ? const EdgeInsets.only(bottom: 4) : margin,
+      margin: compacta ? const EdgeInsets.only(bottom: 5) : margin,
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
@@ -803,7 +825,7 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
             onTap: () => _abrirRuta(ficha.ruta),
             child: Padding(
               padding: compacta
-                  ? const EdgeInsets.symmetric(horizontal: 10, vertical: 4)
+                  ? const EdgeInsets.symmetric(horizontal: 12, vertical: 5)
                   : const EdgeInsets.all(15),
               child: Row(
                 children: [
@@ -821,10 +843,10 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
                     child: Icon(
                       ficha.icono,
                       color: Colors.white,
-                      size: compacta ? 24 : 34,
+                      size: compacta ? 26 : 34,
                     ),
                   ),
-                  SizedBox(width: compacta ? 10 : 18),
+                  SizedBox(width: compacta ? 12 : 18),
                   Expanded(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -836,20 +858,20 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
                           overflow: compacta ? TextOverflow.ellipsis : null,
                           style: TextStyle(
                             color: const Color(0xFF111B59),
-                            fontSize: compacta ? 12.5 : 18,
+                            fontSize: compacta ? 14 : 18,
                             fontWeight: FontWeight.w900,
-                            height: compacta ? 1 : 1.05,
+                            height: compacta ? 1.05 : 1.05,
                           ),
                         ),
-                        SizedBox(height: compacta ? 1 : 5),
+                        SizedBox(height: compacta ? 2 : 5),
                         Text(
                           ficha.descripcion,
                           maxLines: compacta ? 2 : null,
                           overflow: compacta ? TextOverflow.ellipsis : null,
                           style: TextStyle(
                             color: const Color(0xFF465074),
-                            fontSize: compacta ? 10 : 12,
-                            height: compacta ? 1.05 : 1.22,
+                            fontSize: compacta ? 11.25 : 12,
+                            height: compacta ? 1.12 : 1.22,
                           ),
                         ),
                       ],
@@ -859,7 +881,7 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
                   Icon(
                     Icons.chevron_right_rounded,
                     color: const Color(0xFF071451),
-                    size: compacta ? 24 : 31,
+                    size: compacta ? 26 : 31,
                   ),
                 ],
               ),
@@ -917,15 +939,15 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
                   child: Padding(
                     padding: compacta
                         ? const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 4,
+                            horizontal: 12,
+                            vertical: 5,
                           )
                         : const EdgeInsets.all(15),
                     child: Row(
                       children: [
                         Container(
-                          width: compacta ? 42 : 60,
-                          height: compacta ? 42 : 60,
+                          width: compacta ? 46 : 60,
+                          height: compacta ? 46 : 60,
                           decoration: BoxDecoration(
                             gradient: LinearGradient(
                               colors: colores,
@@ -937,10 +959,10 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
                           child: Icon(
                             icono,
                             color: Colors.white,
-                            size: compacta ? 24 : 34,
+                            size: compacta ? 26 : 34,
                           ),
                         ),
-                        SizedBox(width: compacta ? 10 : 18),
+                        SizedBox(width: compacta ? 12 : 18),
                         Expanded(
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
@@ -953,12 +975,12 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
                                     compacta ? TextOverflow.ellipsis : null,
                                 style: TextStyle(
                                   color: const Color(0xFF111B59),
-                                  fontSize: compacta ? 12.5 : 18,
+                                  fontSize: compacta ? 14 : 18,
                                   fontWeight: FontWeight.w900,
-                                  height: compacta ? 1 : 1.05,
+                                  height: compacta ? 1.05 : 1.05,
                                 ),
                               ),
-                              SizedBox(height: compacta ? 1 : 5),
+                              SizedBox(height: compacta ? 2 : 5),
                               Text(
                                 descripcion,
                                 maxLines: compacta ? 2 : null,
@@ -966,8 +988,8 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
                                     compacta ? TextOverflow.ellipsis : null,
                                 style: TextStyle(
                                   color: const Color(0xFF465074),
-                                  fontSize: compacta ? 10 : 12,
-                                  height: compacta ? 1.05 : 1.22,
+                                  fontSize: compacta ? 11.25 : 12,
+                                  height: compacta ? 1.12 : 1.22,
                                 ),
                               ),
                             ],
@@ -980,7 +1002,7 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
                           child: Icon(
                             Icons.chevron_right_rounded,
                             color: const Color(0xFF071451),
-                            size: compacta ? 24 : 31,
+                            size: compacta ? 26 : 31,
                           ),
                         ),
                       ],
@@ -1063,7 +1085,7 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
         ? IdiomaService.texto('quick_access')
         : txtApp('Todas las funciones', 'All features');
     return SizedBox(
-      height: 56,
+      height: 50,
       child: Semantics(
         container: true,
         label: txtApp(
