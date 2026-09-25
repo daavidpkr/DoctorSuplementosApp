@@ -196,11 +196,11 @@ class _PaginaSeleccionPaisState extends State<PaginaSeleccionPais> {
                                     OpcionSelectorEstilizado(
                                         valor: IdiomaApp.espanol,
                                         texto: _texto('Español', 'Spanish'),
-                                        icono: Icons.language_rounded),
+                                        emoji: '🇪🇸'),
                                     const OpcionSelectorEstilizado(
                                         valor: IdiomaApp.ingles,
                                         texto: 'English',
-                                        icono: Icons.language_rounded),
+                                        emoji: '🇺🇸'),
                                   ],
                                   onChanged: (idioma) {
                                     if (!_guardando) {

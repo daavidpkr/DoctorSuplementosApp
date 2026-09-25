@@ -98,7 +98,8 @@ void main() {
 
     expect(intentos, 2);
     expect(find.byType(CircularProgressIndicator), findsNothing);
-    expect(find.textContaining('temporalmente ocupado'), findsOneWidget);
+    expect(find.textContaining('temporalmente ocupada'), findsOneWidget);
+    expect(find.byKey(const ValueKey('reintentar-ia')), findsOneWidget);
   });
 
   testWidgets('doble clic no duplica la solicitud', (tester) async {

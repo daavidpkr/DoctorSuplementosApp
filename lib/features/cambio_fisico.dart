@@ -141,6 +141,7 @@ class _FormularioCambioFisicoState extends State<FormularioCambioFisico> {
   double get _progreso => _camposCompletos / 7;
 
   Future<void> generarCambioFisico() async {
+    if (cargando) return;
     if (_camposCompletos < 7) {
       _mostrarDialogoSimple(
         "Datos incompletos",
@@ -207,7 +208,11 @@ class _FormularioCambioFisicoState extends State<FormularioCambioFisico> {
     } catch (e, stackTrace) {
       registrarErrorIa(e, stackTrace,
           modulo: 'cambio_fisico', pais: paisConsulta);
-      _mostrarDialogoSimple("Error", mensajeErrorIa(e));
+      _mostrarDialogoSimple(
+        "Error",
+        mensajeErrorIa(e),
+        reintentar: permiteReintentoManualIa(e) ? generarCambioFisico : null,
+      );
     } finally {
       if (mounted) setState(() => cargando = false);
     }
@@ -233,11 +238,33 @@ class _FormularioCambioFisicoState extends State<FormularioCambioFisico> {
     );
   }
 
-  void _mostrarDialogoSimple(String titulo, String mensaje) {
+  void _mostrarDialogoSimple(
+    String titulo,
+    String mensaje, {
+    Future<void> Function()? reintentar,
+  }) {
     showDialog(
       context: context,
-      builder: (context) =>
-          AlertDialog(title: Text(titulo), content: Text(mensaje)),
+      builder: (dialogContext) => AlertDialog(
+        title: Text(titulo),
+        content: Text(mensaje),
+        actions: [
+          if (reintentar != null)
+            TextButton.icon(
+              key: const ValueKey('reintentar-ia'),
+              onPressed: () {
+                Navigator.pop(dialogContext);
+                Future<void>.delayed(Duration.zero, reintentar);
+              },
+              icon: const Icon(Icons.refresh_rounded),
+              label: const Text('Reintentar'),
+            ),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Cerrar'),
+          ),
+        ],
+      ),
     );
   }
 

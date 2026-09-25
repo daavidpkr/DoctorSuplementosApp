@@ -1,5 +1,17 @@
 part of '../main.dart';
 
+int columnasGaleriaProductos(double anchoDisponible) {
+  if (anchoDisponible >= 1350) return 4;
+  if (anchoDisponible >= 900) return 3;
+  return 2;
+}
+
+double proporcionTarjetaGaleria(double anchoDisponible) {
+  if (anchoDisponible >= 1350) return 1.10;
+  if (anchoDisponible >= 900) return 1.02;
+  return anchoDisponible < 420 ? 0.70 : 0.92;
+}
+
 enum TipoCatalogoProducto { afiliado, miTienda }
 
 class ConsultaProductoPagina extends StatefulWidget {
@@ -247,10 +259,10 @@ Este producto no es medicina, no diagnostica, no trata, no cura ni previene enfe
                       28,
                     ),
                     gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 2,
+                      crossAxisCount: columnasGaleriaProductos(ancho),
                       mainAxisSpacing: ancho < 420 ? 12 : 20,
                       crossAxisSpacing: ancho < 420 ? 10 : 18,
-                      childAspectRatio: ancho < 420 ? 0.70 : 0.92,
+                      childAspectRatio: proporcionTarjetaGaleria(ancho),
                     ),
                     itemCount: productos.length,
                     itemBuilder: (context, index) {

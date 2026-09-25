@@ -336,6 +336,39 @@ class IdiomaService {
   }
 }
 
+class ConfiguracionMercadoService {
+  const ConfiguracionMercadoService._();
+
+  /// Persiste ambos valores antes de publicar el cambio a la interfaz.
+  static Future<void> guardar({
+    required PaisApp pais,
+    required IdiomaApp idioma,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    final paisAnterior = prefs.getString(PaisService.prefsKey);
+    final idiomaAnterior = prefs.getString(IdiomaService.prefsKey);
+    final resultados = await Future.wait<bool>([
+      prefs.setString(PaisService.prefsKey, pais.codigo),
+      prefs.setString(IdiomaService.prefsKey, idioma.codigo),
+    ]);
+    if (resultados.any((guardado) => !guardado)) {
+      if (paisAnterior == null) {
+        await prefs.remove(PaisService.prefsKey);
+      } else {
+        await prefs.setString(PaisService.prefsKey, paisAnterior);
+      }
+      if (idiomaAnterior == null) {
+        await prefs.remove(IdiomaService.prefsKey);
+      } else {
+        await prefs.setString(IdiomaService.prefsKey, idiomaAnterior);
+      }
+      throw StateError('No se pudo guardar la configuración de mercado.');
+    }
+    PaisService.actual.value = pais;
+    IdiomaService.actual.value = idioma;
+  }
+}
+
 String txtApp(String espanol, String ingles) {
   return IdiomaService.actual.value == IdiomaApp.ingles ? ingles : espanol;
 }

@@ -315,10 +315,15 @@ List<ProductoCatalogoUsa> productosUsaRelevantes(String consulta) {
   final puntuados = catalogoProductosEstadosUnidos
       .map((p) {
         final contenido = normalizarTexto('${p.alias.join(' ')} '
+            '${p.nombreEspanol} ${p.nombreIngles} ${p.categoria} '
             '${p.campo('description', IdiomaApp.espanol)} '
             '${p.campo('description', IdiomaApp.ingles)} '
             '${p.campo('ingredients', IdiomaApp.espanol)} '
-            '${p.campo('ingredients', IdiomaApp.ingles)}');
+            '${p.campo('ingredients', IdiomaApp.ingles)} '
+            '${p.campo('directions', IdiomaApp.espanol)} '
+            '${p.campo('directions', IdiomaApp.ingles)} '
+            '${p.campo('precautions', IdiomaApp.espanol)} '
+            '${p.campo('precautions', IdiomaApp.ingles)}');
         var nombreScore = puntajeBusquedaUsa(consulta, p);
         for (final alias in p.alias) {
           final a = normalizarTexto(alias);
@@ -354,7 +359,7 @@ List<ProductoCatalogoUsa> productosUsaRelevantes(String consulta) {
               tokens.contains('periodo'));
   if (consultaMedicaSinProducto && conNombre.isEmpty) return const [];
   return (conNombre.isEmpty ? puntuados : conNombre)
-      .take(6)
+      .take(conNombre.isEmpty ? 4 : 6)
       .map((e) => e.key)
       .toList();
 }
@@ -432,6 +437,20 @@ class RespuestaIaVaciaException implements Exception {
 
   @override
   String toString() => 'La IA devolvió una respuesta vacía.';
+}
+
+class IaTemporalmenteOcupadaException implements Exception {
+  const IaTemporalmenteOcupadaException();
+}
+
+class _PresupuestoReintentoIa {
+  bool _consumido = false;
+
+  bool consumir() {
+    if (_consumido) return false;
+    _consumido = true;
+    return true;
+  }
 }
 
 class ProductoNoAutorizadoException implements Exception {
@@ -562,19 +581,23 @@ Future<String> generarYProcesarRespuestaProductosPais({
   Duration tiempoMaximo = const Duration(seconds: 90),
 }) async {
   final limite = DateTime.now().add(tiempoMaximo);
+  final presupuestoReintento = _PresupuestoReintentoIa();
   final primeraRespuesta = await _generarIaConReintento(
     generar,
     prompt,
     permitirReintento: permitirReintento,
     control: control,
     limite: limite,
+    presupuestoReintento: presupuestoReintento,
   );
   try {
     return procesarRespuestaProductosPais(
         primeraRespuesta, consulta, pais, idioma);
   } on ProductoNoAutorizadoException {
     if (pais != PaisApp.estadosUnidos) rethrow;
-    if (!permitirReintento) throw const RespuestaIaBloqueadaException();
+    if (!permitirReintento || !presupuestoReintento.consumir()) {
+      throw const RespuestaIaBloqueadaException();
+    }
     final promptCorreccion = '''
 $prompt
 
@@ -586,9 +609,10 @@ $primeraRespuesta
     final segundaRespuesta = await _generarIaConReintento(
       generar,
       promptCorreccion,
-      permitirReintento: permitirReintento,
+      permitirReintento: false,
       control: control,
       limite: limite,
+      presupuestoReintento: presupuestoReintento,
     );
     try {
       return procesarRespuestaProductosPais(
@@ -612,6 +636,7 @@ Future<String> generarRespuestaIaConReintento({
     permitirReintento: permitirReintento,
     control: control,
     limite: DateTime.now().add(tiempoMaximo),
+    presupuestoReintento: _PresupuestoReintentoIa(),
   );
   if (respuesta.trim().isEmpty) throw const RespuestaIaVaciaException();
   return respuesta;
@@ -623,6 +648,7 @@ Future<String> _generarIaConReintento(
   bool permitirReintento = true,
   ControlSolicitudIa? control,
   required DateTime limite,
+  required _PresupuestoReintentoIa presupuestoReintento,
 }) async {
   Future<String> intentar() {
     final restante = limite.difference(DateTime.now());
@@ -638,13 +664,43 @@ Future<String> _generarIaConReintento(
   try {
     return await intentar();
   } catch (error) {
-    if (!permitirReintento || !_esErrorIaTransitorio(error)) rethrow;
+    if (!permitirReintento ||
+        !_esErrorIaTransitorio(error) ||
+        !presupuestoReintento.consumir()) {
+      rethrow;
+    }
     final pausa = Future<void>.delayed(const Duration(milliseconds: 700));
     final restante = limite.difference(DateTime.now());
     await (control?.esperar(pausa) ?? pausa).timeout(restante);
-    return intentar();
+    try {
+      return await intentar();
+    } catch (segundoError) {
+      if (_esErrorSaturacionIa(segundoError)) {
+        throw const IaTemporalmenteOcupadaException();
+      }
+      rethrow;
+    }
   }
 }
+
+bool _esErrorSaturacionIa(Object error) {
+  if (error is IaTemporalmenteOcupadaException || error is TimeoutException) {
+    return true;
+  }
+  if (error is IaProxyException) {
+    return error.estadoHttp == 429 || (error.estadoHttp ?? 0) >= 500;
+  }
+  if (error is DioException) {
+    final estado = error.response?.statusCode;
+    return estado == 429 ||
+        (estado ?? 0) >= 500 ||
+        error.type == DioExceptionType.receiveTimeout ||
+        error.type == DioExceptionType.sendTimeout;
+  }
+  return false;
+}
+
+bool permiteReintentoManualIa(Object error) => _esErrorSaturacionIa(error);
 
 bool _esErrorIaTransitorio(Object error) {
   if (error is IaProxyException) return error.esTransitorio;
@@ -662,6 +718,9 @@ bool _esErrorIaTransitorio(Object error) {
 String mensajeErrorIa(Object error) {
   if (error is SolicitudIaCanceladaException) {
     return 'Solicitud cancelada.';
+  }
+  if (error is IaTemporalmenteOcupadaException) {
+    return 'La IA está temporalmente ocupada. Espera unos segundos e inténtalo nuevamente.';
   }
   if (error is IaProxyException) {
     if (error.codigo == 'AUTENTICACION_REQUERIDA' ||
@@ -694,10 +753,8 @@ String mensajeErrorIa(Object error) {
     if (error.estadoHttp == 422) {
       return 'La IA no pudo responder a esa redacción. Inténtalo nuevamente con una descripción más breve.';
     }
-    if (error.esTransitorio) {
-      return error.estadoHttp == 429
-          ? 'Hay demasiadas solicitudes en este momento. Espera unos segundos e inténtalo nuevamente.'
-          : 'El servicio de IA está temporalmente ocupado. Inténtalo nuevamente en unos segundos.';
+    if (_esErrorSaturacionIa(error)) {
+      return 'La IA está temporalmente ocupada. Espera unos segundos e inténtalo nuevamente.';
     }
     return 'No fue posible conectar con el servicio de IA. Inténtalo nuevamente.';
   }

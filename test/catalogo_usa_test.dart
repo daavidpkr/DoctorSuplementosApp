@@ -62,7 +62,7 @@ void main() {
 
   test('Ecuador-USA mapping is explicit, stable and preserves local commerce',
       () {
-    expect(correspondenciasProductoEcuadorUsa, hasLength(28));
+    expect(correspondenciasProductoEcuadorUsa, hasLength(31));
     expect(
       correspondenciasProductoEcuadorUsa.keys
           .toSet()
@@ -73,6 +73,11 @@ void main() {
       final usa = fichaProductoUsa(entry.value);
       expect(usa, isNotNull, reason: entry.toString());
       final ficha = textoFichaProductoEcuador(entry.key, IdiomaApp.espanol);
+      if (correspondenciasSoloAliasEcuadorUsa.contains(entry.key)) {
+        expect(ficha, contains('FICHA TECNICA EJECUTIVA'), reason: entry.key);
+        expect(ficha, contains('PRESENTACION'), reason: entry.key);
+        continue;
+      }
       expect(ficha, contains('RESPALDO PRINCIPAL'), reason: entry.key);
       expect(ficha, contains('DESCRIPCION COMPLETA'), reason: entry.key);
       expect(ficha, contains('FUNCIONES O BENEFICIOS DOCUMENTADOS'),
@@ -84,9 +89,16 @@ void main() {
       expect(imagenesProductoEcuador[entry.key],
           startsWith('assets/productos/productos-ec/'));
     }
-    expect(correspondenciasProductoEcuadorUsa, isNot(contains('Riovida Jugo')));
-    expect(correspondenciasProductoEcuadorUsa, isNot(contains('Nutrastart')));
-    expect(correspondenciasProductoEcuadorUsa, isNot(contains('Agpro')));
+    expect(correspondenciasProductoEcuadorUsa['Riovida Jugo'],
+        '4Life Transfer Factor RioVida Superfruit Immune Shot');
+    expect(correspondenciasProductoEcuadorUsa['Nutrastart'],
+        'NutraStart Blue Vanilla');
+    expect(correspondenciasProductoEcuadorUsa['Agpro'],
+        '4Life Transfer Factor AgePro');
+    expect(correspondenciasProductoEcuadorUsa, isNot(contains('Tonico')));
+    expect(aliasProductoEcuador('Riovida Jugo'), contains('Riovida Jugo'));
+    expect(aliasProductoEcuador('Nutrastart'), contains('Nutrastart'));
+    expect(aliasProductoEcuador('Agpro'), contains('Agpro'));
     expect(presentacionesProductoEcuador['Bcv'], startsWith('60 '));
     expect(presentacionesProductoEcuador['Transfer factor MAX'],
         startsWith('120 '));

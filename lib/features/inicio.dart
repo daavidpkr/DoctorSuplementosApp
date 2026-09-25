@@ -475,136 +475,243 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
   Future<void> _seleccionarMercadoEIdioma() async {
     var paisTemporal = PaisService.actual.value;
     var idiomaTemporal = IdiomaService.actual.value;
+    var aplicando = false;
     final aplicar = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => StatefulBuilder(
-        builder: (context, actualizarDialogo) => AlertDialog(
+        builder: (context, actualizarDialogo) => Dialog(
           key: const ValueKey('selector-pais-idioma-inicio'),
-          title: Text(txtApp('País e idioma', 'Country and language')),
-          content: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 460),
-            child: SingleChildScrollView(
+          backgroundColor: Colors.transparent,
+          insetPadding:
+              const EdgeInsets.symmetric(horizontal: 18, vertical: 24),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 480, maxHeight: 720),
+            child: Container(
+              decoration: BoxDecoration(
+                color: const Color(0xFFF8F9FD),
+                borderRadius: BorderRadius.circular(24),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF07125E).withValues(alpha: 0.22),
+                    blurRadius: 30,
+                    offset: const Offset(0, 14),
+                  ),
+                ],
+              ),
+              clipBehavior: Clip.antiAlias,
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Text(
-                    txtApp('Selecciona el mercado', 'Select the market'),
-                    style: const TextStyle(fontWeight: FontWeight.w800),
-                  ),
-                  const SizedBox(height: 10),
-                  for (final pais in PaisApp.values)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 8),
-                      child: ListTile(
-                        key: ValueKey('opcion-pais-${pais.codigo}'),
-                        onTap: () =>
-                            actualizarDialogo(() => paisTemporal = pais),
-                        leading: ExcludeSemantics(
-                          child: _InsigniaPais(pais: pais),
-                        ),
-                        title: Text(txtApp(pais.etiqueta, pais.etiquetaIngles)),
-                        trailing: Icon(
-                          paisTemporal == pais
-                              ? Icons.radio_button_checked_rounded
-                              : Icons.radio_button_unchecked_rounded,
-                          color: paisTemporal == pais
-                              ? const Color(0xFF2839C7)
-                              : const Color(0xFF8D94AD),
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14),
-                          side: BorderSide(
-                            color: paisTemporal == pais
-                                ? const Color(0xFF2839C7)
-                                : const Color(0xFFDDE1F1),
-                          ),
-                        ),
+                  Container(
+                    padding: const EdgeInsets.fromLTRB(22, 18, 12, 16),
+                    decoration: const BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [Color(0xFF172B98), Color(0xFF07125E)],
                       ),
                     ),
-                  const SizedBox(height: 12),
-                  Text(
-                    txtApp('Selecciona el idioma', 'Select the language'),
-                    style: const TextStyle(fontWeight: FontWeight.w800),
-                  ),
-                  const SizedBox(height: 10),
-                  for (final idioma in IdiomaApp.values)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 8),
-                      child: ListTile(
-                        key: ValueKey('opcion-idioma-${idioma.codigo}'),
-                        onTap: () =>
-                            actualizarDialogo(() => idiomaTemporal = idioma),
-                        leading: const Icon(Icons.language_rounded),
-                        title: Text(
-                          idioma == IdiomaApp.espanol ? 'Español' : 'English',
-                        ),
-                        trailing: Icon(
-                          idiomaTemporal == idioma
-                              ? Icons.radio_button_checked_rounded
-                              : Icons.radio_button_unchecked_rounded,
-                          color: idiomaTemporal == idioma
-                              ? const Color(0xFF2839C7)
-                              : const Color(0xFF8D94AD),
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14),
-                          side: BorderSide(
-                            color: idiomaTemporal == idioma
-                                ? const Color(0xFF2839C7)
-                                : const Color(0xFFDDE1F1),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.public_rounded,
+                            color: Colors.white, size: 30),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            txtApp('País e idioma', 'Country and language'),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 21,
+                              fontWeight: FontWeight.w900,
+                            ),
                           ),
                         ),
+                        IconButton(
+                          tooltip: txtApp('Cancelar', 'Cancel'),
+                          onPressed: aplicando
+                              ? null
+                              : () => Navigator.pop(dialogContext, false),
+                          icon: const Icon(Icons.close_rounded),
+                          color: Colors.white,
+                        ),
+                      ],
+                    ),
+                  ),
+                  Flexible(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.fromLTRB(18, 18, 18, 8),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Text(
+                            txtApp(
+                                'Selecciona el mercado', 'Select the market'),
+                            style: const TextStyle(
+                              color: Color(0xFF172B98),
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          for (final pais in PaisApp.values)
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 8),
+                              child: Material(
+                                color: paisTemporal == pais
+                                    ? const Color(0xFFE9EEFF)
+                                    : Colors.white,
+                                borderRadius: BorderRadius.circular(14),
+                                child: ListTile(
+                                  key: ValueKey('opcion-pais-${pais.codigo}'),
+                                  onTap: aplicando
+                                      ? null
+                                      : () => actualizarDialogo(
+                                            () => paisTemporal = pais,
+                                          ),
+                                  leading: ExcludeSemantics(
+                                    child: _InsigniaPais(pais: pais),
+                                  ),
+                                  title: Text(txtApp(
+                                      pais.etiqueta, pais.etiquetaIngles)),
+                                  selected: paisTemporal == pais,
+                                  trailing: Icon(
+                                    paisTemporal == pais
+                                        ? Icons.radio_button_checked_rounded
+                                        : Icons.radio_button_unchecked_rounded,
+                                    color: paisTemporal == pais
+                                        ? const Color(0xFF172B98)
+                                        : const Color(0xFF8D94AD),
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(14),
+                                    side: BorderSide(
+                                      color: paisTemporal == pais
+                                          ? const Color(0xFF172B98)
+                                          : const Color(0xFFDDE1F1),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          const SizedBox(height: 10),
+                          Text(
+                            txtApp(
+                                'Selecciona el idioma', 'Select the language'),
+                            style: const TextStyle(
+                              color: Color(0xFF172B98),
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          for (final idioma in IdiomaApp.values)
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 8),
+                              child: Material(
+                                color: idiomaTemporal == idioma
+                                    ? const Color(0xFFE9EEFF)
+                                    : Colors.white,
+                                borderRadius: BorderRadius.circular(14),
+                                child: ListTile(
+                                  key: ValueKey(
+                                      'opcion-idioma-${idioma.codigo}'),
+                                  onTap: aplicando
+                                      ? null
+                                      : () => actualizarDialogo(
+                                            () => idiomaTemporal = idioma,
+                                          ),
+                                  leading: Text(
+                                    idioma == IdiomaApp.espanol
+                                        ? '🇪🇸'
+                                        : '🇺🇸',
+                                    style: const TextStyle(fontSize: 25),
+                                  ),
+                                  title: Text(idioma == IdiomaApp.espanol
+                                      ? 'Español'
+                                      : 'English'),
+                                  selected: idiomaTemporal == idioma,
+                                  trailing: Icon(
+                                    idiomaTemporal == idioma
+                                        ? Icons.radio_button_checked_rounded
+                                        : Icons.radio_button_unchecked_rounded,
+                                    color: idiomaTemporal == idioma
+                                        ? const Color(0xFF172B98)
+                                        : const Color(0xFF8D94AD),
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(14),
+                                    side: BorderSide(
+                                      color: idiomaTemporal == idioma
+                                          ? const Color(0xFF172B98)
+                                          : const Color(0xFFDDE1F1),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                        ],
                       ),
                     ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(18, 8, 18, 18),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        TextButton(
+                          onPressed: aplicando
+                              ? null
+                              : () => Navigator.pop(dialogContext, false),
+                          child: Text(txtApp('Cancelar', 'Cancel')),
+                        ),
+                        const SizedBox(width: 10),
+                        FilledButton(
+                          key: const ValueKey('aplicar-mercado'),
+                          style: FilledButton.styleFrom(
+                            backgroundColor: const Color(0xFF172B98),
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 24,
+                              vertical: 14,
+                            ),
+                          ),
+                          onPressed: aplicando
+                              ? null
+                              : () async {
+                                  actualizarDialogo(() => aplicando = true);
+                                  try {
+                                    await ConfiguracionMercadoService.guardar(
+                                      pais: paisTemporal,
+                                      idioma: idiomaTemporal,
+                                    );
+                                    if (dialogContext.mounted) {
+                                      Navigator.pop(dialogContext, true);
+                                    }
+                                  } catch (_) {
+                                    if (dialogContext.mounted) {
+                                      actualizarDialogo(
+                                          () => aplicando = false);
+                                    }
+                                  }
+                                },
+                          child: aplicando
+                              ? const SizedBox.square(
+                                  dimension: 18,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Colors.white,
+                                  ),
+                                )
+                              : Text(txtApp('Aplicar', 'Apply')),
+                        ),
+                      ],
+                    ),
+                  ),
                 ],
               ),
             ),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext, false),
-              child: Text(txtApp('Cancelar', 'Cancel')),
-            ),
-            FilledButton(
-              key: const ValueKey('solicitar-confirmacion-mercado'),
-              onPressed: () async {
-                final confirmado = await showDialog<bool>(
-                  context: dialogContext,
-                  builder: (confirmationContext) => AlertDialog(
-                    title: Text(txtApp('Confirmar cambio', 'Confirm change')),
-                    content: Text(txtApp(
-                      'Se aplicarán ${paisTemporal.etiqueta} y ${idiomaTemporal == IdiomaApp.espanol ? 'Español' : 'English'} en todos los módulos.',
-                      '${paisTemporal.etiquetaIngles} and ${idiomaTemporal == IdiomaApp.espanol ? 'Spanish' : 'English'} will be applied to every module.',
-                    )),
-                    actions: [
-                      TextButton(
-                        onPressed: () =>
-                            Navigator.pop(confirmationContext, false),
-                        child: Text(txtApp('Cancelar', 'Cancel')),
-                      ),
-                      FilledButton(
-                        key: const ValueKey('confirmar-cambio-mercado'),
-                        onPressed: () =>
-                            Navigator.pop(confirmationContext, true),
-                        child: Text(txtApp('Confirmar', 'Confirm')),
-                      ),
-                    ],
-                  ),
-                );
-                if (confirmado == true && dialogContext.mounted) {
-                  Navigator.pop(dialogContext, true);
-                }
-              },
-              child: Text(txtApp('Aplicar', 'Apply')),
-            ),
-          ],
         ),
       ),
     );
     if (aplicar != true) return;
-    await PaisService.guardar(paisTemporal);
-    await IdiomaService.guardar(idiomaTemporal);
     if (!mounted) return;
     setState(() {});
     ScaffoldMessenger.of(context).showSnackBar(
@@ -825,7 +932,7 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
             onTap: () => _abrirRuta(ficha.ruta),
             child: Padding(
               padding: compacta
-                  ? const EdgeInsets.symmetric(horizontal: 12, vertical: 5)
+                  ? const EdgeInsets.symmetric(horizontal: 12, vertical: 3)
                   : const EdgeInsets.all(15),
               child: Row(
                 children: [
@@ -858,20 +965,20 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
                           overflow: compacta ? TextOverflow.ellipsis : null,
                           style: TextStyle(
                             color: const Color(0xFF111B59),
-                            fontSize: compacta ? 14 : 18,
+                            fontSize: compacta ? 15.5 : 18,
                             fontWeight: FontWeight.w900,
-                            height: compacta ? 1.05 : 1.05,
+                            height: compacta ? 0.98 : 1.05,
                           ),
                         ),
-                        SizedBox(height: compacta ? 2 : 5),
+                        SizedBox(height: compacta ? 1 : 5),
                         Text(
                           ficha.descripcion,
                           maxLines: compacta ? 2 : null,
                           overflow: compacta ? TextOverflow.ellipsis : null,
                           style: TextStyle(
                             color: const Color(0xFF465074),
-                            fontSize: compacta ? 11.25 : 12,
-                            height: compacta ? 1.12 : 1.22,
+                            fontSize: compacta ? 12.25 : 12,
+                            height: compacta ? 1.02 : 1.22,
                           ),
                         ),
                       ],
@@ -940,7 +1047,7 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
                     padding: compacta
                         ? const EdgeInsets.symmetric(
                             horizontal: 12,
-                            vertical: 5,
+                            vertical: 3,
                           )
                         : const EdgeInsets.all(15),
                     child: Row(
@@ -975,12 +1082,12 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
                                     compacta ? TextOverflow.ellipsis : null,
                                 style: TextStyle(
                                   color: const Color(0xFF111B59),
-                                  fontSize: compacta ? 14 : 18,
+                                  fontSize: compacta ? 15.5 : 18,
                                   fontWeight: FontWeight.w900,
-                                  height: compacta ? 1.05 : 1.05,
+                                  height: compacta ? 0.98 : 1.05,
                                 ),
                               ),
-                              SizedBox(height: compacta ? 2 : 5),
+                              SizedBox(height: compacta ? 1 : 5),
                               Text(
                                 descripcion,
                                 maxLines: compacta ? 2 : null,
@@ -988,8 +1095,8 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
                                     compacta ? TextOverflow.ellipsis : null,
                                 style: TextStyle(
                                   color: const Color(0xFF465074),
-                                  fontSize: compacta ? 11.25 : 12,
-                                  height: compacta ? 1.12 : 1.22,
+                                  fontSize: compacta ? 12.25 : 12,
+                                  height: compacta ? 1.02 : 1.22,
                                 ),
                               ),
                             ],

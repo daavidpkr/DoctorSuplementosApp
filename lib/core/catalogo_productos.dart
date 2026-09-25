@@ -105,6 +105,7 @@ const Map<String, String> presentacionesProductoEcuador = {
 /// These IDs are only used to reuse technical copy; commercial fields remain
 /// resolved by the Ecuador catalog.
 const Map<String, String> correspondenciasProductoEcuadorUsa = {
+  'Agpro': '4Life Transfer Factor AgePro',
   'Aloe Vera Stix Tropical': 'Aloe Vera Stix',
   'Bcv': '4Life Transfer Factor Cardio',
   'Belle vie': '4Life Transfer Factor Belle Vie',
@@ -120,12 +121,14 @@ const Map<String, String> correspondenciasProductoEcuadorUsa = {
   'Kbu': '4Life Transfer Factor KBU',
   'Limpiador': 'äKwä Oil-to-Foam Cleanser',
   'Malepro': '4Life Transfer Factor MalePro',
+  'Nutrastart': 'NutraStart Blue Vanilla',
   'Pasta de dientes': 'enummi Toothpaste',
   'Preo biotics': 'Pre/o Biotics',
   'Protf': 'Pro-TF',
   'Recall': '4Life Transfer Factor ReCall',
   'Renuvo': '4Life Transfer Factor Renuvo',
   'Riovida burst': '4Life Transfer Factor RioVida Burst',
+  'Riovida Jugo': '4Life Transfer Factor RioVida Superfruit Immune Shot',
   'Riovida stix': '4Life Transfer Factor RioVida Stix',
   'Suero': 'äKwä Vitamin Serum',
   'TF Boost': '4Life Transfer Factor Immune Boost',
@@ -137,17 +140,32 @@ const Map<String, String> correspondenciasProductoEcuadorUsa = {
 
 /// Verified market differences whose Ecuador value must win.
 const Map<String, String> diferenciasCorrespondenciaEcuadorUsa = {
+  'Agpro':
+      'Nombre AG-Pro, formula, dosis y presentacion Ecuador; USA corresponde a AgePro.',
   'Aloe Vera Stix Tropical': 'Sabor tropical y presentacion Ecuador.',
   'Bcv': 'Nombre BCV y 60 capsulas; USA Cardio declara 90.',
   'Bioefa': 'Nombre BioEFA y 60 capsulas del envase Ecuador.',
   'Colageno tipo i': '15 paquetes de 6.6 g en Ecuador.',
   'Energy go stix': '30 sobres de 6 g en Ecuador.',
   'Malepro': 'Nombre MalePro+ y 120 capsulas; USA declara 90 blandas.',
+  'Nutrastart':
+      'Nombre NutraStart NF Vanilla, formula y presentacion Ecuador; USA corresponde a Blue Vanilla.',
   'Protf': 'Presentacion y sabor del envase Ecuador.',
+  'Riovida Jugo':
+      'Botella Ecuador de 532 ml; USA corresponde al RioVida Shot individual.',
   'Suero': 'Presentacion Ecuador de 50 ml.',
   'Transfer factor MAX': '120 capsulas en Ecuador; USA declara 60.',
   'Transfer factor plus': '90 capsulas en Ecuador; USA declara 60.',
   'Vistari': 'Nombre comercial Vistari y 60 capsulas en Ecuador.',
+};
+
+/// Estas relaciones sirven para alias y búsqueda entre mercados, pero sus
+/// fórmulas o presentaciones no son intercambiables. La ficha Ecuador conserva
+/// íntegramente su información local.
+const Set<String> correspondenciasSoloAliasEcuadorUsa = {
+  'Agpro',
+  'Nutrastart',
+  'Riovida Jugo',
 };
 
 List<String> aliasProductoEcuador(String id) {
@@ -846,7 +864,10 @@ InformacionProductoCatalogo informacionProductoCatalogo(String nombre) {
   }
   final local = informacionProductosEcuador[nombre];
   final idUsa = correspondenciasProductoEcuadorUsa[nombre];
-  final compartida = idUsa == null ? null : fichaProductoUsa(idUsa);
+  final compartida =
+      idUsa == null || correspondenciasSoloAliasEcuadorUsa.contains(nombre)
+          ? null
+          : fichaProductoUsa(idUsa);
   if (local != null && compartida != null) {
     final idioma = IdiomaService.actual.value;
     final usoUsa = compartida.campo('directions', idioma).trim();
@@ -883,7 +904,10 @@ InformacionProductoCatalogo informacionProductoCatalogo(String nombre) {
 /// inferir contenido.
 String textoFichaProductoEcuador(String nombre, IdiomaApp idioma) {
   final idUsa = correspondenciasProductoEcuadorUsa[nombre];
-  final compartida = idUsa == null ? null : fichaProductoUsa(idUsa);
+  final compartida =
+      idUsa == null || correspondenciasSoloAliasEcuadorUsa.contains(nombre)
+          ? null
+          : fichaProductoUsa(idUsa);
   final local = informacionProductosEcuador[nombre];
   if (compartida == null || local == null) {
     return _textoFichaProductoEcuadorBase(nombre, idioma);

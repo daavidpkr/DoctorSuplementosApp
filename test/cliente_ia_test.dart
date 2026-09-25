@@ -318,7 +318,7 @@ void main() {
   test('respuesta 504 se considera transitoria y muestra mensaje util', () {
     const error = IaProxyException('GEMINI_TIMEOUT', estadoHttp: 504);
     expect(error.esTransitorio, isTrue);
-    expect(mensajeErrorIa(error), contains('temporalmente ocupado'));
+    expect(mensajeErrorIa(error), contains('temporalmente ocupada'));
   });
 
   test('401, 403, 429 y 5xx producen mensajes utiles', () {
@@ -332,12 +332,12 @@ void main() {
     );
     expect(
       mensajeErrorIa(const IaProxyException('ERROR_PROXY', estadoHttp: 429)),
-      contains('demasiadas solicitudes'),
+      'La IA está temporalmente ocupada. Espera unos segundos e inténtalo nuevamente.',
     );
     for (final estado in [500, 501, 502, 503, 504, 599]) {
       final error = IaProxyException('ERROR_PROXY', estadoHttp: estado);
       expect(error.esTransitorio, isTrue, reason: 'HTTP $estado');
-      expect(mensajeErrorIa(error), contains('temporalmente ocupado'));
+      expect(mensajeErrorIa(error), contains('temporalmente ocupada'));
     }
   });
 
@@ -356,6 +356,40 @@ void main() {
     );
 
     expect(reloj.elapsed, lessThan(const Duration(seconds: 1)));
+  });
+
+  for (final estado in [429, 503]) {
+    test('HTTP $estado realiza un solo reintento y termina como IA ocupada',
+        () async {
+      var intentos = 0;
+      await expectLater(
+        generarRespuestaIaConReintento(
+          generar: (_) async {
+            intentos++;
+            throw IaProxyException('ERROR_PROXY', estadoHttp: estado);
+          },
+          prompt: 'Prompt',
+        ),
+        throwsA(isA<IaTemporalmenteOcupadaException>()),
+      );
+      expect(intentos, 2);
+    });
+  }
+
+  test('solicitud con adjunto desactiva el reintento automático', () async {
+    var intentos = 0;
+    await expectLater(
+      generarRespuestaIaConReintento(
+        generar: (_) async {
+          intentos++;
+          throw const IaProxyException('ERROR_PROXY', estadoHttp: 503);
+        },
+        prompt: 'Prompt',
+        permitirReintento: false,
+      ),
+      throwsA(isA<IaProxyException>()),
+    );
+    expect(intentos, 1);
   });
 
   test('cancelar corta la espera y no inicia un reintento', () async {

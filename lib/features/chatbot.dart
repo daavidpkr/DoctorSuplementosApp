@@ -326,8 +326,11 @@ class _PaginaChatbotState extends State<PaginaChatbot>
     );
   }
 
-  Future<void> enviarMensaje() async {
-    final textoUsuario = _controller.text.trim();
+  Future<void> enviarMensaje({
+    String? textoReintento,
+    bool agregarMensajeUsuario = true,
+  }) async {
+    final textoUsuario = (textoReintento ?? _controller.text).trim();
     if ((textoUsuario.isEmpty && !_tieneAdjuntos) || enviando) return;
     final control = ControlSolicitudIa();
     _controlSolicitud = control;
@@ -338,7 +341,9 @@ class _PaginaChatbotState extends State<PaginaChatbot>
         : textoUsuario;
 
     setState(() {
-      mensajes.add({"rol": "usuario", "texto": textoVisible});
+      if (agregarMensajeUsuario) {
+        mensajes.add({"rol": "usuario", "texto": textoVisible});
+      }
       enviando = true;
     });
     _controller.clear();
@@ -347,7 +352,11 @@ class _PaginaChatbotState extends State<PaginaChatbot>
     final idiomaConsulta = IdiomaService.actual.value;
     final historialPrevio = mensajes
         .skip(_inicioContextoMercado)
-        .take(mensajes.length - 1 - _inicioContextoMercado)
+        .take(math.max(
+            0,
+            mensajes.length -
+                (agregarMensajeUsuario ? 1 : 0) -
+                _inicioContextoMercado))
         .map((mensaje) =>
             "${mensaje['rol'] == 'ia' ? 'Asesor IA' : 'Socio'}: ${mensaje['texto']}")
         .join("\n");
@@ -483,7 +492,12 @@ class _PaginaChatbotState extends State<PaginaChatbot>
           pais: paisConsulta);
       if (!mounted) return;
       setState(() {
-        mensajes.add({"rol": "ia", "texto": mensajeErrorIa(e)});
+        mensajes.add({
+          "rol": "ia",
+          "texto": mensajeErrorIa(e),
+          if (permiteReintentoManualIa(e)) "reintentar": "true",
+          if (permiteReintentoManualIa(e)) "consulta": textoUsuario,
+        });
         if (widget.modoLlamada) {
           _estadoLlamada = _txt(
             "No pude responder. Intenta nuevamente",
@@ -509,6 +523,16 @@ class _PaginaChatbotState extends State<PaginaChatbot>
   }
 
   void cancelarSolicitud() => _controlSolicitud?.cancelar();
+
+  void _reintentarMensaje(int indice) {
+    if (enviando || indice < 0 || indice >= mensajes.length) return;
+    final consulta = mensajes[indice]['consulta'] ?? '';
+    setState(() => mensajes.removeAt(indice));
+    unawaited(enviarMensaje(
+      textoReintento: consulta,
+      agregarMensajeUsuario: false,
+    ));
+  }
 
   @override
   void dispose() {
@@ -750,7 +774,20 @@ class _PaginaChatbotState extends State<PaginaChatbot>
                       return ListTile(
                         leading: Icon(esIA ? Icons.smart_toy : Icons.person),
                         title: Text(esIA ? "Gemini 4Life" : "T\u00fa"),
-                        subtitle: Text(texto),
+                        subtitle: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(texto),
+                            if (mensajes[i]['reintentar'] == 'true')
+                              TextButton.icon(
+                                onPressed: enviando
+                                    ? null
+                                    : () => _reintentarMensaje(i),
+                                icon: const Icon(Icons.refresh_rounded),
+                                label: const Text('Reintentar'),
+                              ),
+                          ],
+                        ),
                         trailing: esIA
                             ? Row(
                                 mainAxisSize: MainAxisSize.min,
@@ -947,6 +984,16 @@ extension _PaginaChatbotUi on _PaginaChatbotState {
                       color: Colors.white,
                       strokeWidth: 3,
                     ),
+                  ),
+                ],
+                if (!ocupado &&
+                    mensajes.isNotEmpty &&
+                    mensajes.last['reintentar'] == 'true') ...[
+                  const SizedBox(height: 14),
+                  FilledButton.icon(
+                    onPressed: () => _reintentarMensaje(mensajes.length - 1),
+                    icon: const Icon(Icons.refresh_rounded),
+                    label: const Text('Reintentar'),
                   ),
                 ],
                 const SizedBox(height: 24),
@@ -1503,7 +1550,13 @@ extension _PaginaChatbotUi on _PaginaChatbotState {
       itemBuilder: (context, i) {
         final esIA = mensajes[i]["rol"] == "ia";
         final texto = mensajes[i]["texto"] ?? "";
-        return _burbujaMensaje(esIA: esIA, texto: texto);
+        return _burbujaMensaje(
+          esIA: esIA,
+          texto: texto,
+          onReintentar: mensajes[i]['reintentar'] == 'true'
+              ? () => _reintentarMensaje(i)
+              : null,
+        );
       },
     );
   }
@@ -1511,6 +1564,7 @@ extension _PaginaChatbotUi on _PaginaChatbotState {
   Widget _burbujaMensaje({
     required bool esIA,
     required String texto,
+    VoidCallback? onReintentar,
   }) {
     final textoVisible = esIA ? _limpiarFormatoAsesorIa(texto) : texto;
     return Align(
@@ -1555,6 +1609,15 @@ extension _PaginaChatbotUi on _PaginaChatbotState {
                 fontWeight: FontWeight.w500,
               ),
             ),
+            if (onReintentar != null) ...[
+              const SizedBox(height: 8),
+              TextButton.icon(
+                key: const ValueKey('reintentar-ia-chat'),
+                onPressed: enviando ? null : onReintentar,
+                icon: const Icon(Icons.refresh_rounded),
+                label: const Text('Reintentar'),
+              ),
+            ],
             if (esIA) ...[
               const SizedBox(height: 8),
               Row(

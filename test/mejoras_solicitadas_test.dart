@@ -17,7 +17,7 @@ void main() {
     IdiomaService.actual.value = IdiomaApp.espanol;
   });
 
-  testWidgets('Inicio cambia país e idioma solo después de confirmar',
+  testWidgets('Inicio aplica país e idioma sin segunda confirmación',
       (tester) async {
     await tester.binding.setSurfaceSize(null);
     await tester.pumpWidget(const MaterialApp(home: PantallaPrincipal()));
@@ -32,18 +32,35 @@ void main() {
     expect(PaisService.actual.value, PaisApp.ecuador);
     expect(IdiomaService.actual.value, IdiomaApp.espanol);
 
-    await tester
-        .tap(find.byKey(const ValueKey('solicitar-confirmacion-mercado')));
-    await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const ValueKey('confirmar-cambio-mercado')));
+    expect(find.text('Confirmar cambio'), findsNothing);
+    await tester.tap(find.byKey(const ValueKey('aplicar-mercado')));
     await tester.pumpAndSettle();
 
     expect(PaisService.actual.value, PaisApp.estadosUnidos);
     expect(IdiomaService.actual.value, IdiomaApp.ingles);
     expect(find.byKey(const ValueKey('bandera-pais-us')), findsOneWidget);
+    expect(find.text('Changes applied'), findsOneWidget);
     expect(productosConPrecioPaisActual.length, 76);
     expect(buscarProductoConPrecio('Super Greens')?.nombre, 'Super Greens');
     expect(buscarProductoConPrecio('Agpro'), isNull);
+  });
+
+  test('galería usa 2 columnas móviles y 3/4 en web de escritorio', () {
+    expect(columnasGaleriaProductos(393), 2);
+    expect(columnasGaleriaProductos(899), 2);
+    expect(columnasGaleriaProductos(900), 3);
+    expect(columnasGaleriaProductos(1349), 3);
+    expect(columnasGaleriaProductos(1350), 4);
+    expect(proporcionTarjetaGaleria(393), 0.70);
+  });
+
+  testWidgets('selectores muestran banderas de idioma', (tester) async {
+    await tester.pumpWidget(const MaterialApp(home: PantallaPrincipal()));
+    await tester.pump();
+    await tester.tap(find.byKey(const ValueKey('bandera-pais-ec')));
+    await tester.pumpAndSettle();
+    expect(find.text('🇪🇸'), findsOneWidget);
+    expect(find.text('🇺🇸'), findsOneWidget);
   });
 
   testWidgets('Inicio pagina dos grupos exactos sin scroll interno ni overflow',

@@ -217,7 +217,11 @@ class _FormularioPacienteState extends State<FormularioPaciente> {
     } catch (e, stackTrace) {
       registrarErrorIa(e, stackTrace,
           modulo: 'diagnostico', pais: paisConsulta);
-      _mostrarDialogoSimple("Error", mensajeErrorIa(e));
+      _mostrarDialogoSimple(
+        "Error",
+        mensajeErrorIa(e),
+        reintentar: permiteReintentoManualIa(e) ? generarDiagnostico : null,
+      );
     } finally {
       if (identical(_controlSolicitud, control)) _controlSolicitud = null;
       if (mounted) setState(() => cargando = false);
@@ -246,10 +250,33 @@ class _FormularioPacienteState extends State<FormularioPaciente> {
     );
   }
 
-  void _mostrarDialogoSimple(String t, String m) {
+  void _mostrarDialogoSimple(
+    String t,
+    String m, {
+    Future<void> Function()? reintentar,
+  }) {
     showDialog(
         context: context,
-        builder: (c) => AlertDialog(title: Text(t), content: Text(m)));
+        builder: (c) => AlertDialog(
+              title: Text(t),
+              content: Text(m),
+              actions: [
+                if (reintentar != null)
+                  TextButton.icon(
+                    key: const ValueKey('reintentar-ia'),
+                    onPressed: () {
+                      Navigator.pop(c);
+                      Future<void>.delayed(Duration.zero, reintentar);
+                    },
+                    icon: const Icon(Icons.refresh_rounded),
+                    label: const Text('Reintentar'),
+                  ),
+                TextButton(
+                  onPressed: () => Navigator.pop(c),
+                  child: const Text('Cerrar'),
+                ),
+              ],
+            ));
   }
 
   void _avisarAdjunto(String mensaje) {

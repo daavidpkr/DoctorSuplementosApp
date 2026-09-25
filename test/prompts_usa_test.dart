@@ -285,6 +285,21 @@ void main() {
     );
   });
 
+  test(
+      'consulta general USA entrega varias fichas pertinentes sin todo el catálogo',
+      () {
+    final productos = productosUsaRelevantes(
+      'Busco apoyo para energía, cansancio y bienestar inmunológico.',
+    );
+    expect(productos.length, inInclusiveRange(3, 4));
+    expect(productos.length, lessThan(productosPermitidosEstadosUnidos.length));
+  });
+
+  test('consulta directa USA se mantiene enfocada en el producto', () {
+    final productos = productosUsaRelevantes('Información de Super Greens');
+    expect(productos.map((producto) => producto.id), ['Super Greens']);
+  });
+
   test('USA acepta respuesta sin productos y evita duplicar el descargo', () {
     const texto =
         'Orientación general. Los suplementos no son medicamentos y no están '
@@ -389,7 +404,7 @@ void main() {
     );
     expect(
       mensajeErrorIa(const IaProxyException('GEMINI_TIMEOUT', estadoHttp: 504)),
-      contains('temporalmente ocupado'),
+      contains('temporalmente ocupada'),
     );
   });
 
