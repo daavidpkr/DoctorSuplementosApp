@@ -199,6 +199,40 @@ void main() {
     expect(prompt, isNot(contains('productos exclusivos de Ecuador')));
   });
 
+  test('USA evalúa apoyo documentado para el caso de colesterol', () {
+    const caso =
+        'Hombre de 48 años, problemas con el colesterol y sin síntomas.';
+    final fichas = productosUsaRelevantes(caso);
+    final ids = fichas.map((producto) => producto.id).toSet();
+    final base = construirPromptDiagnosticoBase(
+      pais: PaisApp.estadosUnidos,
+      instruccionIdioma: 'Español',
+      contextoAnterior: '',
+      saludoAsesor:
+          'Dentro de ANALISIS DEL CASO integra este saludo personalizado: Hola, ¿cómo estás?, mi nombre es David.',
+      nombre: 'Paciente',
+      edad: '48',
+      genero: 'Hombre',
+      sintomas: 'Problemas con el colesterol y sin síntomas.',
+    );
+    final prompt = construirPromptProductosPais(
+      caso,
+      base,
+      pais: PaisApp.estadosUnidos,
+      idioma: IdiomaApp.espanol,
+    );
+
+    expect(fichas.length, inInclusiveRange(1, 4));
+    expect(ids, contains('4Life Transfer Factor Cardio'));
+    expect(ids, contains('Essential Fatty Acid Complex'));
+    expect(prompt, isNot(contains('No hay una ficha de producto pertinente')));
+    expect(prompt, contains('apoyo nutricional'));
+    expect(prompt, contains('No afirmes que un suplemento reduce'));
+    expect(prompt, contains('Salud cardiovascular'));
+    expect(prompt, contains('*ANALISIS DEL CASO*'));
+    expect(prompt, contains('*Nota de seguridad:*'));
+  });
+
   test('Cambio físico y Chat conservan estructura entre mercados', () {
     String cambio(PaisApp pais) => construirPromptCambioFisicoBase(
           pais: pais,

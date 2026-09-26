@@ -241,6 +241,7 @@ String? buscarProductoUsa(String consulta) {
 }
 
 List<ProductoCatalogoUsa> productosUsaRelevantes(String consulta) {
+  final pesosConceptos = <String, int>{};
   final tokens = normalizarTexto(consulta)
       .split(' ')
       .where((p) =>
@@ -303,6 +304,29 @@ List<ProductoCatalogoUsa> productosUsaRelevantes(String consulta) {
   // Solo equivalencias de consulta; una ficha debe contener el concepto.
   if (tokens.contains('cansancio')) tokens.add('fatigue');
   if (tokens.contains('dormir')) tokens.add('sleep');
+  if (tokens.contains('colesterol') || tokens.contains('cholesterol')) {
+    // El catálogo USA describe ámbitos de bienestar, no indicaciones médicas.
+    // Estas equivalencias permiten recuperar fichas cuyo respaldo documentado
+    // puede guardar una relación nutricional razonable con la consulta, sin
+    // atribuirles por ello efectos para reducir o tratar el colesterol.
+    pesosConceptos.addAll({
+      'cardiovascular': 8,
+      'heart': 6,
+      'corazon': 6,
+      'circulatory': 5,
+      'circulatoria': 5,
+      'fiber': 3,
+      'fibra': 3,
+      'metabolism': 3,
+      'metabolismo': 3,
+      'digestive': 2,
+      'digestiva': 2,
+      'digestion': 2,
+      'wellness': 1,
+      'bienestar': 1,
+    });
+    tokens.addAll(pesosConceptos.keys);
+  }
   final q = ' ${normalizarTexto(consulta)} ';
   final nombresUsa = catalogoProductosEstadosUnidos
       .expand((p) => p.alias)
@@ -344,8 +368,11 @@ List<ProductoCatalogoUsa> productosUsaRelevantes(String consulta) {
           }
         }
         final palabrasFuente = contenido.split(' ').toSet();
-        final score =
-            nombreScore * 10 + tokens.where(palabrasFuente.contains).length;
+        final score = nombreScore * 10 +
+            tokens.where(palabrasFuente.contains).fold<int>(
+                  0,
+                  (total, token) => total + (pesosConceptos[token] ?? 1),
+                );
         return MapEntry(p, score);
       })
       .where((e) => e.value > 0)

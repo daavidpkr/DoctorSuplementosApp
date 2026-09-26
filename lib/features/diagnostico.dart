@@ -124,6 +124,14 @@ String _construirPromptDiagnosticoUsa({
     - Debes recomendar ÚNICAMENTE estos productos del catálogo USA: $catalogoPermitido.
     - Los nombres, usos, dosis, presentaciones y beneficios deben proceder
       exclusivamente de las fichas USA proporcionadas en el contexto del catálogo.
+    - Analiza los síntomas y el objetivo de bienestar. Evalúa beneficios
+      documentados relacionados de forma razonable, directa o indirecta, como
+      apoyo cardiovascular, fibra, digestión, metabolismo o bienestar general.
+      No exijas que la ficha mencione literalmente la condición consultada como
+      indicación principal.
+    - Explica cualquier relación indirecta únicamente como apoyo nutricional
+      complementario. No afirmes que un suplemento reduce, controla, trata o cura
+      el colesterol si la ficha USA no lo documenta.
     - Recomienda normalmente un máximo de 3 o 4 productos. No fuerces productos
       cuando no exista una ficha pertinente.
     - No inventes productos, medicamentos, ingredientes, beneficios ni marcas.
