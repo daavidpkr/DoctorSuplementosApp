@@ -144,6 +144,61 @@ void main() {
     expect(usa, isNot(contains('INSTRUCCION MAESTRA NUEVA')));
   });
 
+  test('Diagnóstico USA siempre exige español y conserva los datos del caso',
+      () {
+    final prompt = construirPromptDiagnosticoBase(
+      pais: PaisApp.estadosUnidos,
+      instruccionIdioma: 'Respond only in English.',
+      contextoAnterior: 'HISTORIAL PREVIO: insomnio desde hace dos meses.',
+      saludoAsesor:
+          'Dentro de ANALISIS DEL CASO integra este saludo personalizado: Hola, ¿cómo estás?, mi nombre es David.',
+      nombre: 'Ana',
+      edad: '42',
+      genero: 'Femenino',
+      sintomas: 'Cansancio frecuente y dificultad para dormir.',
+    );
+
+    expect(
+      prompt,
+      contains(
+        'IDIOMA OBLIGATORIO: Responde solo en español, incluso si el usuario escribe o habla en inglés.',
+      ),
+    );
+    expect(prompt, isNot(contains('Respond only in English.')));
+    expect(prompt, contains('HISTORIAL PREVIO: insomnio'));
+    expect(prompt, contains('Nombre: Ana, Edad: 42, Género: Femenino'));
+    expect(prompt, contains('mi nombre es David'));
+  });
+
+  test('Prompt USA usa solo nombres y reglas del catálogo USA', () {
+    final prompt = diagnostico(
+      PaisApp.estadosUnidos,
+      sintomas: 'Busco apoyo para cansancio y dificultad para dormir.',
+    );
+    final idsRelevantes = productosUsaRelevantes(
+      'HISTORIAL PREVIO: seguimiento de Ana '
+      'Busco apoyo para cansancio y dificultad para dormir.',
+    ).map((producto) => producto.id);
+
+    expect(idsRelevantes, isNotEmpty);
+    for (final id in idsRelevantes) {
+      expect(prompt, contains(id));
+    }
+    expect(prompt, isNot(contains('Agpro')));
+    expect(prompt, isNot(contains('Bioefa')));
+    expect(prompt, isNot(contains('Vistari')));
+    expect(prompt, contains('No documentado en el catálogo'));
+    expect(prompt, contains('nombre oficial USA documentado'));
+  });
+
+  test('El texto del prompt Ecuador no recibe las reglas nuevas de USA', () {
+    final prompt = diagnostico(PaisApp.ecuador);
+
+    expect(prompt, contains('Resume en la misma línea la dosis'));
+    expect(prompt, isNot(contains('nombre oficial USA documentado')));
+    expect(prompt, isNot(contains('productos exclusivos de Ecuador')));
+  });
+
   test('Cambio físico y Chat conservan estructura entre mercados', () {
     String cambio(PaisApp pais) => construirPromptCambioFisicoBase(
           pais: pais,

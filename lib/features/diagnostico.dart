@@ -9,6 +9,16 @@ String construirPromptDiagnosticoBase(
     required String edad,
     required String genero,
     required String sintomas}) {
+  if (pais == PaisApp.estadosUnidos) {
+    return _construirPromptDiagnosticoUsa(
+      contextoAnterior: contextoAnterior,
+      saludoAsesor: saludoAsesor,
+      nombre: nombre,
+      edad: edad,
+      genero: genero,
+      sintomas: sintomas,
+    );
+  }
   final productosPermitidos = pais == PaisApp.ecuador
       ? productosPermitidosEcuador
       : productosUsaRelevantes(sintomas)
@@ -63,6 +73,92 @@ String construirPromptDiagnosticoBase(
 
     *1. [Nombre exacto del producto]*
     - *Forma de uso:* [uso o dosis documentada según la regla del mercado]
+    - *Por qué se elige:* [relación concreta con el caso]
+    - *Beneficio clave:* [mecanismo y apoyo principal documentado]
+
+    Repite el mismo bloque numerado para cada producto. Si no existe una ficha
+    pertinente, conserva la sección y explica responsablemente que no se recomienda
+    un producto; no inventes uno para completar el formato.
+
+    *RECOMENDACIONES DE BIENESTAR GENERAL*
+    Presenta en líneas separadas entre 2 y 3 hábitos seguros y seguimiento.
+
+    *Nota de seguridad:*
+    Los productos son apoyo nutricional y no sustituyen evaluación médica,
+    tratamientos prescritos ni atención urgente.
+
+    Antes de responder verifica que los títulos y el bloque de cada producto
+    coincidan exactamente con esta única plantilla. Mantén el tono científico pero
+    accesible, sin promesas de cura ni lenguaje de venta exagerado.
+    """;
+}
+
+String _construirPromptDiagnosticoUsa({
+  required String contextoAnterior,
+  required String saludoAsesor,
+  required String nombre,
+  required String edad,
+  required String genero,
+  required String sintomas,
+}) {
+  final productosPermitidos = productosUsaRelevantes(
+    '$contextoAnterior $sintomas',
+  ).map((producto) => producto.id).toList();
+  final catalogoPermitido = productosPermitidos.isEmpty
+      ? 'ninguno: no hay una ficha pertinente para esta consulta'
+      : productosPermitidos.join(', ');
+
+  return """
+    IDIOMA OBLIGATORIO: Responde solo en español, incluso si el usuario escribe o habla en inglés. Mantén todo el contenido, encabezados, notas, diagnósticos, productos, dosis, recomendaciones y fichas en español.
+
+    $contextoAnterior
+    SÍNTOMAS ACTUALES: $sintomas
+    DATOS: Nombre: $nombre, Edad: $edad, Género: $genero.
+    $saludoAsesor
+
+    Actúa como consultor profesional de bienestar, inmunología y metabolismo.
+    Genera un reporte ético, prudente y listo para mostrarse en la ficha y PDF.
+
+    REGLAS DE PRODUCTOS:
+
+    - Debes recomendar ÚNICAMENTE estos productos del catálogo USA: $catalogoPermitido.
+    - Los nombres, usos, dosis, presentaciones y beneficios deben proceder
+      exclusivamente de las fichas USA proporcionadas en el contexto del catálogo.
+    - Recomienda normalmente un máximo de 3 o 4 productos. No fuerces productos
+      cuando no exista una ficha pertinente.
+    - No inventes productos, medicamentos, ingredientes, beneficios ni marcas.
+    - No uses productos exclusivos de Ecuador ni copies nombres, dosis,
+      presentaciones o precios del mercado Ecuador.
+    - Si un producto de Ecuador tiene equivalencia en USA, utiliza únicamente el
+      nombre oficial USA documentado. Si no hay equivalencia ni ficha pertinente
+      en USA, no recomiendes un producto sustituto.
+    - Usa únicamente directions/uso documentado en la ficha USA. Si está vacío,
+      escribe exactamente: No documentado en el catálogo; revisa la etiqueta
+      vigente. No deduzcas dosis, cantidades, frecuencias ni horarios.
+
+    FORMATO MAESTRO ÚNICO Y OBLIGATORIO:
+    Usa exactamente las cinco secciones siguientes, una sola vez y en este orden.
+    Conserva los títulos literalmente. No escribas ninguna introducción antes del
+    primer título. Usa asteriscos para la negrita, separa los bloques con una línea
+    vacía y no combines dos secciones en un mismo párrafo.
+
+    *ANALISIS DEL CASO*
+    Comienza con una aclaración breve de que el análisis es informativo y no
+    sustituye consulta médica. Integra aquí el saludo indicado, los datos del caso
+    y una lectura prudente. No afirmes diagnósticos, daño orgánico ni causalidad
+    sin confirmación profesional.
+
+    *NUESTRO OBJETIVO*
+    Explica qué debe vigilarse, qué datos o exámenes debe confirmar un profesional,
+    señales de alarma, siguientes pasos y el rol limitado de los suplementos.
+
+    *SUSTRATO Y RESPALDO RECOMENDADO*
+    Para cada producto usa exactamente este bloque, manteniendo cada campo en su
+    propia línea y el nombre oficial del mercado USA:
+
+    *1. [Nombre exacto del producto]*
+
+    - *Forma de uso:* [uso o dosis documentada según la regla del mercado USA]
     - *Por qué se elige:* [relación concreta con el caso]
     - *Beneficio clave:* [mecanismo y apoyo principal documentado]
 
@@ -156,6 +252,9 @@ class _FormularioPacienteState extends State<FormularioPaciente> {
     final paisConsulta = PaisService.actual.value;
     try {
       final idiomaConsulta = IdiomaService.actual.value;
+      final idiomaRespuesta = paisConsulta == PaisApp.estadosUnidos
+          ? IdiomaApp.espanol
+          : idiomaConsulta;
       final contextoAnterior = widget.infoPrevia != null
           ? "HISTORIAL PREVIO: El paciente anteriormente reportó: ${widget.infoPrevia!['datos']['sintomas']}. El resultado anterior fue: ${widget.infoPrevia!['resultado']}. "
           : "";
@@ -174,14 +273,14 @@ class _FormularioPacienteState extends State<FormularioPaciente> {
           genero: _generoSeleccionado!,
           sintomas: historialController.text);
       final consultaCatalogo =
-          'Síntomas: ${historialController.text}. Nombre: ${nombreController.text}. Edad: ${edadController.text}. Género: $_generoSeleccionado';
+          '$contextoAnterior Síntomas: ${historialController.text}. Nombre: ${nombreController.text}. Edad: ${edadController.text}. Género: $_generoSeleccionado';
       final promptPais = construirPromptProductosPais(consultaCatalogo, prompt,
-          pais: paisConsulta, idioma: idiomaConsulta);
+          pais: paisConsulta, idioma: idiomaRespuesta);
       final textoFinal = await generarYProcesarRespuestaProductosPais(
         prompt: promptPais,
         consulta: consultaCatalogo,
         pais: paisConsulta,
-        idioma: idiomaConsulta,
+        idioma: idiomaRespuesta,
         generar: (promptGeneracion) async {
           if (widget.generarTexto != null) {
             return widget.generarTexto!(promptGeneracion);
