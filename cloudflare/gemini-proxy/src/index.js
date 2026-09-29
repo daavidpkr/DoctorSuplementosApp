@@ -22,7 +22,7 @@ const ALLOWED_ORIGINS = new Set([
   'http://127.0.0.1:7357',
 ]);
 
-function response(origin, status, code, message) {
+function response(origin, status, code, message, retryAfter) {
   const headers = {
     'Content-Type': 'application/json; charset=utf-8',
     'Cache-Control': 'no-store',
@@ -31,6 +31,13 @@ function response(origin, status, code, message) {
   if (origin && ALLOWED_ORIGINS.has(origin)) {
     headers['Access-Control-Allow-Origin'] = origin;
     headers.Vary = 'Origin';
+  }
+  if (typeof retryAfter === 'string') {
+    const sanitizedRetryAfter = retryAfter.trim();
+    if (/^\d+$/.test(sanitizedRetryAfter) ||
+        Number.isFinite(Date.parse(sanitizedRetryAfter))) {
+      headers['Retry-After'] = sanitizedRetryAfter;
+    }
   }
   return new Response(JSON.stringify({error: {code, message}}), {
     status,
@@ -317,11 +324,26 @@ export default {
     }
 
     if (upstream.status === 429) {
-      return response(origin, 429, 'GEMINI_SATURADO', 'La IA está temporalmente ocupada.');
+      return response(
+        origin,
+        429,
+        'GEMINI_SATURADO',
+        'La IA está temporalmente ocupada.',
+        upstream.headers.get('Retry-After'),
+      );
     }
     if (!upstream.ok) {
-      const status = upstream.status >= 500 ? 502 : 422;
-      return response(origin, status, 'GEMINI_RECHAZO', 'La IA rechazó la solicitud.');
+      const status = [502, 503, 504].includes(upstream.status)
+        ? upstream.status
+        : upstream.status >= 500 ? 502 : 422;
+      const code = status === 504 ? 'GEMINI_TIMEOUT' : 'GEMINI_RECHAZO';
+      return response(
+        origin,
+        status,
+        code,
+        status === 504 ? 'La IA tardó demasiado.' : 'La IA rechazó la solicitud.',
+        upstream.headers.get('Retry-After'),
+      );
     }
 
     let body;

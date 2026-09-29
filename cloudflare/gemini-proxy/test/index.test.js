@@ -181,9 +181,22 @@ describe('Gemini proxy', () => {
       .mockResolvedValueOnce(new Response(JSON.stringify({
         users: [{localId: 'usuario-a'}],
       }), {status: 200, headers: {'Content-Type': 'application/json'}}))
-      .mockResolvedValueOnce(new Response('detalle privado', {status: 429}));
+      .mockResolvedValueOnce(new Response('detalle privado', {
+        status: 429,
+        headers: {'Retry-After': '3'},
+      }));
     const response = await worker.fetch(request(), env);
     expect(response.status).toBe(429);
+    expect(response.headers.get('Retry-After')).toBe('3');
+    expect(JSON.stringify(await response.json())).not.toContain('detalle privado');
+  });
+
+  it.each([502, 503, 504])('conserva el estado transitorio %s', async (status) => {
+    vi.spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(validIdentity())
+      .mockResolvedValueOnce(new Response('detalle privado', {status}));
+    const response = await worker.fetch(request(), env);
+    expect(response.status).toBe(status);
     expect(JSON.stringify(await response.json())).not.toContain('detalle privado');
   });
 
