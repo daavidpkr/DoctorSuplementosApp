@@ -154,6 +154,9 @@ class _PaginaChatbotState extends State<PaginaChatbot>
   final List<ArchivoAdjuntoIA> _adjuntos = [];
   bool enviando = false;
   ControlSolicitudIa? _controlSolicitud;
+  int _secuenciaSolicitudes = 0;
+  int? _solicitudActiva;
+  bool _cancelacionSolicitada = false;
   bool _modoCientifico = false;
   bool _grabandoAudio = false;
   bool _iniciandoGrabacionVoz = false;
@@ -332,8 +335,11 @@ class _PaginaChatbotState extends State<PaginaChatbot>
   }) async {
     final textoUsuario = (textoReintento ?? _controller.text).trim();
     if ((textoUsuario.isEmpty && !_tieneAdjuntos) || enviando) return;
+    final solicitud = ++_secuenciaSolicitudes;
     final control = ControlSolicitudIa();
     _controlSolicitud = control;
+    _solicitudActiva = solicitud;
+    _cancelacionSolicitada = false;
     final textoVisible = textoUsuario.isEmpty
         ? (_adjuntosSoloAudio
             ? "Analiza esta nota de voz."
@@ -490,7 +496,7 @@ class _PaginaChatbotState extends State<PaginaChatbot>
       registrarErrorIa(e, stackTrace,
           modulo: widget.modoLlamada ? 'chat_live' : 'chatbot',
           pais: paisConsulta);
-      if (!mounted) return;
+      if (!mounted || _solicitudActiva != solicitud) return;
       setState(() {
         mensajes.add({
           "rol": "ia",
@@ -515,14 +521,23 @@ class _PaginaChatbotState extends State<PaginaChatbot>
         modoAsesor: _modoCientifico ? 'modo_cientifico' : 'asesor_ia',
       );
     } finally {
-      if (identical(_controlSolicitud, control)) _controlSolicitud = null;
-      if (mounted) {
-        setState(() => enviando = false);
+      if (_solicitudActiva == solicitud &&
+          identical(_controlSolicitud, control)) {
+        _controlSolicitud = null;
+        _solicitudActiva = null;
+        _cancelacionSolicitada = false;
+        if (mounted) {
+          setState(() => enviando = false);
+        }
       }
     }
   }
 
-  void cancelarSolicitud() => _controlSolicitud?.cancelar();
+  void cancelarSolicitud() {
+    if (!enviando || _cancelacionSolicitada) return;
+    _cancelacionSolicitada = true;
+    _controlSolicitud?.cancelar();
+  }
 
   void _reintentarMensaje(int indice) {
     if (enviando || indice < 0 || indice >= mensajes.length) return;

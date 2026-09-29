@@ -211,6 +211,9 @@ class _FormularioPacienteState extends State<FormularioPaciente> {
   bool cargando = false;
   bool _grabandoAudio = false;
   ControlSolicitudIa? _controlSolicitud;
+  int _secuenciaSolicitudes = 0;
+  int? _solicitudActiva;
+  bool _cancelacionSolicitada = false;
 
   @override
   void initState() {
@@ -253,8 +256,11 @@ class _FormularioPacienteState extends State<FormularioPaciente> {
       _mostrarDialogoSimple("Falta género", "Por favor, selecciona el género.");
       return;
     }
+    final solicitud = ++_secuenciaSolicitudes;
     final control = ControlSolicitudIa();
     _controlSolicitud = control;
+    _solicitudActiva = solicitud;
+    _cancelacionSolicitada = false;
     setState(() => cargando = true);
 
     final paisConsulta = PaisService.actual.value;
@@ -324,18 +330,28 @@ class _FormularioPacienteState extends State<FormularioPaciente> {
     } catch (e, stackTrace) {
       registrarErrorIa(e, stackTrace,
           modulo: 'diagnostico', pais: paisConsulta);
+      if (!mounted || _solicitudActiva != solicitud) return;
       _mostrarDialogoSimple(
         "Error",
         mensajeErrorIa(e),
         reintentar: permiteReintentoManualIa(e) ? generarDiagnostico : null,
       );
     } finally {
-      if (identical(_controlSolicitud, control)) _controlSolicitud = null;
-      if (mounted) setState(() => cargando = false);
+      if (_solicitudActiva == solicitud &&
+          identical(_controlSolicitud, control)) {
+        _controlSolicitud = null;
+        _solicitudActiva = null;
+        _cancelacionSolicitada = false;
+        if (mounted) setState(() => cargando = false);
+      }
     }
   }
 
-  void _cancelarDiagnostico() => _controlSolicitud?.cancelar();
+  void _cancelarDiagnostico() {
+    if (!cargando || _cancelacionSolicitada) return;
+    _cancelacionSolicitada = true;
+    _controlSolicitud?.cancelar();
+  }
 
   void _mostrarResultado(String mensaje, PerfilAsesor perfilAsesor) {
     Navigator.push(

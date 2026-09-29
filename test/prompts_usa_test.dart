@@ -405,10 +405,14 @@ void main() {
     );
   });
 
-  test('Solo nombres completos inequívocos de Ecuador se rechazan', () {
-    for (final nombre in ['Agpro', 'Bioefa', 'Vistari']) {
-      expect(() => procesar('Recomiendo $nombre.'),
-          throwsA(isA<ProductoNoAutorizadoException>()));
+  test('USA acepta alias, mayusculas, acentos y equivalencias locales', () {
+    for (final nombre in [
+      'AG-PRO',
+      'BioEFA',
+      '4LIFE TRANSFER FACTOR VISTARI',
+      'Colágeno Tipo I',
+    ]) {
+      expect(procesar('Recomiendo $nombre.'), contains(nombre));
     }
     expect(
       procesar(
@@ -419,37 +423,55 @@ void main() {
         startsWith('Recall y lung'));
   });
 
-  test('Producto de Ecuador activa un solo reintento y muestra la corrección',
+  test('Una mezcla real activa un solo reintento y muestra la corrección',
       () async {
+    PaisService.actual.value = PaisApp.ecuador;
+    final idsEquivalentes = correspondenciasProductoEcuadorUsa.values
+        .map(normalizarClaveProducto)
+        .toSet();
+    final productoSoloUsa = catalogoProductosEstadosUnidos.firstWhere(
+      (producto) =>
+          !idsEquivalentes.contains(normalizarClaveProducto(producto.id)),
+    );
     var llamadas = 0;
     final resultado = await generarYProcesarRespuestaProductosPais(
       prompt: 'PROMPT COMPLETO',
-      consulta: 'Quiero Agpro',
-      pais: PaisApp.estadosUnidos,
+      consulta: 'Consulta Ecuador',
+      pais: PaisApp.ecuador,
       idioma: IdiomaApp.espanol,
       generar: (prompt) async {
         llamadas++;
-        if (llamadas == 1) return 'Recomiendo Agpro.';
+        if (llamadas == 1) return 'Recomiendo ${productoSoloUsa.id}.';
         expect(prompt, contains('Reescribe la respuesta'));
         expect(prompt, contains('PROMPT COMPLETO'));
-        return 'Ese producto no está disponible en el catálogo USA.';
+        expect(prompt, contains('catálogo Ecuador'));
+        return 'Orientación sin productos de otro mercado.';
       },
     );
     expect(llamadas, 2);
-    expect(resultado, startsWith('Ese producto no está disponible'));
+    expect(resultado, startsWith('Orientación sin productos'));
   });
 
   test('Un segundo resultado inválido falla sin crear ciclos', () async {
+    PaisService.actual.value = PaisApp.ecuador;
+    final idsEquivalentes = correspondenciasProductoEcuadorUsa.values
+        .map(normalizarClaveProducto)
+        .toSet();
+    final productosSoloUsa = catalogoProductosEstadosUnidos
+        .where((producto) =>
+            !idsEquivalentes.contains(normalizarClaveProducto(producto.id)))
+        .take(2)
+        .toList();
     var llamadas = 0;
     await expectLater(
       generarYProcesarRespuestaProductosPais(
         prompt: 'PROMPT',
-        consulta: 'Agpro',
-        pais: PaisApp.estadosUnidos,
+        consulta: 'Consulta Ecuador',
+        pais: PaisApp.ecuador,
         idioma: IdiomaApp.espanol,
         generar: (_) async {
           llamadas++;
-          return llamadas == 1 ? 'Agpro' : 'Bioefa';
+          return productosSoloUsa[llamadas - 1].id;
         },
       ),
       throwsA(isA<RespuestaIaBloqueadaException>()),
@@ -493,7 +515,7 @@ void main() {
     );
     expect(
       mensajeErrorIa(const IaProxyException('GEMINI_TIMEOUT', estadoHttp: 504)),
-      contains('temporalmente ocupada'),
+      contains('agotó el tiempo'),
     );
   });
 

@@ -3,12 +3,19 @@ part of '../main.dart';
 class IaProxyException implements Exception {
   final String codigo;
   final int? estadoHttp;
+  final Duration? reintentarDespuesDe;
 
-  const IaProxyException(this.codigo, {this.estadoHttp});
+  const IaProxyException(
+    this.codigo, {
+    this.estadoHttp,
+    this.reintentarDespuesDe,
+  });
 
   bool get esTransitorio =>
       estadoHttp == 429 ||
-      (estadoHttp != null && estadoHttp! >= 500 && estadoHttp! <= 599);
+      estadoHttp == 502 ||
+      estadoHttp == 503 ||
+      estadoHttp == 504;
 
   @override
   String toString() => 'IaProxyException($codigo, $estadoHttp)';
@@ -148,6 +155,7 @@ class ClienteIa {
       throw IaProxyException(
         codigo?.trim().isNotEmpty == true ? codigo! : 'ERROR_PROXY',
         estadoHttp: response.statusCode,
+        reintentarDespuesDe: _leerRetryAfter(response.headers),
       );
     } on IaProxyException {
       rethrow;
@@ -190,6 +198,51 @@ class ClienteIa {
       throw const IaProxyException('PROXY_NO_CONFIGURADO');
     }
     return uri.replace(path: '/v1/generate');
+  }
+
+  static Duration? _leerRetryAfter(Headers headers) {
+    final valor = headers.value('retry-after')?.trim();
+    if (valor == null || valor.isEmpty) return null;
+    final segundos = int.tryParse(valor);
+    if (segundos != null && segundos >= 0) {
+      return Duration(seconds: segundos);
+    }
+    final fecha = DateTime.tryParse(valor)?.toUtc() ?? _fechaHttp(valor);
+    if (fecha == null) return null;
+    final espera = fecha.difference(DateTime.now().toUtc());
+    return espera.isNegative ? Duration.zero : espera;
+  }
+
+  static DateTime? _fechaHttp(String valor) {
+    final coincidencia = RegExp(
+      r'^[A-Za-z]{3},\s+(\d{2})\s+([A-Za-z]{3})\s+(\d{4})\s+'
+      r'(\d{2}):(\d{2}):(\d{2})\s+GMT$',
+    ).firstMatch(valor);
+    if (coincidencia == null) return null;
+    const meses = {
+      'jan': 1,
+      'feb': 2,
+      'mar': 3,
+      'apr': 4,
+      'may': 5,
+      'jun': 6,
+      'jul': 7,
+      'aug': 8,
+      'sep': 9,
+      'oct': 10,
+      'nov': 11,
+      'dec': 12,
+    };
+    final mes = meses[coincidencia.group(2)!.toLowerCase()];
+    if (mes == null) return null;
+    return DateTime.utc(
+      int.parse(coincidencia.group(3)!),
+      mes,
+      int.parse(coincidencia.group(1)!),
+      int.parse(coincidencia.group(4)!),
+      int.parse(coincidencia.group(5)!),
+      int.parse(coincidencia.group(6)!),
+    );
   }
 
   static void validarAdjuntos(List<ArchivoAdjuntoIA> adjuntos) {

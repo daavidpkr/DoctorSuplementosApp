@@ -88,7 +88,7 @@ void main() {
     respuestas[0].completeError(
       const IaProxyException('GEMINI_TIMEOUT', estadoHttp: 504),
     );
-    await tester.pump(const Duration(milliseconds: 701));
+    await tester.pump(const Duration(seconds: 2));
     expect(intentos, 2);
     expect(find.byType(CircularProgressIndicator), findsOneWidget);
     respuestas[1].completeError(
@@ -98,7 +98,8 @@ void main() {
 
     expect(intentos, 2);
     expect(find.byType(CircularProgressIndicator), findsNothing);
-    expect(find.textContaining('temporalmente ocupada'), findsOneWidget);
+    expect(find.textContaining('agotó el tiempo'), findsOneWidget);
+    expect(find.textContaining('temporalmente ocupada'), findsNothing);
     expect(find.byKey(const ValueKey('reintentar-ia')), findsOneWidget);
   });
 
@@ -136,7 +137,14 @@ void main() {
     await tester.pumpAndSettle();
 
     await _completarFormulario(tester);
-    await tester.tap(find.byTooltip('Cancelar solicitud'));
+    final botonCancelar = tester.widget<IconButton>(
+      find.ancestor(
+        of: find.byTooltip('Cancelar solicitud'),
+        matching: find.byType(IconButton),
+      ),
+    );
+    botonCancelar.onPressed!();
+    botonCancelar.onPressed!();
     await tester.pumpAndSettle();
 
     expect(find.byType(CircularProgressIndicator), findsNothing);

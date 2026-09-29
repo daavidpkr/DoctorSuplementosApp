@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
@@ -312,16 +313,18 @@ void main() {
     }
 
     expect(error, isA<DioException>());
-    expect(mensajeErrorIa(error!), contains('conectar'));
+    expect(mensajeErrorIa(error!), contains('tiempo de espera'));
+    expect(mensajeErrorIa(error), isNot(contains('ocupada')));
   });
 
   test('respuesta 504 se considera transitoria y muestra mensaje util', () {
     const error = IaProxyException('GEMINI_TIMEOUT', estadoHttp: 504);
     expect(error.esTransitorio, isTrue);
-    expect(mensajeErrorIa(error), contains('temporalmente ocupada'));
+    expect(mensajeErrorIa(error), contains('agotó el tiempo'));
+    expect(mensajeErrorIa(error), isNot(contains('ocupada')));
   });
 
-  test('401, 403, 429 y 5xx producen mensajes utiles', () {
+  test('429, 502/503, 504 y falta de conexion tienen mensajes distintos', () {
     expect(
       mensajeErrorIa(const IaProxyException('ERROR_PROXY', estadoHttp: 401)),
       contains('sesi'),
@@ -334,11 +337,68 @@ void main() {
       mensajeErrorIa(const IaProxyException('ERROR_PROXY', estadoHttp: 429)),
       'La IA está temporalmente ocupada. Espera unos segundos e inténtalo nuevamente.',
     );
-    for (final estado in [500, 501, 502, 503, 504, 599]) {
+    for (final estado in [502, 503, 504]) {
       final error = IaProxyException('ERROR_PROXY', estadoHttp: estado);
       expect(error.esTransitorio, isTrue, reason: 'HTTP $estado');
-      expect(mensajeErrorIa(error), contains('temporalmente ocupada'));
     }
+    expect(
+      mensajeErrorIa(const IaProxyException('ERROR_PROXY', estadoHttp: 502)),
+      contains('no está disponible'),
+    );
+    expect(
+      mensajeErrorIa(const IaProxyException('ERROR_PROXY', estadoHttp: 503)),
+      contains('no está disponible'),
+    );
+    expect(
+      mensajeErrorIa(const IaProxyException('ERROR_PROXY', estadoHttp: 504)),
+      contains('agotó el tiempo'),
+    );
+    expect(
+      mensajeErrorIa(const SocketException('sin red')),
+      contains('Verifica tu conexión'),
+    );
+    expect(
+      mensajeErrorIa(TimeoutException('lento')),
+      contains('tiempo de espera'),
+    );
+  });
+
+  test('Retry-After se conserva y la espera por defecto es de 2 segundos',
+      () async {
+    final dio = _dioCon((options) async => ResponseBody.fromString(
+          jsonEncode({
+            'error': {'code': 'GEMINI_SATURADO'}
+          }),
+          429,
+          headers: {
+            Headers.contentTypeHeader: [Headers.jsonContentType],
+            'retry-after': ['4'],
+          },
+        ));
+
+    Object? recibido;
+    try {
+      await ClienteIa.generarTexto(
+        'Prompt',
+        urlProxy: _proxyPrueba,
+        obtenerToken: () async => 'token',
+        clienteHttp: dio,
+      );
+    } catch (error) {
+      recibido = error;
+    }
+
+    expect(recibido, isA<IaProxyException>());
+    expect(
+      (recibido! as IaProxyException).reintentarDespuesDe,
+      const Duration(seconds: 4),
+    );
+    expect(
+      duracionEsperaReintentoIa(
+        const IaProxyException('ERROR_PROXY', estadoHttp: 503),
+      ),
+      const Duration(seconds: 2),
+    );
   });
 
   test('presupuesto total evita esperas acumuladas y cargas infinitas',
@@ -366,11 +426,15 @@ void main() {
         generarRespuestaIaConReintento(
           generar: (_) async {
             intentos++;
-            throw IaProxyException('ERROR_PROXY', estadoHttp: estado);
+            throw IaProxyException(
+              'ERROR_PROXY',
+              estadoHttp: estado,
+              reintentarDespuesDe: Duration.zero,
+            );
           },
           prompt: 'Prompt',
         ),
-        throwsA(isA<IaTemporalmenteOcupadaException>()),
+        throwsA(isA<IaProxyException>()),
       );
       expect(intentos, 2);
     });
@@ -411,5 +475,17 @@ void main() {
     expect(intentos, 1);
     expect(mensajeErrorIa(const SolicitudIaCanceladaException()),
         'Solicitud cancelada.');
+  });
+
+  test('un control nuevo no reutiliza la cancelacion anterior', () async {
+    final anterior = ControlSolicitudIa()..cancelar();
+    final actual = ControlSolicitudIa();
+
+    await expectLater(
+      anterior.esperar(Future.value('anterior')),
+      throwsA(isA<SolicitudIaCanceladaException>()),
+    );
+    expect(await actual.esperar(Future.value('actual')), 'actual');
+    expect(actual.cancelada, isFalse);
   });
 }

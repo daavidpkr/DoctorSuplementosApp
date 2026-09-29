@@ -466,10 +466,6 @@ class RespuestaIaVaciaException implements Exception {
   String toString() => 'La IA devolvió una respuesta vacía.';
 }
 
-class IaTemporalmenteOcupadaException implements Exception {
-  const IaTemporalmenteOcupadaException();
-}
-
 class _PresupuestoReintentoIa {
   bool _consumido = false;
 
@@ -509,21 +505,18 @@ String procesarRespuestaProductosPais(
     throw const PaisConsultaCambioException();
   }
   if (pais == PaisApp.ecuador) {
-    final texto = ' ${normalizarTexto(respuesta)} ';
+    final texto = normalizarTexto(respuesta);
+    final idsUsaEquivalentes = correspondenciasProductoEcuadorUsa.values
+        .map(normalizarClaveProducto)
+        .toSet();
     for (final p in catalogoProductosEstadosUnidos) {
-      final equivalente = [
-        ...productosPermitidosEcuador,
-        ...productosCambioFisicoEcuador
-      ].any((nombre) =>
-          normalizarClaveProducto(nombre) == normalizarClaveProducto(p.id) ||
-          p.alias.any((a) =>
-              normalizarClaveProducto(a) == normalizarClaveProducto(nombre)));
-      if (!equivalente &&
-          [
+      if (!idsUsaEquivalentes.contains(normalizarClaveProducto(p.id)) &&
+          _mencionaProducto(texto, {
             p.id,
             p.nombreEspanol,
-            p.nombreIngles
-          ].any((nombre) => texto.contains(' ${normalizarTexto(nombre)} '))) {
+            p.nombreIngles,
+            ...p.alias,
+          })) {
         throw ProductoNoAutorizadoException(p.id);
       }
     }
@@ -536,42 +529,50 @@ String procesarRespuestaProductosPais(
 }
 
 void validarMercadoEstadosUnidos(String texto, String consulta) {
-  final nombresUsa = catalogoProductosEstadosUnidos
-      .expand((p) => {p.id, p.nombreEspanol, p.nombreIngles, ...p.alias})
-      .map(normalizarTexto)
-      .where((nombre) => nombre.isNotEmpty)
-      .toSet();
+  final normalizado = normalizarTexto(texto);
+  for (final nombre in {
+    ...productosPermitidosEcuador,
+    ...productosCambioFisicoEcuador,
+  }) {
+    if (_productoEcuadorTieneEquivalenteUsa(nombre)) continue;
+    if (_mencionaProducto(normalizado, {nombre})) {
+      throw ProductoNoAutorizadoException(nombre);
+    }
+  }
+}
+
+bool _productoEcuadorTieneEquivalenteUsa(String nombre) {
+  final clave = normalizarClaveProducto(nombre);
+  for (final entry in correspondenciasProductoEcuadorUsa.entries) {
+    final alias = aliasProductoEcuador(entry.key);
+    if (alias.map(normalizarClaveProducto).contains(clave) ||
+        _mencionaProducto(normalizarTexto(nombre), alias)) {
+      return fichaProductoUsa(entry.value) != null;
+    }
+  }
+  return false;
+}
+
+bool _mencionaProducto(String textoNormalizado, Iterable<String> nombres) {
   const ambiguos = {
     'vista',
     'max',
     'plus',
     'energia',
+    'energy',
     'factor',
     'recall',
     'lung',
   };
-  final exclusivosEcuador = {
-    ...productosPermitidosEcuador,
-    ...productosCambioFisicoEcuador,
-  }.where((nombre) {
+  for (final nombre in nombres) {
     final normalizado = normalizarTexto(nombre);
-    final patronCompartido =
-        RegExp(r'(?<![a-z0-9])' + RegExp.escape(normalizado) + r'(?![a-z0-9])');
-    return normalizado.isNotEmpty &&
-        !ambiguos.contains(normalizado) &&
-        !nombresUsa.any((nombreUsa) =>
-            nombreUsa == normalizado || patronCompartido.hasMatch(nombreUsa));
-  }).toList()
-    ..sort((a, b) => b.length.compareTo(a.length));
-  final normalizado = normalizarTexto(texto);
-  for (final nombre in exclusivosEcuador) {
-    final clave = normalizarTexto(nombre);
-    final patron =
-        RegExp(r'(?<![a-z0-9])' + RegExp.escape(clave) + r'(?![a-z0-9])');
-    if (patron.hasMatch(normalizado)) {
-      throw ProductoNoAutorizadoException(nombre);
-    }
+    if (normalizado.isEmpty || ambiguos.contains(normalizado)) continue;
+    final patron = RegExp(
+      r'(?<![a-z0-9])' + RegExp.escape(normalizado) + r'(?![a-z0-9])',
+    );
+    if (patron.hasMatch(textoNormalizado)) return true;
   }
+  return false;
 }
 
 String agregarDescargoUsaSiFalta(String texto, IdiomaApp idioma) {
@@ -597,6 +598,17 @@ proporcionadas. Si no existe una alternativa documentada, responde sin recomenda
 productos. Responde en texto normal, sin JSON ni bloques de código.
 ''';
 
+const String _instruccionCorreccionMercadoEcuador = '''
+Reescribe la respuesta conservando su contenido y formato, pero elimina cualquier
+producto que no pertenezca al catálogo Ecuador. Utiliza únicamente las fichas Ecuador
+proporcionadas. Si no existe una alternativa documentada, responde sin recomendar
+productos. Responde en texto normal, sin JSON ni bloques de código.
+''';
+
+String _instruccionCorreccionMercado(PaisApp pais) => pais == PaisApp.ecuador
+    ? _instruccionCorreccionMercadoEcuador
+    : _instruccionCorreccionMercadoUsa;
+
 Future<String> generarYProcesarRespuestaProductosPais({
   required Future<String> Function(String prompt) generar,
   required String prompt,
@@ -621,14 +633,13 @@ Future<String> generarYProcesarRespuestaProductosPais({
     return procesarRespuestaProductosPais(
         primeraRespuesta, consulta, pais, idioma);
   } on ProductoNoAutorizadoException {
-    if (pais != PaisApp.estadosUnidos) rethrow;
     if (!permitirReintento || !presupuestoReintento.consumir()) {
       throw const RespuestaIaBloqueadaException();
     }
     final promptCorreccion = '''
 $prompt
 
-$_instruccionCorreccionMercadoUsa
+${_instruccionCorreccionMercado(pais)}
 
 Respuesta anterior que debes corregir:
 $primeraRespuesta
@@ -696,48 +707,35 @@ Future<String> _generarIaConReintento(
         !presupuestoReintento.consumir()) {
       rethrow;
     }
-    final pausa = Future<void>.delayed(const Duration(milliseconds: 700));
+    final pausa = Future<void>.delayed(duracionEsperaReintentoIa(error));
     final restante = limite.difference(DateTime.now());
     await (control?.esperar(pausa) ?? pausa).timeout(restante);
-    try {
-      return await intentar();
-    } catch (segundoError) {
-      if (_esErrorSaturacionIa(segundoError)) {
-        throw const IaTemporalmenteOcupadaException();
-      }
-      rethrow;
-    }
+    return intentar();
   }
 }
 
-bool _esErrorSaturacionIa(Object error) {
-  if (error is IaTemporalmenteOcupadaException || error is TimeoutException) {
-    return true;
+Duration duracionEsperaReintentoIa(Object error) {
+  if (error is IaProxyException && error.reintentarDespuesDe != null) {
+    return error.reintentarDespuesDe!;
   }
-  if (error is IaProxyException) {
-    return error.estadoHttp == 429 || (error.estadoHttp ?? 0) >= 500;
-  }
-  if (error is DioException) {
-    final estado = error.response?.statusCode;
-    return estado == 429 ||
-        (estado ?? 0) >= 500 ||
-        error.type == DioExceptionType.receiveTimeout ||
-        error.type == DioExceptionType.sendTimeout;
-  }
-  return false;
+  return const Duration(seconds: 2);
 }
 
-bool permiteReintentoManualIa(Object error) => _esErrorSaturacionIa(error);
+bool permiteReintentoManualIa(Object error) => _esErrorIaTransitorio(error);
 
 bool _esErrorIaTransitorio(Object error) {
   if (error is IaProxyException) return error.esTransitorio;
   if (esSocketException(error) || error is TimeoutException) return true;
   if (error is DioException) {
+    final estado = error.response?.statusCode;
     return error.type == DioExceptionType.connectionError ||
         error.type == DioExceptionType.connectionTimeout ||
         error.type == DioExceptionType.receiveTimeout ||
         error.type == DioExceptionType.sendTimeout ||
-        (error.response?.statusCode ?? 0) >= 500;
+        estado == 429 ||
+        estado == 502 ||
+        estado == 503 ||
+        estado == 504;
   }
   return false;
 }
@@ -745,9 +743,6 @@ bool _esErrorIaTransitorio(Object error) {
 String mensajeErrorIa(Object error) {
   if (error is SolicitudIaCanceladaException) {
     return 'Solicitud cancelada.';
-  }
-  if (error is IaTemporalmenteOcupadaException) {
-    return 'La IA está temporalmente ocupada. Espera unos segundos e inténtalo nuevamente.';
   }
   if (error is IaProxyException) {
     if (error.codigo == 'AUTENTICACION_REQUERIDA' ||
@@ -780,8 +775,14 @@ String mensajeErrorIa(Object error) {
     if (error.estadoHttp == 422) {
       return 'La IA no pudo responder a esa redacción. Inténtalo nuevamente con una descripción más breve.';
     }
-    if (_esErrorSaturacionIa(error)) {
+    if (error.estadoHttp == 429) {
       return 'La IA está temporalmente ocupada. Espera unos segundos e inténtalo nuevamente.';
+    }
+    if (error.estadoHttp == 502 || error.estadoHttp == 503) {
+      return 'El servicio de IA no está disponible temporalmente. Inténtalo nuevamente en unos segundos.';
+    }
+    if (error.estadoHttp == 504) {
+      return 'El servicio de IA agotó el tiempo de respuesta. Inténtalo nuevamente.';
     }
     return 'No fue posible conectar con el servicio de IA. Inténtalo nuevamente.';
   }
@@ -796,11 +797,16 @@ String mensajeErrorIa(Object error) {
     return 'El país cambió mientras se generaba la respuesta. Genera nuevamente la consulta.';
   }
   if (esSocketException(error) ||
-      (error is DioException && _esErrorIaTransitorio(error))) {
+      (error is DioException &&
+          error.type == DioExceptionType.connectionError)) {
     return 'No se pudo conectar con la IA. Verifica tu conexión e inténtalo nuevamente.';
   }
-  if (error is TimeoutException) {
-    return 'La IA tardó demasiado en responder. Verifica tu conexión e inténtalo nuevamente.';
+  if (error is TimeoutException ||
+      (error is DioException &&
+          (error.type == DioExceptionType.connectionTimeout ||
+              error.type == DioExceptionType.sendTimeout ||
+              error.type == DioExceptionType.receiveTimeout))) {
+    return 'La solicitud superó el tiempo de espera. Inténtalo nuevamente.';
   }
   return 'No fue posible procesar la respuesta. Inténtalo nuevamente.';
 }
